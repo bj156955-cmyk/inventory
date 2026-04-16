@@ -278,29 +278,29 @@
             <h3 class="text-3xl font-black font-headline text-primary-container mb-8 tracking-tighter" id="modal-title">Create New Entry</h3>
             <form id="item-form" class="space-y-6">
                 <input type="hidden" id="item-id">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-                    <div class="md:col-span-2 flex flex-col gap-2">
+                <div class="grid grid-cols-2 gap-x-6 gap-y-5">
+                    <div class="col-span-2 flex flex-col gap-1.5">
                         <label class="label-xs ml-1">Item Name</label>
                         <input type="text" id="item-name" required class="form-input w-full" placeholder="Enter product name">
                     </div>
-                    <div class="flex flex-col gap-2">
-                        <label class="label-xs ml-1">SKU Number (Optional)</label>
+                    <div class="flex flex-col gap-1.5">
+                        <label class="label-xs ml-1 font-black">SKU Number</label>
                         <input type="text" id="item-sku" class="form-input w-full" placeholder="e.g. ATL-001">
                     </div>
-                    <div class="flex flex-col gap-2">
-                        <label class="label-xs ml-1">Category</label>
+                    <div class="flex flex-col gap-1.5">
+                        <label class="label-xs ml-1 font-black">Category</label>
                         <input type="text" id="item-category" class="form-input w-full" placeholder="e.g. Timber">
                     </div>
-                    <div class="flex flex-col gap-2">
-                        <label class="label-xs ml-1">Current Stock</label>
+                    <div class="flex flex-col gap-1.5">
+                        <label class="label-xs ml-1 font-black">Current Stock</label>
                         <input type="number" id="item-stock" required class="form-input w-full" placeholder="0">
                     </div>
-                    <div class="flex flex-col gap-2">
-                        <label class="label-xs ml-1">Target Quantity</label>
+                    <div class="flex flex-col gap-1.5">
+                        <label class="label-xs ml-1 font-black">Target Quantity</label>
                         <input type="number" id="item-target" required class="form-input w-full" placeholder="0">
                     </div>
-                    <div class="md:col-span-2 flex flex-col gap-2">
-                        <label class="label-xs ml-1">Unit Price (₩)</label>
+                    <div class="col-span-2 flex flex-col gap-1.5">
+                        <label class="label-xs ml-1 font-black">Unit Price (₩)</label>
                         <input type="number" id="item-price" class="form-input w-full" placeholder="0">
                     </div>
                 </div>
