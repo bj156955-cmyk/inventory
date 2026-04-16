@@ -136,7 +136,7 @@
             </header>
 
             <!-- Dashboard Content -->
-            <main class="flex-1 p-4 lg:p-10 space-y-6 lg:space-y-10 flex flex-col min-h-0 overflow-hidden">
+            <main class="flex-1 p-4 lg:p-10 space-y-6 lg:space-y-10 flex flex-col min-h-0 overflow-y-auto custom-scrollbar pb-32 lg:pb-10">
                 <!-- Dashboard Header (Dynamic) -->
                 <div class="flex justify-between items-end shrink-0">
                     <div>
@@ -152,7 +152,7 @@
                 <!-- Bento Stats Grid (Dashboard Only) - Reordered -->
                 <div id="section-stats" class="grid grid-cols-1 md:grid-cols-4 gap-6 shrink-0">
                     <!-- 1. Total Items (Clickable Filter) -->
-                    <div id="filter-total" class="no-line-card bg-surface-container-lowest p-7 rounded-[2rem] cursor-pointer hover:shadow-xl transition-all active:scale-95">
+                    <div id="filter-total" class="no-line-card bg-surface-container-lowest p-5 lg:p-7 rounded-[2rem] cursor-pointer hover:shadow-xl transition-all active:scale-95">
                         <div class="flex justify-between items-start mb-6">
                             <div class="w-10 h-10 bg-primary-fixed rounded-xl flex items-center justify-center"><span class="material-symbols-outlined text-primary">inventory_2</span></div>
                             <span class="text-[10px] font-black text-primary px-3 py-1 bg-primary/5 rounded-md uppercase">Current</span>
@@ -161,7 +161,7 @@
                         <h3 class="text-3xl font-black font-headline text-primary-container mt-1" id="total-items">0</h3>
                     </div>
                     <!-- 2. Low Stock Alerts (Clickable Filter) -->
-                    <div id="filter-low" class="no-line-card bg-surface-container-lowest p-7 rounded-[2rem] cursor-pointer hover:shadow-xl transition-all active:scale-95 group">
+                    <div id="filter-low" class="no-line-card bg-surface-container-lowest p-5 lg:p-7 rounded-[2rem] cursor-pointer hover:shadow-xl transition-all active:scale-95 group">
                         <div class="flex justify-between items-start mb-6">
                             <div class="w-10 h-10 bg-orange-400/20 rounded-xl flex items-center justify-center group-hover:bg-orange-400/40 transition-colors"><span class="material-symbols-outlined text-orange-500">warning</span></div>
                             <span class="text-[10px] font-black text-orange-600 px-2 py-1 bg-orange-100 rounded-md uppercase">Attention</span>
@@ -170,7 +170,7 @@
                         <h3 class="text-3xl font-black font-headline text-orange-500 mt-1" id="low-stock">0</h3>
                     </div>
                     <!-- 3. Out of Stock (Clickable Filter) -->
-                    <div id="filter-out" class="no-line-card bg-surface-container-lowest p-7 rounded-[2rem] cursor-pointer hover:shadow-xl transition-all active:scale-95 group">
+                    <div id="filter-out" class="no-line-card bg-surface-container-lowest p-5 lg:p-7 rounded-[2rem] cursor-pointer hover:shadow-xl transition-all active:scale-95 group">
                         <div class="flex justify-between items-start mb-6">
                             <div class="w-10 h-10 bg-error-container rounded-xl flex items-center justify-center group-hover:bg-error transition-colors"><span class="material-symbols-outlined text-error group-hover:text-white transition-colors">dangerous</span></div>
                             <span class="text-[10px] font-black text-white bg-error px-2 py-1 rounded-md uppercase">Critical</span>
@@ -179,7 +179,7 @@
                         <h3 class="text-3xl font-black font-headline text-error mt-1" id="out-of-stock">0</h3>
                     </div>
                     <!-- 4. Total Value (No Filter) -->
-                    <div class="no-line-card bg-surface-container-lowest p-7 rounded-[2rem]">
+                    <div class="no-line-card bg-surface-container-lowest p-5 lg:p-7 rounded-[2rem]">
                         <div class="flex justify-between items-start mb-6">
                             <div class="w-10 h-10 bg-tertiary-fixed rounded-xl flex items-center justify-center"><span class="material-symbols-outlined text-tertiary">payments</span></div>
                             <span class="text-[10px] font-black text-on-tertiary-fixed-variant px-2 py-1 bg-tertiary-fixed rounded-md uppercase">Optimal</span>
@@ -246,7 +246,7 @@
                 </div>
 
                 <!-- Team Management View (Hidden by default) -->
-                <div id="section-team" class="hidden flex-1 grid grid-cols-1 lg:grid-cols-2 gap-8 min-h-0 pb-2">
+                <div id="section-team" class="hidden grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-10 pb-10">
                     <!-- Whitelist Management -->
                     <div class="bg-white rounded-[2.5rem] no-line-card flex flex-col min-h-0">
                         <div class="p-8 border-b border-black/[0.03] flex justify-between items-center shrink-0">
@@ -262,7 +262,7 @@
                     </div>
 
                     <!-- Active Sessions -->
-                    <div id="active-sessions-panel" class="bg-surface-container-low/30 rounded-[2.5rem] p-10 flex flex-col items-center text-center">
+                    <div id="active-sessions-panel" class="bg-surface-container-low/30 rounded-[2.5rem] p-6 lg:p-10 flex flex-col items-center text-center">
                         <div class="w-20 h-20 bg-primary/5 rounded-full flex items-center justify-center mb-6 relative">
                             <span class="material-symbols-outlined text-primary text-4xl">verified_user</span>
                             <div class="absolute -top-1 -right-1 w-6 h-6 bg-primary text-white text-[10px] font-black flex items-center justify-center rounded-full border-4 border-white" id="active-user-count">1</div>
@@ -276,17 +276,6 @@
                     </div>
                 </div>
             </main>
-        </div>
-
-        <!-- Mobile Nav/FAB (Responsive layers) -->
-        <nav class="lg:hidden fixed bottom-0 left-0 w-full flex justify-around items-center px-4 pb-6 pt-3 glass z-50 rounded-t-[2rem] shadow-[0_-4px_25px_rgba(0,0,0,0.05)]">
-            <a href="#" class="mobile-nav-item active"><span class="material-symbols-outlined filled">inventory_2</span><span class="text-[10px] font-black mt-1 uppercase tracking-widest">Stock</span></a>
-            <a href="#" class="mobile-nav-item text-on-surface-variant/40"><span class="material-symbols-outlined">qr_code_scanner</span><span class="text-[10px] font-black mt-1">Scanner</span></a>
-            <a href="#" class="mobile-nav-item text-on-surface-variant/40"><span class="material-symbols-outlined">query_stats</span><span class="text-[10px] font-black mt-1">Status</span></a>
-            <a href="#" class="mobile-nav-item text-on-surface-variant/40"><span class="material-symbols-outlined">settings</span><span class="text-[10px] font-black mt-1">Profile</span></a>
-        </nav>
-        <div class="lg:hidden fixed bottom-28 right-6 z-40">
-            <button id="add-item-btn-mobile" class="w-16 h-16 bg-primary text-white rounded-full shadow-2xl flex items-center justify-center active:scale-90 transition-all"><span class="material-symbols-outlined text-3xl font-black">add</span></button>
         </div>
     </div>
 
