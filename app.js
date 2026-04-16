@@ -17,6 +17,8 @@ let presenceChannel;
 let onlineUsers = {}; 
 
 const DOMAIN = "@atelier.app"; // Internal domain proxy
+const CONFIG_URL = "https://dxtnryxplefvtcpdsnuq.supabase.co";
+const CONFIG_KEY = "sb_publishable_4OUEZ3TcBegF2JtqoldIzA_qo7sNkNm";
 
 // --- Initialization ---
 
@@ -27,14 +29,8 @@ window.onload = () => {
 };
 
 function checkSetup() {
-    const url = localStorage.getItem('ATELIER_SUPABASE_URL');
-    const key = localStorage.getItem('ATELIER_SUPABASE_KEY');
-
-    if (!url || !key) {
-        document.getElementById('setup-overlay').classList.remove('hidden');
-    } else {
-        initSupabase(url, key);
-    }
+    // Automatically use hardcoded config
+    initSupabase(CONFIG_URL, CONFIG_KEY);
 }
 
 async function initSupabase(url, key) {
