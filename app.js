@@ -646,6 +646,9 @@ function setupEventListeners() {
 
     const logoutBtn = document.getElementById('logout-btn-desktop');
     if (logoutBtn) logoutBtn.onclick = async () => { await supabaseClient.auth.signOut(); location.reload(); };
+
+    const logoutBtnMob = document.getElementById('logout-btn-mobile');
+    if (logoutBtnMob) logoutBtnMob.onclick = async () => { await supabaseClient.auth.signOut(); location.reload(); };
     
     const refreshBtn = document.getElementById('refresh-btn');
     if (refreshBtn) refreshBtn.onclick = fetchProducts;

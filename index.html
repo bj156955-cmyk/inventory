@@ -109,9 +109,9 @@
         <div class="flex-1 lg:ml-72 flex flex-col h-screen overflow-hidden">
             
             <!-- Premium TopBar -->
-            <header class="w-full sticky top-0 z-50 glass flex justify-between items-center h-20 px-10 border-b border-black/[0.03]">
+            <header class="w-full sticky top-0 z-50 glass flex justify-between items-center h-16 lg:h-20 px-4 lg:px-10 border-b border-black/[0.03]">
                 <div class="flex items-center gap-6">
-                    <div class="relative w-80 lg:w-96">
+                    <div class="relative hidden md:block w-80 lg:w-96">
                         <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant/40">search</span>
                         <input type="text" id="search-input-desktop" placeholder="Search architectural items..." class="pl-12 pr-4 py-3 bg-white/50 border-none rounded-2xl text-sm w-full outline-none focus:ring-2 focus:ring-primary/5 transition-all" autocomplete="off">
                         
@@ -124,27 +124,26 @@
                         </div>
                     </div>
                 </div>
-                <div class="flex items-center gap-8">
+                <div class="flex items-center gap-2 lg:gap-8">
                     <div class="flex items-center gap-1">
                         <button class="icon-btn-sm"><span class="material-symbols-outlined">notifications</span></button>
-                        <button class="icon-btn-sm"><span class="material-symbols-outlined">settings</span></button>
                     </div>
-                    <div class="flex items-center gap-4 pl-8 border-l border-black/5">
-                        <div class="text-right"><p class="text-sm font-black font-headline text-primary-container leading-none" id="user-display-name-desktop">Warehouse Admin</p><p class="text-[10px] text-on-surface-variant font-bold uppercase tracking-widest mt-1">Warehouse 01</p></div>
-                        <div class="w-11 h-11 rounded-2xl bg-primary/5 flex items-center justify-center border border-black/5 shadow-sm"><span class="material-symbols-outlined text-primary text-xl">person</span></div>
+                    <div class="flex items-center gap-4 pl-4 lg:pl-8 border-l border-black/5">
+                        <div class="text-right hidden sm:block"><p class="text-sm font-black font-headline text-primary-container leading-none" id="user-display-name-desktop">Warehouse Admin</p><p class="text-[10px] text-on-surface-variant font-bold uppercase tracking-widest mt-1">Warehouse 01</p></div>
+                        <div class="w-9 h-9 lg:w-11 lg:h-11 rounded-xl lg:rounded-2xl bg-primary/5 flex items-center justify-center border border-black/5 shadow-sm"><span class="material-symbols-outlined text-primary text-lg lg:text-xl">person</span></div>
                     </div>
                 </div>
             </header>
 
             <!-- Dashboard Content -->
-            <main class="flex-1 p-10 space-y-10 flex flex-col min-h-0 overflow-hidden">
+            <main class="flex-1 p-4 lg:p-10 space-y-6 lg:space-y-10 flex flex-col min-h-0 overflow-hidden">
                 <!-- Dashboard Header (Dynamic) -->
                 <div class="flex justify-between items-end shrink-0">
                     <div>
-                        <h2 id="view-title" class="text-4xl font-black font-headline text-primary-container tracking-tighter">Main Atelier Dashboard</h2>
-                        <p id="view-subtitle" class="text-on-surface-variant font-medium mt-1">Real-time oversight of architectural stock movements.</p>
+                        <h2 id="view-title" class="text-2xl lg:text-4xl font-black font-headline text-primary-container tracking-tighter">Main Atelier Dashboard</h2>
+                        <p id="view-subtitle" class="text-[10px] lg:text-sm text-on-surface-variant font-medium mt-1">Real-time oversight of architectural stock movements.</p>
                     </div>
-                    <div class="flex gap-4">
+                    <div class="hidden sm:flex gap-4">
                         <button class="secondary-btn"><span class="material-symbols-outlined text-lg">download</span>Export Report</button>
                         <button class="primary-btn"><span class="material-symbols-outlined text-lg">add</span>Manual Adjust</button>
                     </div>
@@ -353,6 +352,32 @@
             </form>
         </div>
     </div>
+
+    <!-- Mobile Navigation & Actions -->
+    <div class="lg:hidden fixed bottom-8 right-6 z-[200]">
+        <button id="add-item-btn-mobile" class="w-14 h-14 bg-primary text-white rounded-full flex items-center justify-center shadow-[0_8px_25px_rgba(0,32,69,0.4)] active:scale-90 transition-all">
+            <span class="material-symbols-outlined text-2xl">add</span>
+        </button>
+    </div>
+
+    <nav class="lg:hidden fixed bottom-0 left-0 w-full bg-white/95 backdrop-blur-2xl border-t border-black/[0.03] px-6 py-3 flex justify-between items-center z-[150] shadow-[0_-4px_20px_rgba(0,0,0,0.03)]">
+        <a href="#" class="mobile-nav-item nav-item active" data-view="dashboard">
+            <span class="material-symbols-outlined filled">dashboard</span>
+            <span class="text-[9px] font-black uppercase tracking-widest mt-1">Dash</span>
+        </a>
+        <a href="#" class="mobile-nav-item nav-item" data-view="inventory">
+            <span class="material-symbols-outlined">inventory_2</span>
+            <span class="text-[9px] font-black uppercase tracking-widest mt-1">Stock</span>
+        </a>
+        <a href="#" class="mobile-nav-item nav-item" data-view="team">
+            <span class="material-symbols-outlined">group</span>
+            <span class="text-[9px] font-black uppercase tracking-widest mt-1">Team</span>
+        </a>
+        <a href="#" id="logout-btn-mobile" class="mobile-nav-item">
+            <span class="material-symbols-outlined">logout</span>
+            <span class="text-[9px] font-black uppercase tracking-widest mt-1">Exit</span>
+        </a>
+    </nav>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="app.js"></script>
