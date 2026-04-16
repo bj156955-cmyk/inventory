@@ -375,23 +375,24 @@ function renderInventory() {
         const card = document.createElement('div');
         card.className = "mobile-inventory-card";
         card.innerHTML = `
-            <div class="thumbnail-box">
-                <span class="material-symbols-outlined text-white/40 text-3xl">${p.category === 'Timber' ? 'forest' : (p.category === 'Metal' ? 'architecture' : 'package_2')}</span>
-            </div>
             <div class="flex-1 min-w-0" onclick="editItem('${p.id}')">
                 <p class="font-black text-sm text-primary-container tracking-tight truncate">${p.name}</p>
-                <p class="text-[9px] font-black text-on-surface-variant/40 uppercase tracking-widest mt-0.5">SKU: ${p.sku || 'NONE'}</p>
+                <div class="flex items-center gap-2 mt-1">
+                    <span class="text-[9px] font-black text-on-surface-variant/40 uppercase tracking-widest">SKU: ${p.sku || 'NONE'}</span>
+                    <span class="w-1 h-1 rounded-full bg-black/5"></span>
+                    <span class="text-[9px] font-black text-on-surface-variant/40 uppercase tracking-widest">${p.category || 'N/A'}</span>
+                </div>
                 
                 <div class="flex items-center gap-2 mt-3">
                     <div class="flex-1 bg-surface-container-low h-1 rounded-full overflow-hidden">
                         <div class="h-full ${status === 'OUT' ? 'bg-error' : (status === 'LOW' ? 'bg-red-400' : 'bg-primary')}" style="width: ${Math.min(ratioPercent, 100)}%"></div>
                     </div>
-                    <span class="text-[9px] font-black text-on-surface-variant/40">${ratioPercent}%</span>
                 </div>
             </div>
-            <div class="text-right flex flex-col items-end gap-2">
-                <p class="text-[10px] font-black ${status === 'OUT' ? 'text-error' : (status === 'LOW' ? 'text-red-500' : 'text-primary-container')} uppercase">${stock} LEFT</p>
-                ${status === 'LOW' || status === 'OUT' ? `<span class="px-3 py-1 bg-red-50 text-red-600 text-[8px] font-black rounded-lg border border-red-100 uppercase tracking-tighter">Order</span>` : ''}
+            <div class="text-right flex flex-col items-end gap-1">
+                <p class="text-[10px] font-black ${status === 'OUT' ? 'text-error' : (status === 'LOW' ? 'text-red-500' : 'text-primary-container')} uppercase">${stock} / ${target}</p>
+                <p class="text-[9px] font-black text-on-surface-variant/20 uppercase">${ratioPercent}%</p>
+                ${status === 'LOW' || status === 'OUT' ? `<span class="mt-1 px-2 py-0.5 bg-red-50 text-red-600 text-[8px] font-black rounded-md border border-red-100 uppercase tracking-tighter">Low stock</span>` : ''}
             </div>
         `;
         mobileList.appendChild(card);
