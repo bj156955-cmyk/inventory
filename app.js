@@ -649,6 +649,9 @@ function setupEventListeners() {
     
     const addItemBtnMob = document.getElementById('add-item-btn-mobile');
     if (addItemBtnMob) addItemBtnMob.onclick = openAddModal;
+
+    const addItemBtnHeader = document.getElementById('add-item-btn-header');
+    if (addItemBtnHeader) addItemBtnHeader.onclick = openAddModal;
     
     const closeModalBtn = document.getElementById('close-modal');
     if (closeModalBtn) closeModalBtn.onclick = closeModal;
