@@ -223,7 +223,7 @@
             <header class="w-full sticky top-0 z-50 glass flex items-center justify-between h-16 px-6 border-b border-black/[0.02]">
                 <div class="flex items-center gap-3">
                     <div class="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-white shadow-sm"><span class="material-symbols-outlined text-sm filled">inventory_2</span></div>
-                    <h1 class="text-lg font-black font-headline text-primary tracking-tight">Atelier</h1>
+                    <h1 class="text-lg font-black font-headline text-primary tracking-tight">Atelier Inventory</h1>
                 </div>
                 <button id="add-item-btn-mobile-header" class="w-9 h-9 rounded-xl bg-primary text-white flex items-center justify-center shadow-lg active:scale-95 transition-all"><span class="material-symbols-outlined text-sm">add</span></button>
             </header>
@@ -233,11 +233,35 @@
                     <h2 id="view-title-mobile" class="text-2xl font-black font-headline text-primary-container tracking-tighter">Main Dashboard</h2>
                 </div>
 
-                <div id="section-stats-mobile" class="grid grid-cols-2 gap-3">
-                    <div id="filter-total-mobile" class="bg-white p-5 rounded-[1.5rem] shadow-sm"><div class="stat-label">Total</div><h3 id="total-items-mobile" class="text-xl font-black text-primary-container tabular-nums">0</h3></div>
-                    <div class="bg-white p-5 rounded-[1.5rem] shadow-sm"><div class="stat-label">Value</div><h3 id="total-value-mobile" class="text-xl font-black text-primary-container tabular-nums">₩0</h3></div>
-                    <div id="filter-low-mobile" class="bg-red-50 p-5 rounded-[1.5rem] border border-red-100"><div class="stat-label text-red-600">Low</div><h3 id="low-stock-mobile" class="text-xl font-black text-red-600 tabular-nums">0</h3></div>
-                    <div id="filter-out-mobile" class="bg-surface-container-high p-5 rounded-[1.5rem]"><div class="stat-label">Out</div><h3 id="out-of-stock-mobile" class="text-xl font-black text-on-surface-variant tabular-nums">0</h3></div>
+                <div id="section-stats-mobile" class="grid grid-cols-2 gap-4">
+                    <div id="filter-total-mobile" class="bg-white p-5 rounded-[2rem] shadow-sm cursor-pointer active:scale-95 transition-all">
+                        <div class="flex justify-between items-start mb-4">
+                            <div class="stat-label">Total Items</div>
+                            <span class="material-symbols-outlined text-primary/20 text-lg">inventory_2</span>
+                        </div>
+                        <h3 id="total-items-mobile" class="text-2xl font-black text-primary-container tabular-nums">0</h3>
+                    </div>
+                    <div class="bg-white p-5 rounded-[2rem] shadow-sm">
+                        <div class="flex justify-between items-start mb-4">
+                            <div class="stat-label">Total Value</div>
+                            <span class="material-symbols-outlined text-primary/20 text-lg">payments</span>
+                        </div>
+                        <h3 id="total-value-mobile" class="text-xl font-black text-primary-container tabular-nums">₩0</h3>
+                    </div>
+                    <div id="filter-low-mobile" class="bg-red-50 p-5 rounded-[2rem] border border-red-100/50 cursor-pointer active:scale-95 transition-all">
+                        <div class="flex justify-between items-start mb-4">
+                            <div class="stat-label text-red-600/60">Low Stock</div>
+                            <span class="material-symbols-outlined text-red-600/40 text-lg">warning</span>
+                        </div>
+                        <h3 id="low-stock-mobile" class="text-2xl font-black text-red-600 tabular-nums">0</h3>
+                    </div>
+                    <div id="filter-out-mobile" class="bg-surface-container-low p-5 rounded-[2rem] shadow-sm cursor-pointer active:scale-95 transition-all">
+                        <div class="flex justify-between items-start mb-4">
+                            <div class="stat-label text-on-surface-variant/40">Out of Stock</div>
+                            <span class="material-symbols-outlined text-on-surface-variant/20 text-lg">block</span>
+                        </div>
+                        <h3 id="out-of-stock-mobile" class="text-2xl font-black text-on-surface-variant tabular-nums">0</h3>
+                    </div>
                 </div>
 
                 <div id="section-inventory-mobile" class="space-y-4">

@@ -382,22 +382,26 @@ function renderInventory() {
 
         // Mobile Card
         const card = document.createElement('div');
-        card.className = "mobile-inventory-card";
+        card.className = "mobile-inventory-card shadow-sm border border-black/[0.02]";
         card.innerHTML = `
             <div class="flex-1 min-w-0" onclick="editItem('${p.id}')">
                 <p class="font-black text-sm text-primary-container tracking-tight truncate">${p.name}</p>
                 <div class="flex items-center gap-2 mt-1">
-                    <span class="text-[9px] font-black text-on-surface-variant/40 uppercase tracking-widest">${p.sku || 'N/A'}</span>
+                    <span class="text-[9px] font-black text-on-surface-variant/40 uppercase tracking-widest">SKU: ${p.sku || 'NONE'}</span>
                     <span class="w-1 h-1 rounded-full bg-black/5"></span>
-                    <span class="text-[9px] font-black text-on-surface-variant/40 uppercase tracking-widest">${p.category || 'GEN'}</span>
+                    <span class="text-[9px] font-black text-on-surface-variant/40 uppercase tracking-widest">${p.category || 'N/A'}</span>
                 </div>
-                <div class="w-full bg-surface-container-low h-1 rounded-full overflow-hidden mt-3">
-                    <div class="h-full ${status === 'OUT' ? 'bg-error' : (status === 'LOW' ? 'bg-red-400' : 'bg-primary')}" style="width: ${Math.min(ratioPercent, 100)}%"></div>
+                
+                <div class="flex items-center gap-2 mt-3">
+                    <div class="flex-1 bg-surface-container-low h-1 rounded-full overflow-hidden">
+                        <div class="h-full ${status === 'OUT' ? 'bg-error' : (status === 'LOW' ? 'bg-red-400' : 'bg-primary')}" style="width: ${Math.min(ratioPercent, 100)}%"></div>
+                    </div>
                 </div>
             </div>
-            <div class="text-right">
-                <p class="text-[10px] font-black ${status === 'OUT' ? 'text-error' : (status === 'LOW' ? 'text-red-500' : 'text-primary-container')}">${stock}/${target}</p>
-                <p class="text-[8px] font-bold text-on-surface-variant/20">${ratioPercent}%</p>
+            <div class="text-right flex flex-col items-end gap-1">
+                <p class="text-[10px] font-black ${status === 'OUT' ? 'text-error' : (status === 'LOW' ? 'text-red-500' : 'text-primary-container')} uppercase">${stock} / ${target}</p>
+                <p class="text-[9px] font-black text-on-surface-variant/20 uppercase">${ratioPercent}%</p>
+                ${status === 'LOW' || status === 'OUT' ? `<span class="mt-1 px-2 py-0.5 bg-red-50 text-red-600 text-[8px] font-black rounded-md border border-red-100 uppercase tracking-tighter">Low stock</span>` : ''}
             </div>
         `;
         mobileList.appendChild(card);
