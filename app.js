@@ -669,41 +669,76 @@ function setupEventListeners() {
         item.onclick = (e) => {
             e.preventDefault();
             const view = item.getAttribute('data-view');
-            document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
-            item.classList.add('active');
-
-            const stats = document.getElementById('section-stats');
-            const inventory = document.getElementById('section-inventory');
-            const activity = document.getElementById('section-activity');
-            const team = document.getElementById('section-team');
-            const title = document.getElementById('view-title');
-            const subtitle = document.getElementById('view-subtitle');
-
-            if (view === 'inventory') {
-                if (stats) stats.classList.add('hidden');
-                if (activity) activity.classList.add('hidden');
-                if (team) team.classList.add('hidden');
-                if (inventory) inventory.classList.remove('hidden');
-                title.textContent = "Full Inventory Management";
-                subtitle.textContent = "Complete list of architectural assets across all zones.";
-            } else if (view === 'team') {
-                if (stats) stats.classList.add('hidden');
-                if (activity) activity.classList.add('hidden');
-                if (inventory) inventory.classList.add('hidden');
-                if (team) team.classList.remove('hidden');
-                title.textContent = "Team Access Management";
-                subtitle.textContent = "Manage whitelisted IDs and active warehouse members.";
-            } else if (view === 'dashboard') {
-                if (stats) stats.classList.remove('hidden');
-                if (activity) activity.classList.remove('hidden');
-                if (inventory) inventory.classList.remove('hidden');
-                if (team) team.classList.add('hidden');
-                title.textContent = "Main Atelier Dashboard";
-                subtitle.textContent = "Real-time oversight of architectural stock movements.";
-            }
+            switchView(view);
         };
     });
 
+    // Dashboard Stat Filters
+    const fTotal = document.getElementById('filter-total');
+    const fLow = document.getElementById('filter-low');
+    const fOut = document.getElementById('filter-out');
+
+    if (fTotal) {
+        fTotal.onclick = () => {
+            currentStatusFilter = 'all';
+            switchView('inventory');
+            renderInventory();
+        };
+    }
+    if (fLow) {
+        fLow.onclick = () => {
+            currentStatusFilter = 'low';
+            switchView('inventory');
+            renderInventory();
+        };
+    }
+    if (fOut) {
+        fOut.onclick = () => {
+            currentStatusFilter = 'out';
+            switchView('inventory');
+            renderInventory();
+        };
+    }
+}
+
+function switchView(view) {
+    const items = document.querySelectorAll('.nav-item');
+    items.forEach(i => {
+        if (i.getAttribute('data-view') === view) i.classList.add('active');
+        else i.classList.remove('active');
+    });
+
+    const stats = document.getElementById('section-stats');
+    const inventory = document.getElementById('section-inventory');
+    const activity = document.getElementById('section-activity');
+    const team = document.getElementById('section-team');
+    const title = document.getElementById('view-title');
+    const subtitle = document.getElementById('view-subtitle');
+
+    if (!title || !subtitle) return;
+
+    if (view === 'inventory') {
+        if (stats) stats.classList.add('hidden');
+        if (activity) activity.classList.add('hidden');
+        if (team) team.classList.add('hidden');
+        if (inventory) inventory.classList.remove('hidden');
+        title.textContent = "Full Inventory Management";
+        subtitle.textContent = "Complete list of architectural assets across all zones.";
+    } else if (view === 'team') {
+        if (stats) stats.classList.add('hidden');
+        if (activity) activity.classList.add('hidden');
+        if (inventory) inventory.classList.add('hidden');
+        if (team) team.classList.remove('hidden');
+        title.textContent = "Team Access Management";
+        subtitle.textContent = "Manage whitelisted IDs and active warehouse members.";
+    } else if (view === 'dashboard') {
+        if (stats) stats.classList.remove('hidden');
+        if (activity) activity.classList.remove('hidden');
+        if (inventory) inventory.classList.remove('hidden');
+        if (team) team.classList.add('hidden');
+        title.textContent = "Main Atelier Dashboard";
+        subtitle.textContent = "Real-time oversight of architectural stock movements.";
+    }
 }
 
 function openAddModal() {
