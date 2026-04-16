@@ -41,6 +41,7 @@
     <style>
         .glass { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
         .no-line-card { border: 1px solid rgba(0,0,0,0.02); box-shadow: 0 4px 20px -4px rgba(26,54,93,0.04); }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
     </style>
 </head>
 <body class="bg-surface font-sans text-on-surface antialiased overflow-x-hidden">
@@ -84,191 +85,181 @@
     </div>
 
     <!-- Main App Container -->
-    <div id="app-container" class="opacity-0 transition-opacity duration-1000 pointer-events-none min-h-screen bg-surface flex">
+    <div id="app-container" class="opacity-0 transition-opacity duration-1000 pointer-events-none min-h-screen bg-surface">
         
-        <!-- Premium Sidebar -->
-        <aside class="hidden lg:flex h-screen w-72 bg-surface-container-low flex-col p-8 space-y-2 border-r border-black/[0.03] z-[100] fixed">
-            <div class="mb-12 px-2 flex items-center gap-4">
-                <div class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center shadow-lg"><span class="material-symbols-outlined text-white text-xl">inventory_2</span></div>
-                <h1 class="text-xl font-black text-primary-container font-headline tracking-tighter">Atelier Inventory</h1>
-            </div>
-            <nav class="flex-1 space-y-2">
-                <a href="#" class="nav-item active" data-view="dashboard"><span class="material-symbols-outlined filled">dashboard</span><span>Dashboard</span></a>
-                <a href="#" class="nav-item" data-view="inventory"><span class="material-symbols-outlined">inventory_2</span><span>Full Inventory</span></a>
-                <a href="#" class="nav-item" data-view="movements"><span class="material-symbols-outlined">swap_horiz</span><span>Movements</span></a>
-                <a href="#" class="nav-item" id="nav-team" data-view="team"><span class="material-symbols-outlined">group</span><span>Team Access</span></a>
-                <a href="#" class="nav-item" data-view="reports"><span class="material-symbols-outlined">analytics</span><span>Reports</span></a>
-            </nav>
-            <div class="pt-6 border-t border-black/[0.05] space-y-4">
-                <button id="add-item-btn-desktop" class="w-full bg-primary text-white py-4 rounded-2xl font-headline font-black text-sm shadow-lg hover:shadow-2xl transition-all active:scale-95">Create New Entry</button>
-                <div id="logout-btn-desktop" class="flex items-center gap-3 px-4 py-2 text-on-surface-variant font-bold text-xs uppercase tracking-widest cursor-pointer hover:text-primary transition-colors"><span class="material-symbols-outlined text-lg">logout</span><span>Sign Out</span></div>
-            </div>
-        </aside>
-
-        <!-- Main Content Wrapper -->
-        <div class="flex-1 lg:ml-72 flex flex-col min-h-screen lg:h-screen lg:overflow-hidden">
-            
-            <!-- Native Mobile Header & Branding -->
-            <header class="w-full sticky top-0 z-50 glass flex items-center justify-between h-16 lg:h-20 px-6 lg:px-10 border-b border-black/[0.02]">
-                <div class="flex items-center gap-3">
-                    <div class="lg:hidden w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-white"><span class="material-symbols-outlined text-sm filled">inventory_2</span></div>
-                    <h1 class="text-lg lg:text-xl font-black font-headline text-primary tracking-tight">Atelier Inventory</h1>
+        <!-- PC VIEWPORT -->
+        <div id="pc-wrapper" class="hidden lg:flex h-screen overflow-hidden">
+            <!-- Sidebar -->
+            <aside class="h-full w-72 bg-surface-container-low flex flex-col p-8 space-y-2 border-r border-black/[0.03] shrink-0">
+                <div class="mb-12 px-2 flex items-center gap-4">
+                    <div class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center shadow-lg"><span class="material-symbols-outlined text-white text-xl">inventory_2</span></div>
+                    <h1 class="text-xl font-black text-primary-container font-headline tracking-tighter">Atelier Inventory</h1>
                 </div>
-                
-                <div class="flex items-center gap-4">
-                    <div class="relative hidden lg:block w-80 lg:w-96">
-                        <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant/40">search</span>
-                        <input type="text" id="search-input-desktop" placeholder="Search architectural items..." class="pl-12 pr-4 py-3 bg-white/50 border-none rounded-2xl text-sm w-full outline-none focus:ring-2 focus:ring-primary/5 transition-all" autocomplete="off">
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <button id="add-item-btn-header" class="w-9 h-9 rounded-xl bg-primary text-white flex items-center justify-center shadow-sm active:scale-95 transition-all"><span class="material-symbols-outlined text-sm">add</span></button>
-                        <button class="icon-btn-sm lg:flex hidden"><span class="material-symbols-outlined">notifications</span></button>
-                        <div class="w-9 h-9 lg:w-11 lg:h-11 rounded-xl bg-primary/5 flex items-center justify-center border border-black/5 shadow-sm ml-1 overflow-hidden">
-                            <span class="material-symbols-outlined text-primary text-xl">person</span>
+                <nav class="flex-1 space-y-2">
+                    <a href="#" class="nav-item active" data-view="dashboard"><span class="material-symbols-outlined filled">dashboard</span><span>Dashboard</span></a>
+                    <a href="#" class="nav-item" data-view="inventory"><span class="material-symbols-outlined">inventory_2</span><span>Full Inventory</span></a>
+                    <a href="#" class="nav-item" id="nav-team-pc" data-view="team"><span class="material-symbols-outlined">group</span><span>Team Access</span></a>
+                    <a href="#" class="nav-item" data-view="reports"><span class="material-symbols-outlined">analytics</span><span>Reports</span></a>
+                </nav>
+                <div class="pt-6 border-t border-black/[0.05] space-y-4">
+                    <button id="add-item-btn-desktop" class="w-full bg-primary text-white py-4 rounded-2xl font-headline font-black text-sm shadow-lg hover:shadow-2xl transition-all active:scale-95">Create New Entry</button>
+                    <div id="logout-btn-desktop" class="flex items-center gap-3 px-4 py-2 text-on-surface-variant font-bold text-xs uppercase tracking-widest cursor-pointer hover:text-primary transition-colors"><span class="material-symbols-outlined text-lg">logout</span><span>Sign Out</span></div>
+                </div>
+            </aside>
+
+            <!-- PC Main Area -->
+            <div class="flex-1 flex flex-col h-full overflow-hidden">
+                <header class="w-full glass flex items-center justify-between h-20 px-10 border-b border-black/[0.02]">
+                    <h1 class="text-xl font-black font-headline text-primary tracking-tight">Atelier Inventory</h1>
+                    <div class="flex items-center gap-4">
+                        <div class="relative w-96">
+                            <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant/40">search</span>
+                            <input type="text" id="search-input-desktop" placeholder="Search architectural items..." class="pl-12 pr-4 py-3 bg-white/50 border-none rounded-2xl text-sm w-full outline-none focus:ring-2 focus:ring-primary/5 transition-all" autocomplete="off">
+                            <!-- Search Dropdown (PC) -->
+                            <div id="search-results-dropdown" class="absolute top-full left-0 w-full bg-white mt-2 rounded-3xl shadow-2xl border border-black/5 p-4 z-[200] hidden">
+                                <div id="search-results-list" class="space-y-1"></div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button id="add-item-btn-header" class="w-9 h-9 rounded-xl bg-primary text-white flex items-center justify-center shadow-sm active:scale-95 transition-all"><span class="material-symbols-outlined text-sm">add</span></button>
+                            <button class="icon-btn-sm flex"><span class="material-symbols-outlined">notifications</span></button>
+                            <div class="w-11 h-11 rounded-xl bg-primary/5 flex items-center justify-center border border-black/5 shadow-sm ml-1 overflow-hidden">
+                                <span class="material-symbols-outlined text-primary text-xl">person</span>
+                            </div>
                         </div>
                     </div>
+                </header>
+
+                <main class="flex-1 p-10 space-y-10 flex flex-col overflow-y-auto custom-scrollbar">
+                    <div class="flex justify-between items-end shrink-0">
+                        <div>
+                            <h2 id="view-title-pc" class="text-4xl font-black font-headline text-primary-container tracking-tighter">Main Atelier Dashboard</h2>
+                            <p id="view-subtitle-pc" class="text-sm text-on-surface-variant font-medium mt-1">Real-time oversight of architectural stock movements.</p>
+                        </div>
+                    </div>
+
+                    <div id="section-stats-pc" class="grid grid-cols-4 gap-6 shrink-0">
+                        <div id="filter-total-pc" class="bg-white p-7 rounded-[2rem] shadow-md cursor-pointer active:scale-95 transition-all">
+                            <div class="flex justify-between items-start mb-6">
+                                <div class="stat-label">Total Items</div>
+                                <span class="material-symbols-outlined text-primary/20 text-lg">inventory_2</span>
+                            </div>
+                            <h3 id="total-items-pc" class="text-3xl font-black text-primary-container tabular-nums">0</h3>
+                        </div>
+                        <div class="bg-white p-7 rounded-[2rem] shadow-md">
+                            <div class="flex justify-between items-start mb-6">
+                                <div class="stat-label">Total Value</div>
+                                <span class="material-symbols-outlined text-primary/20 text-lg">payments</span>
+                            </div>
+                            <h3 id="total-value-pc" class="stat-value text-2xl font-black text-primary-container tabular-nums">₩0</h3>
+                        </div>
+                        <div id="filter-low-pc" class="bg-red-50 p-7 rounded-[2rem] shadow-sm border border-red-100/50 cursor-pointer active:scale-95 transition-all">
+                            <div class="flex justify-between items-start mb-6">
+                                <div class="stat-label text-red-600/60">Low Stock</div>
+                                <span class="material-symbols-outlined text-red-600/40 text-lg">warning</span>
+                            </div>
+                            <h3 id="low-stock-pc" class="text-3xl font-black text-red-600 tabular-nums">0</h3>
+                        </div>
+                        <div id="filter-out-pc" class="bg-surface-container-low p-7 rounded-[2rem] shadow-sm cursor-pointer active:scale-95 transition-all">
+                            <div class="flex justify-between items-start mb-6">
+                                <div class="stat-label text-on-surface-variant/40">Out of Stock</div>
+                                <span class="material-symbols-outlined text-on-surface-variant/20 text-lg">block</span>
+                            </div>
+                            <h3 id="out-of-stock-pc" class="text-3xl font-black text-on-surface-variant tabular-nums">0</h3>
+                        </div>
+                    </div>
+
+                    <div id="pc-main-layout" class="grid grid-cols-4 gap-8 pb-2">
+                        <div id="section-inventory-pc" class="col-span-3 bg-white rounded-[2.5rem] no-line-card flex flex-col">
+                            <div class="px-8 py-6 border-b border-black/[0.03] flex justify-between items-center shrink-0">
+                                <div><h4 class="text-2xl font-black font-headline text-primary-container tracking-tight">Atelier Inventory List</h4></div>
+                                <button id="refresh-btn-pc" class="w-9 h-9 rounded-xl bg-surface-container-low flex items-center justify-center text-on-surface-variant/40 hover:text-primary transition-all"><span class="material-symbols-outlined text-sm">refresh</span></button>
+                            </div>
+                            <div id="category-chips-pc" class="px-8 py-4 flex flex-wrap gap-2 bg-surface-container-low/20 border-b border-black/[0.02] shrink-0"></div>
+                            <div class="flex-1 overflow-x-auto custom-scrollbar">
+                                <table class="w-full text-left">
+                                    <thead class="bg-surface-container-low/50 sticky top-0 z-10"><tr>
+                                        <th class="px-8 py-5 text-[10px] font-black text-on-surface-variant uppercase tracking-[0.2em]">Item Details</th>
+                                        <th class="px-8 py-5 text-[10px] font-black text-on-surface-variant uppercase tracking-[0.2em]">SKU</th>
+                                        <th class="px-8 py-5 text-[10px] font-black text-on-surface-variant uppercase tracking-[0.2em]">Category</th>
+                                        <th class="px-8 py-5 text-[10px] font-black text-on-surface-variant uppercase tracking-[0.2em] text-center">Stock</th>
+                                        <th class="px-8 py-5 text-[10px] font-black text-on-surface-variant uppercase tracking-[0.2em] text-right">Edit</th>
+                                    </tr></thead>
+                                    <tbody id="inventory-body-pc" class="divide-y divide-black/[0.02]"></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div id="section-activity-pc" class="col-span-1 flex flex-col">
+                            <div class="bg-surface-container-lowest p-8 rounded-[2.5rem] no-line-card flex flex-col h-full">
+                                <div class="flex justify-between items-center mb-8">
+                                    <h4 class="text-xl font-black font-headline text-primary-container">Activity Log</h4>
+                                    <button id="add-activity-btn-pc" class="w-8 h-8 rounded-full bg-primary/5 flex items-center justify-center hover:bg-primary transition-all"><span class="material-symbols-outlined text-sm">add</span></button>
+                                </div>
+                                <div id="activity-log-pc" class="flex-1 overflow-y-auto space-y-8 custom-scrollbar pr-2"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="section-team-pc" class="hidden grid grid-cols-2 gap-10">
+                        <div class="bg-white rounded-[2.5rem] no-line-card p-8 min-h-[400px]">
+                            <div class="flex justify-between items-center mb-8">
+                                <h4 class="text-2xl font-black text-primary-container">Access Whitelist</h4>
+                                <button id="add-whitelist-btn-pc" class="w-10 h-10 rounded-2xl bg-primary text-white flex items-center justify-center transition-all hover:shadow-xl"><span class="material-symbols-outlined">person_add</span></button>
+                            </div>
+                            <div id="whitelist-container-pc" class="space-y-4"></div>
+                        </div>
+                        <div class="bg-surface-container-low p-8 rounded-[2.5rem] flex flex-col items-center">
+                            <h4 class="text-xl font-black text-primary-container mb-6">Online Members</h4>
+                            <div id="active-users-list-pc" class="w-full space-y-3"></div>
+                        </div>
+                    </div>
+                </main>
+            </div>
+        </div>
+
+        <!-- MOBILE VIEWPORT -->
+        <div id="mobile-wrapper" class="flex lg:hidden flex-col h-screen overflow-hidden">
+            <header class="w-full sticky top-0 z-50 glass flex items-center justify-between h-16 px-6 border-b border-black/[0.02]">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-white shadow-sm"><span class="material-symbols-outlined text-sm filled">inventory_2</span></div>
+                    <h1 class="text-lg font-black font-headline text-primary tracking-tight">Atelier</h1>
                 </div>
+                <button id="add-item-btn-mobile-header" class="w-9 h-9 rounded-xl bg-primary text-white flex items-center justify-center shadow-lg active:scale-95 transition-all"><span class="material-symbols-outlined text-sm">add</span></button>
             </header>
 
-            <!-- Dashboard Content -->
-            <main class="flex-1 p-4 lg:p-10 space-y-8 lg:space-y-10 flex flex-col lg:overflow-y-auto custom-scrollbar pb-32 lg:pb-10">
-                <!-- Dashboard Header (Dynamic) -->
-                <div class="flex justify-between items-end shrink-0">
-                    <div>
-                        <h2 id="view-title" class="text-2xl lg:text-4xl font-black font-headline text-primary-container tracking-tighter">Main Atelier Dashboard</h2>
-                        <p id="view-subtitle" class="text-[10px] lg:text-sm text-on-surface-variant font-medium mt-1">Real-time oversight of architectural stock movements.</p>
-                    </div>
-                    <div class="hidden sm:flex gap-4">
-                        <button class="secondary-btn"><span class="material-symbols-outlined text-lg">download</span>Export Report</button>
-                        <button class="primary-btn"><span class="material-symbols-outlined text-lg">add</span>Manual Adjust</button>
-                    </div>
+            <main class="flex-1 overflow-y-auto p-4 space-y-6 pb-32">
+                <div id="view-header-mobile">
+                    <h2 id="view-title-mobile" class="text-2xl font-black font-headline text-primary-container tracking-tighter">Main Dashboard</h2>
                 </div>
 
-                <!-- Bento Stats Grid (2x2 on Mobile, 1x4 on Desktop) -->
-                <div id="section-stats" class="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 shrink-0">
-                    <!-- 1. Total Items -->
-                    <div id="filter-total" class="bg-white p-5 lg:p-7 rounded-[2rem] shadow-sm lg:shadow-md cursor-pointer active:scale-95 transition-all">
-                        <div class="flex justify-between items-start mb-4 lg:mb-6">
-                            <div class="stat-label">Total Items</div>
-                            <span class="material-symbols-outlined text-primary/20 text-lg">inventory_2</span>
-                        </div>
-                        <h3 id="total-items" class="text-2xl lg:text-3xl font-black text-primary-container tabular-nums">0</h3>
-                    </div>
-
-                    <!-- 2. Value -->
-                    <div class="bg-white p-5 lg:p-7 rounded-[2rem] shadow-sm lg:shadow-md">
-                        <div class="flex justify-between items-start mb-4 lg:mb-6">
-                            <div class="stat-label">Total Value</div>
-                            <span class="material-symbols-outlined text-primary/20 text-lg">payments</span>
-                        </div>
-                        <h3 id="total-value" class="text-xl lg:text-2xl font-black text-primary-container tabular-nums">₩0</h3>
-                    </div>
-
-                    <!-- 3. Low Stock -->
-                    <div id="filter-low" class="bg-red-50 p-5 lg:p-7 rounded-[2rem] shadow-sm border border-red-100/50 cursor-pointer active:scale-95 transition-all">
-                        <div class="flex justify-between items-start mb-4 lg:mb-6">
-                            <div class="stat-label text-red-600/60">Low Stock</div>
-                            <span class="material-symbols-outlined text-red-600/40 text-lg">warning</span>
-                        </div>
-                        <h3 id="low-stock" class="text-2xl lg:text-3xl font-black text-red-600 tabular-nums">0</h3>
-                    </div>
-
-                    <!-- 4. Out of Stock -->
-                    <div id="filter-out" class="bg-surface-container-low p-5 lg:p-7 rounded-[2rem] shadow-sm cursor-pointer active:scale-95 transition-all">
-                        <div class="flex justify-between items-start mb-4 lg:mb-6">
-                            <div class="stat-label text-on-surface-variant/40">Out of Stock</div>
-                            <span class="material-symbols-outlined text-on-surface-variant/20 text-lg">block</span>
-                        </div>
-                        <h3 id="out-of-stock" class="text-2xl lg:text-3xl font-black text-on-surface-variant tabular-nums">0</h3>
-                    </div>
+                <div id="section-stats-mobile" class="grid grid-cols-2 gap-3">
+                    <div id="filter-total-mobile" class="bg-white p-5 rounded-[1.5rem] shadow-sm"><div class="stat-label">Total</div><h3 id="total-items-mobile" class="text-xl font-black text-primary-container tabular-nums">0</h3></div>
+                    <div class="bg-white p-5 rounded-[1.5rem] shadow-sm"><div class="stat-label">Value</div><h3 id="total-value-mobile" class="text-xl font-black text-primary-container tabular-nums">₩0</h3></div>
+                    <div id="filter-low-mobile" class="bg-red-50 p-5 rounded-[1.5rem] border border-red-100"><div class="stat-label text-red-600">Low</div><h3 id="low-stock-mobile" class="text-xl font-black text-red-600 tabular-nums">0</h3></div>
+                    <div id="filter-out-mobile" class="bg-surface-container-high p-5 rounded-[1.5rem]"><div class="stat-label">Out</div><h3 id="out-of-stock-mobile" class="text-xl font-black text-on-surface-variant tabular-nums">0</h3></div>
                 </div>
 
-                <!-- New 2-Column Main Layout: List (Large) + Activity (Sidebar) -->
-                <div class="grid grid-cols-1 lg:grid-cols-4 gap-8 pb-2">
-                    
-                    <!-- (Left) Real Inventory Table Section - BIG & MIDDLE (3/4 width) -->
-                    <div id="section-inventory" class="lg:col-span-3 bg-white rounded-[2.5rem] no-line-card flex flex-col">
-                        <div class="px-8 py-6 border-b border-black/[0.03] flex justify-between items-center shrink-0">
-                            <div>
-                                <h4 class="text-2xl font-black font-headline text-primary-container tracking-tight">Atelier Inventory List</h4>
-                                <p class="text-sm text-on-surface-variant font-medium">Active warehouse assets and material stock.</p>
-                            </div>
-                            <button id="refresh-btn" class="w-9 h-9 rounded-xl bg-surface-container-low flex items-center justify-center text-on-surface-variant/40 hover:text-primary transition-all"><span class="material-symbols-outlined text-sm">refresh</span></button>
-                        </div>
-                        <!-- Dynamic Category Chips -->
-                        <div id="category-chips" class="px-8 py-4 flex flex-wrap gap-2 bg-surface-container-low/20 border-b border-black/[0.02] shrink-0">
-                            <button class="chip active" data-category="all">All Items</button>
-                        </div>
-                        <div class="flex-1 overflow-x-auto custom-scrollbar">
-                            <!-- Desktop View (Visible only on Large screens) -->
-                            <table class="hidden lg:table w-full text-left">
-                                <thead class="bg-surface-container-low/50 sticky top-0 z-10"><tr>
-                                    <th class="px-8 py-5 text-[10px] font-black text-on-surface-variant uppercase tracking-[0.2em]">Item Details</th>
-                                    <th class="px-8 py-5 text-[10px] font-black text-on-surface-variant uppercase tracking-[0.2em]">SKU</th>
-                                    <th class="px-8 py-5 text-[10px] font-black text-on-surface-variant uppercase tracking-[0.2em]">Category</th>
-                                    <th class="px-8 py-5 text-[10px] font-black text-on-surface-variant uppercase tracking-[0.2em] text-center">Stock</th>
-                                    <th class="px-8 py-5 text-[10px] font-black text-on-surface-variant uppercase tracking-[0.2em] text-right">Edit</th>
-                                </tr></thead>
-                                <tbody id="inventory-body" class="divide-y divide-black/[0.02]"></tbody>
-                            </table>
-                        </div>
-                        <div id="mobile-inventory-list" class="lg:hidden p-4 space-y-4 overflow-y-auto"></div>
-                    </div>
-
-                    <!-- (Right) Activity Log Section - LONG & SIDEBAR (1/4 width) -->
-                    <div id="section-activity" class="lg:col-span-1 flex flex-col">
-                        <div class="bg-surface-container-lowest p-8 rounded-[2.5rem] no-line-card flex flex-col h-full min-h-0">
-                            <div class="flex justify-between items-center mb-8 shrink-0">
-                                <h4 class="text-xl font-black font-headline text-primary-container">Recent Activity</h4>
-                                <button id="add-activity-btn" class="w-8 h-8 rounded-full bg-primary/5 flex items-center justify-center hover:bg-primary hover:text-white transition-all"><span class="material-symbols-outlined text-sm">add</span></button>
-                            </div>
-                            <div id="activity-log-container" class="flex-1 overflow-y-auto space-y-8 custom-scrollbar pr-2">
-                                <div class="flex gap-4">
-                                    <div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                                        <span class="material-symbols-outlined text-primary text-sm">add</span>
-                                    </div>
-                                    <div>
-                                        <p class="text-xs font-bold text-primary-container leading-tight">System Initialized</p>
-                                        <p class="text-[10px] text-on-surface-variant opacity-40 font-black mt-1">JUST NOW</p>
-                                    </div>
-                                </div>
-                                <!-- More entries... -->
-                            </div>
-                        </div>
-                    </div>
+                <div id="section-inventory-mobile" class="space-y-4">
+                    <div id="category-chips-mobile" class="flex gap-2 overflow-x-auto no-scrollbar py-1"></div>
+                    <div id="mobile-inventory-list" class="space-y-3"></div>
                 </div>
 
-                <!-- Team Management View (Hidden by default) -->
-                <div id="section-team" class="hidden grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-10 pb-10">
-                    <!-- Whitelist Management -->
-                    <div class="bg-white rounded-[2.5rem] no-line-card flex flex-col min-h-0">
-                        <div class="p-8 border-b border-black/[0.03] flex justify-between items-center shrink-0">
-                            <div>
-                                <h4 class="text-2xl font-black font-headline text-primary-container tracking-tight">Access Whitelist</h4>
-                                <p class="text-sm text-on-surface-variant font-medium">Only these IDs can join the Atelier.</p>
-                            </div>
-                            <button id="add-whitelist-btn" class="w-10 h-10 rounded-2xl bg-primary text-white flex items-center justify-center hover:shadow-xl transition-all"><span class="material-symbols-outlined">person_add</span></button>
-                        </div>
-                        <div id="whitelist-container" class="flex-1 overflow-y-auto p-8 space-y-4 custom-scrollbar">
-                            <!-- Whitelist items will be rendered here -->
-                        </div>
+                <div id="section-team-mobile" class="hidden space-y-6">
+                    <div class="bg-white p-6 rounded-[2rem] shadow-sm">
+                        <div class="flex justify-between items-center mb-4"><h4 class="text-lg font-black text-primary-container">Whitelist</h4><button id="add-whitelist-btn-mobile" class="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center"><span class="material-symbols-outlined text-sm">add</span></button></div>
+                        <div id="whitelist-container-mobile" class="space-y-3"></div>
                     </div>
-
-                    <!-- Active Sessions -->
-                    <div id="active-sessions-panel" class="bg-surface-container-low/30 rounded-[2.5rem] p-6 lg:p-10 flex flex-col items-center text-center">
-                        <div class="w-20 h-20 bg-primary/5 rounded-full flex items-center justify-center mb-6 relative">
-                            <span class="material-symbols-outlined text-primary text-4xl">verified_user</span>
-                            <div class="absolute -top-1 -right-1 w-6 h-6 bg-primary text-white text-[10px] font-black flex items-center justify-center rounded-full border-4 border-white" id="active-user-count">1</div>
-                        </div>
-                        <h4 class="text-xl font-black text-primary-container mb-2">Security Enforcement</h4>
-                        <p class="text-sm text-on-surface-variant max-w-xs mb-8">Active members are synchronized via real-time presence.</p>
-                        
-                        <div id="active-users-list" class="w-full space-y-3">
-                            <!-- Active users list -->
-                        </div>
-                    </div>
+                    <div id="active-users-list-mobile" class="space-y-2"></div>
                 </div>
             </main>
+
+            <nav class="fixed bottom-0 left-0 w-full bg-white/95 backdrop-blur-2xl border-t border-black/[0.02] px-4 py-3 pb-8 flex justify-between items-center z-[150] shadow-[0_-4px_30px_rgba(0,0,0,0.03)]">
+                <a href="#" class="mobile-nav-item active" data-view="dashboard"><div class="nav-capsule"></div><span class="material-symbols-outlined filled">dashboard</span><span class="text-[9px] font-black uppercase tracking-widest mt-1">Dash</span></a>
+                <a href="#" class="mobile-nav-item" data-view="inventory"><div class="nav-capsule"></div><span class="material-symbols-outlined">inventory_2</span><span class="text-[9px] font-black uppercase tracking-widest mt-1">Stock</span></a>
+                <a href="#" class="mobile-nav-item" data-view="team"><div class="nav-capsule"></div><span class="material-symbols-outlined">group</span><span class="text-[9px] font-black uppercase tracking-widest mt-1">Team</span></a>
+                <a href="#" id="logout-btn-mobile" class="mobile-nav-item"><div class="nav-capsule"></div><span class="material-symbols-outlined">logout</span><span class="text-[9px] font-black uppercase tracking-widest mt-1">Exit</span></a>
+            </nav>
         </div>
     </div>
 
@@ -352,30 +343,6 @@
             </form>
         </div>
     </div>
-
-    <!-- Capsule-Style Bottom Navigation -->
-    <nav class="lg:hidden fixed bottom-0 left-0 w-full bg-white/95 backdrop-blur-2xl border-t border-black/[0.02] px-4 py-3 pb-8 flex justify-between items-center z-[150] shadow-[0_-4px_30px_rgba(0,0,0,0.03)]">
-        <a href="#" class="mobile-nav-item nav-item active" data-view="dashboard">
-            <div class="nav-capsule"></div>
-            <span class="material-symbols-outlined filled">dashboard</span>
-            <span class="text-[9px] font-black uppercase tracking-widest mt-1">Dash</span>
-        </a>
-        <a href="#" class="mobile-nav-item nav-item" data-view="inventory">
-            <div class="nav-capsule"></div>
-            <span class="material-symbols-outlined">inventory_2</span>
-            <span class="text-[9px] font-black uppercase tracking-widest mt-1">Stock</span>
-        </a>
-        <a href="#" class="mobile-nav-item nav-item" data-view="team">
-            <div class="nav-capsule"></div>
-            <span class="material-symbols-outlined">group</span>
-            <span class="text-[9px] font-black uppercase tracking-widest mt-1">Team</span>
-        </a>
-        <a href="#" id="logout-btn-mobile" class="mobile-nav-item">
-            <div class="nav-capsule"></div>
-            <span class="material-symbols-outlined">logout</span>
-            <span class="text-[9px] font-black uppercase tracking-widest mt-1">Exit</span>
-        </a>
-    </nav>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="app.js"></script>
