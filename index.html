@@ -106,7 +106,7 @@
         </aside>
 
         <!-- Main Content Wrapper -->
-        <div class="flex-1 lg:ml-72 flex flex-col h-screen overflow-hidden">
+        <div class="flex-1 lg:ml-72 flex flex-col min-h-screen lg:h-screen lg:overflow-hidden">
             
             <!-- Native Mobile Header & Branding -->
             <header class="w-full sticky top-0 z-50 glass flex items-center justify-between h-16 lg:h-20 px-6 lg:px-10 border-b border-black/[0.02]">
@@ -130,7 +130,7 @@
             </header>
 
             <!-- Dashboard Content -->
-            <main class="flex-1 p-4 lg:p-10 space-y-6 lg:space-y-10 flex flex-col min-h-0 overflow-y-auto custom-scrollbar pb-32 lg:pb-10">
+            <main class="flex-1 p-4 lg:p-10 space-y-8 lg:space-y-10 flex flex-col lg:overflow-y-auto custom-scrollbar pb-32 lg:pb-10">
                 <!-- Dashboard Header (Dynamic) -->
                 <div class="flex justify-between items-end shrink-0">
                     <div>
@@ -183,10 +183,10 @@
                 </div>
 
                 <!-- New 2-Column Main Layout: List (Large) + Activity (Sidebar) -->
-                <div class="flex-1 grid grid-cols-1 lg:grid-cols-4 gap-8 min-h-0 pb-2">
+                <div class="grid grid-cols-1 lg:grid-cols-4 gap-8 pb-2">
                     
                     <!-- (Left) Real Inventory Table Section - BIG & MIDDLE (3/4 width) -->
-                    <div id="section-inventory" class="lg:col-span-3 bg-white rounded-[2.5rem] no-line-card flex flex-col min-h-0">
+                    <div id="section-inventory" class="lg:col-span-3 bg-white rounded-[2.5rem] no-line-card flex flex-col">
                         <div class="p-8 border-b border-black/[0.03] flex flex-col md:flex-row justify-between items-start md:items-center gap-6 shrink-0">
                             <div>
                                 <h4 class="text-2xl font-black font-headline text-primary-container tracking-tight">Atelier Inventory List</h4>
@@ -216,7 +216,7 @@
                     </div>
 
                     <!-- (Right) Activity Log Section - LONG & SIDEBAR (1/4 width) -->
-                    <div id="section-activity" class="lg:col-span-1 flex flex-col min-h-0 h-full">
+                    <div id="section-activity" class="lg:col-span-1 flex flex-col">
                         <div class="bg-surface-container-lowest p-8 rounded-[2.5rem] no-line-card flex flex-col h-full min-h-0">
                             <div class="flex justify-between items-center mb-8 shrink-0">
                                 <h4 class="text-xl font-black font-headline text-primary-container">Recent Activity</h4>
