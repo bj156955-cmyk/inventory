@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script type="text/javascript" nonce="bbb30b2e31c348cb9d5b216c597" src="//local.adguard.org?ts=1776334162065&amp;type=content-script&amp;dmn=contribution.usercontent.google.com&amp;url=https%3A%2F%2Fcontribution.usercontent.google.com%2Fdownload%3Fc%3DCgthaWRhX2NvZGVmeBJ8Eh1hcHBfY29tcGFuaW9uX2dlbmVyYXRlZF9maWxlcxpbCiVodG1sXzU5ZjQ4ZDkzZjA5NjQ5MTFiOTZjMTkzY2ZiMDViOGI4EgsSBxCbx7_k1B0YAZIBJAoKcHJvamVjdF9pZBIWQhQxNjc0NTUxMDY2ODAzNjQ1MjY1OQ%26filename%3D%26opi%3D89354086&amp;app=com.apple.Safari&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=1&amp;stealth=1&amp;st-push&amp;st-loc&amp;st-java&amp;st-dnt"></script><script type="text/javascript" nonce="bbb30b2e31c348cb9d5b216c597" src="//local.adguard.org?ts=1776334162065&amp;name=AdGuard%20Extra&amp;type=user-script"></script><link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "secondary-container": "#d6e0f6",
+                        "primary-fixed": "#d6e3ff",
+                        "surface-container": "#efedf1",
+                        "inverse-primary": "#adc7f7",
+                        "on-surface": "#1a1c1e",
+                        "surface-bright": "#faf9fd",
+                        "tertiary-fixed-dim": "#84d5c5",
+                        "on-secondary-fixed-variant": "#3d4759",
+                        "on-error-container": "#93000a",
+                        "background": "#faf9fd",
+                        "secondary-fixed-dim": "#bdc7dc",
+                        "secondary": "#555f71",
+                        "inverse-surface": "#2f3033",
+                        "primary-fixed-dim": "#adc7f7",
+                        "surface-variant": "#e3e2e6",
+                        "on-tertiary-container": "#5bac9d",
+                        "on-primary": "#ffffff",
+                        "inverse-on-surface": "#f1f0f4",
+                        "surface-container-highest": "#e3e2e6",
+                        "primary-container": "#1a365d",
+                        "error-container": "#ffdad6",
+                        "outline": "#74777f",
+                        "secondary-fixed": "#d9e3f9",
+                        "tertiary": "#002520",
+                        "surface": "#faf9fd",
+                        "on-secondary-fixed": "#121c2c",
+                        "on-tertiary-fixed": "#00201b",
+                        "surface-container-lowest": "#ffffff",
+                        "on-secondary": "#ffffff",
+                        "on-error": "#ffffff",
+                        "error": "#ba1a1a",
+                        "surface-dim": "#dad9dd",
+                        "on-tertiary-fixed-variant": "#005046",
+                        "on-background": "#1a1c1e",
+                        "on-primary-container": "#86a0cd",
+                        "on-tertiary": "#ffffff",
+                        "on-surface-variant": "#43474e",
+                        "primary": "#002045",
+                        "outline-variant": "#c4c6cf",
+                        "on-secondary-container": "#596376",
+                        "surface-tint": "#455f88",
+                        "surface-container-high": "#e9e7eb",
+                        "on-primary-fixed-variant": "#2d476f",
+                        "tertiary-container": "#003d35",
+                        "surface-container-low": "#f4f3f7",
+                        "tertiary-fixed": "#a0f2e1",
+                        "on-primary-fixed": "#001b3c"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "fontFamily": {
+                        "headline": ["Manrope"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body { font-family: 'Inter', sans-serif; }
+        h1, h2, h3, .brand-font { font-family: 'Manrope', sans-serif; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface min-h-screen pb-24">
+<!-- TopAppBar -->
+<header class="w-full top-0 sticky z-40 bg-slate-50 dark:bg-slate-900 transition-all duration-200 ease-in-out">
+<div class="flex justify-between items-center px-4 h-16 w-full">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-blue-900 dark:text-blue-400">warehouse</span>
+<span class="text-lg font-bold text-blue-900 dark:text-blue-100 font-manrope tracking-tight">Grid &amp; Gantry</span>
+</div>
+<div class="h-8 w-8 rounded-full overflow-hidden bg-surface-container-highest">
+<img alt="User profile photo" class="w-full h-full object-cover" data-alt="Professional male warehouse manager profile portrait with neutral background, soft studio lighting, sharp focus" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCgzj2ZOXkswOAgHfNjLwgqqGskxVZ9nEZXvAdhzGNSlxyiw1GskcVW6uIIo4vXGmeo0YOPA5mn-BsR5IKoAg6PWjGlS8MkxpqmC6TSCGq5rjWidWU2B6JDkrqcxYXyOZfyrRHa3GaQuQOhRbXcD2XD8xd5ITkDCpsk3RfoCoEwda8GxqhvwiJ2HCoqwmx3EB9E3l1n9Tx6jH2dOGtu-94I11Wc76gz-v7ldPoIPJ5_-pDFuky7sf3lvhQK1qtSkmkFn7tqQA1aju9y"/>
+</div>
+</div>
+</header>
+<main class="px-4 py-6 space-y-8">
+<!-- Dashboard Summary Section -->
+<section>
+<div class="flex items-end justify-between mb-4">
+<h2 class="text-on-surface-variant font-headline font-semibold text-sm tracking-widest uppercase">Ecosystem Summary</h2>
+<span class="text-xs text-outline font-medium">Last synced: 2m ago</span>
+</div>
+<!-- Bento Stats Grid -->
+<div class="grid grid-cols-2 gap-3">
+<div class="bg-surface-container-lowest p-4 rounded-xl shadow-sm space-y-1">
+<span class="text-outline text-[11px] font-semibold uppercase tracking-wider">Total Items</span>
+<div class="flex items-center justify-between">
+<span class="text-2xl font-headline font-extrabold text-primary">12,842</span>
+<span class="material-symbols-outlined text-tertiary-fixed-dim">inventory_2</span>
+</div>
+</div>
+<div class="bg-surface-container-lowest p-4 rounded-xl shadow-sm space-y-1">
+<span class="text-outline text-[11px] font-semibold uppercase tracking-wider">Total Value</span>
+<div class="flex items-center justify-between">
+<span class="text-2xl font-headline font-extrabold text-primary">$1.2M</span>
+<span class="material-symbols-outlined text-secondary">payments</span>
+</div>
+</div>
+<div class="bg-error-container/40 p-4 rounded-xl space-y-1 border-b-2 border-error">
+<span class="text-on-error-container text-[11px] font-semibold uppercase tracking-wider">Low Stock</span>
+<div class="flex items-center justify-between">
+<span class="text-2xl font-headline font-extrabold text-on-error-container">24</span>
+<span class="material-symbols-outlined text-error">warning</span>
+</div>
+</div>
+<div class="bg-surface-container-high p-4 rounded-xl space-y-1">
+<span class="text-on-surface-variant text-[11px] font-semibold uppercase tracking-wider">Out of Stock</span>
+<div class="flex items-center justify-between">
+<span class="text-2xl font-headline font-extrabold text-on-surface">08</span>
+<span class="material-symbols-outlined text-on-surface-variant">block</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Stock Movements Chart Placeholder -->
+<section class="space-y-4">
+<div class="flex items-center justify-between">
+<h2 class="text-on-surface font-headline font-bold text-lg">Stock Velocity</h2>
+<div class="flex gap-2">
+<button class="px-3 py-1 bg-primary text-on-primary rounded-full text-[10px] font-bold">7D</button>
+<button class="px-3 py-1 bg-surface-container text-on-surface-variant rounded-full text-[10px] font-bold">30D</button>
+</div>
+</div>
+<div class="bg-surface-container-lowest rounded-xl p-4 shadow-sm border border-outline-variant/15">
+<!-- Visual Chart Representation using CSS Gradients/Borders -->
+<div class="h-40 w-full flex items-end gap-2 justify-between">
+<div class="w-full bg-primary-fixed-dim/20 rounded-t-sm relative h-[40%] group">
+<div class="absolute bottom-0 w-full bg-primary h-[80%] rounded-t-sm"></div>
+</div>
+<div class="w-full bg-primary-fixed-dim/20 rounded-t-sm relative h-[60%]">
+<div class="absolute bottom-0 w-full bg-primary h-[90%] rounded-t-sm"></div>
+</div>
+<div class="w-full bg-primary-fixed-dim/20 rounded-t-sm relative h-[50%]">
+<div class="absolute bottom-0 w-full bg-primary h-[70%] rounded-t-sm"></div>
+</div>
+<div class="w-full bg-primary-fixed-dim/20 rounded-t-sm relative h-[80%]">
+<div class="absolute bottom-0 w-full bg-primary h-[85%] rounded-t-sm"></div>
+</div>
+<div class="w-full bg-primary-fixed-dim/20 rounded-t-sm relative h-[70%]">
+<div class="absolute bottom-0 w-full bg-primary h-[60%] rounded-t-sm"></div>
+</div>
+<div class="w-full bg-primary-fixed-dim/20 rounded-t-sm relative h-[90%]">
+<div class="absolute bottom-0 w-full bg-primary h-[95%] rounded-t-sm"></div>
+</div>
+<div class="w-full bg-primary-fixed-dim/20 rounded-t-sm relative h-[65%]">
+<div class="absolute bottom-0 w-full bg-primary h-[75%] rounded-t-sm"></div>
+</div>
+</div>
+<div class="flex justify-between mt-2 px-1">
+<span class="text-[9px] font-medium text-outline">MON</span>
+<span class="text-[9px] font-medium text-outline">TUE</span>
+<span class="text-[9px] font-medium text-outline">WED</span>
+<span class="text-[9px] font-medium text-outline">THU</span>
+<span class="text-[9px] font-medium text-outline">FRI</span>
+<span class="text-[9px] font-medium text-outline">SAT</span>
+<span class="text-[9px] font-medium text-outline">SUN</span>
+</div>
+</div>
+</section>
+<!-- Critical Stock Items -->
+<section class="space-y-4">
+<div class="flex items-center justify-between">
+<h2 class="text-on-surface font-headline font-bold text-lg">Critical Stock Items</h2>
+<button class="text-primary-container font-semibold text-xs flex items-center gap-1">
+                    View All <span class="material-symbols-outlined text-[14px]">arrow_forward</span>
+</button>
+</div>
+<div class="space-y-3">
+<!-- Item 1 -->
+<div class="bg-surface-container-lowest p-3 rounded-xl flex items-center gap-4 border border-outline-variant/10">
+<div class="h-12 w-12 rounded-lg bg-surface-container overflow-hidden shrink-0">
+<img alt="Item Photo" class="w-full h-full object-cover" data-alt="Close up of high-precision metallic ball bearings on a industrial workbench, technical lighting, metallic textures" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCFPSRKbCG_1EQdatVKhO_JfGBDZKttjewHV1f04ZOG2d_7Cofc7fefJJ9Kjq1z3trbum5vFcN7lv1skJIlMNGu4z_z7udyQa-XtJiH0q4gOt7Gr9GVA50TEuOlN5Y6qR26D1yOX8JrMKA0mW4ZcDrwUoCjEMHTVpIS7BYHjUTBqQ_dW-jHQLPgdc-J3Xb7GcgDhQ57TIWrSn1OaWqONq1RB_Uh8N76-JdXSymS43fR_jX1B0gn6je-aNCUMTgZUUacn8SPucmIGuBj"/>
+</div>
+<div class="flex-1 min-w-0">
+<p class="font-semibold text-sm truncate">Precision Ball Bearings X2</p>
+<p class="text-[11px] text-outline font-medium tracking-tight">SKU: IND-400-92</p>
+</div>
+<div class="text-right">
+<p class="text-xs font-bold text-error">4 Left</p>
+<button class="mt-1 text-[10px] px-2 py-1 bg-tertiary-fixed text-on-tertiary-fixed rounded-md font-bold uppercase tracking-tight">Order</button>
+</div>
+</div>
+<!-- Item 2 -->
+<div class="bg-surface-container-lowest p-3 rounded-xl flex items-center gap-4 border border-outline-variant/10">
+<div class="h-12 w-12 rounded-lg bg-surface-container overflow-hidden shrink-0">
+<img alt="Item Photo" class="w-full h-full object-cover" data-alt="Industrial architectural glass panels stacked neatly, reflecting soft warehouse lighting, minimalist industrial aesthetic" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAzkq0d2czE2tXbHh7GbFO3zsKU1QnFzlwcM_9P3xoGApg2kNDOpXTYIK03oWDR2KNFbtVxv-ZUFI8mOKfa6ttSh_d1geHW43e3K-ux7IZEjBWwkzRh8_EU7TJyw6Bcrw-JoiH5h0AfpphpH57yzF1boJucfOPbEVbOFx_j3dBUIxk-IFKELMF7W0IGsZAGO40AZ7WwpTYG3teJuvGz5CfFAbOGsr9yfJS4fKLdxl5f3lVoTa1HNOutSWXKpdzHTL25XK1RW6dj0krf"/>
+</div>
+<div class="flex-1 min-w-0">
+<p class="font-semibold text-sm truncate">Tempered Glass Panel A</p>
+<p class="text-[11px] text-outline font-medium tracking-tight">SKU: GLS-112-BX</p>
+</div>
+<div class="text-right">
+<p class="text-xs font-bold text-error">12 Left</p>
+<button class="mt-1 text-[10px] px-2 py-1 bg-tertiary-fixed text-on-tertiary-fixed rounded-md font-bold uppercase tracking-tight">Order</button>
+</div>
+</div>
+<!-- Item 3 -->
+<div class="bg-surface-container-lowest p-3 rounded-xl flex items-center gap-4 border border-outline-variant/10">
+<div class="h-12 w-12 rounded-lg bg-surface-container overflow-hidden shrink-0">
+<img alt="Item Photo" class="w-full h-full object-cover" data-alt="Solid oak timber planks stacked horizontally, warm wood grain details, side natural lighting from a workshop window" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDEalMG5gnwjzDvl8dkTVSyiWn4YNOqkNyGSi7CwXjgtvb77mBtwfDy9-4nghfYwwmC-5ZJr9UhT0TU9XT556ElLhUY5jku-YmhBjcMs3PB9lRErWYDnRL3c_Ofw05Y4XHNKBWT-Mbhrle8lt0e39kaJYP9MYrYQ7Ie3m6QKyKgLUmK1bzaZ_oEGVL4PZMHuraJGiDyq39O9Eo6OfA1OtuXa4QSu5caTda050FPEwjfKaTEhY62KAB5-84bs7ZWuAwMDf6w67fhVYOI"/>
+</div>
+<div class="flex-1 min-w-0">
+<p class="font-semibold text-sm truncate">Solid Oak Timber 2x4</p>
+<p class="text-[11px] text-outline font-medium tracking-tight">SKU: WOD-881-Z</p>
+</div>
+<div class="text-right">
+<p class="text-xs font-bold text-error">2 Left</p>
+<button class="mt-1 text-[10px] px-2 py-1 bg-tertiary-fixed text-on-tertiary-fixed rounded-md font-bold uppercase tracking-tight">Order</button>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full flex justify-around items-center px-4 pb-6 pt-2 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md z-50 rounded-t-xl shadow-[0_-4px_12px_rgba(0,0,0,0.05)] border-t border-slate-200/50 dark:border-slate-800/50">
+<!-- Inventory (Active) -->
+<a class="flex flex-col items-center justify-center bg-blue-50 dark:bg-blue-900/30 text-blue-900 dark:text-blue-100 rounded-xl px-3 py-1.5 transition-transform scale-95 active:scale-90" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="inventory_2" style="font-variation-settings: 'FILL' 1;">inventory_2</span>
+<span class="font-inter text-[11px] font-medium mt-1">Inventory</span>
+</a>
+<!-- Scanner -->
+<a class="flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 px-3 py-1.5 transition-transform scale-95 active:scale-90 hover:text-blue-700 dark:hover:text-teal-300" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="qr_code_scanner">qr_code_scanner</span>
+<span class="font-inter text-[11px] font-medium mt-1">Scanner</span>
+</a>
+<!-- Analytics -->
+<a class="flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 px-3 py-1.5 transition-transform scale-95 active:scale-90 hover:text-blue-700 dark:hover:text-teal-300" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="query_stats">query_stats</span>
+<span class="font-inter text-[11px] font-medium mt-1">Analytics</span>
+</a>
+<!-- Settings -->
+<a class="flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 px-3 py-1.5 transition-transform scale-95 active:scale-90 hover:text-blue-700 dark:hover:text-teal-300" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="settings">settings</span>
+<span class="font-inter text-[11px] font-medium mt-1">Settings</span>
+</a>
+</nav>
+<!-- FAB Integration (Only on Home/Dashboard) -->
+<div class="fixed bottom-24 right-4 z-40">
+<button class="h-14 w-14 rounded-full bg-primary shadow-lg flex items-center justify-center text-on-primary transition-transform active:scale-90">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">add</span>
+</button>
+</div>
+</body></html>

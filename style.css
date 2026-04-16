@@ -1,0 +1,218 @@
+/* Atelier Inventory - Premium Design System (Standard CSS) */
+
+:root {
+    --primary: #002045;
+    --primary-container: #1a365d;
+    --surface: #faf9fd;
+    --surface-container-low: #f4f3f7;
+    --on-surface-variant: #43474e;
+}
+
+/* Base resets */
+* { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
+body { -webkit-font-smoothing: antialiased; }
+
+/* Custom Form Styles */
+.form-input {
+    width: 100%;
+    background-color: var(--surface-container-low);
+    border: none;
+    border-radius: 1rem;
+    padding: 1rem 1.5rem;
+    font-size: 0.875rem;
+    outline: none;
+    transition: all 0.2s;
+}
+.form-input:focus {
+    box-shadow: 0 0 0 4px rgba(0, 32, 69, 0.05);
+}
+
+.label-xs {
+    display: block;
+    font-size: 10px;
+    font-weight: 900;
+    color: var(--on-surface-variant);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 0.5rem;
+    margin-left: 0.25rem;
+}
+
+/* Navigation & Architecture */
+.nav-item {
+    display: flex;
+    items-center;
+    gap: 1rem;
+    padding: 1rem 1.25rem;
+    color: var(--on-surface-variant);
+    font-weight: 700;
+    font-size: 0.875rem;
+    border-radius: 1rem;
+    transition: all 0.3s;
+    align-items: center;
+}
+.nav-item:hover {
+    background-color: rgba(255, 255, 255, 0.6);
+    color: var(--primary-container);
+}
+.nav-item.active {
+    background-color: #ffffff;
+    color: var(--primary-container);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+.nav-item .material-symbols-outlined {
+    font-size: 1.25rem;
+    opacity: 0.6;
+}
+.nav-item.active .material-symbols-outlined {
+    opacity: 100;
+}
+
+.icon-btn-sm {
+    padding: 0.75rem;
+    border-radius: 1rem;
+    color: rgba(67, 71, 78, 0.6);
+    transition: all 0.2s;
+}
+.icon-btn-sm:hover {
+    background-color: #ffffff;
+    color: var(--primary);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+/* Table Styling */
+.table-row-item {
+    padding: 1.25rem 2.5rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--primary-container);
+}
+
+/* Dashboard Buttons */
+.primary-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.875rem 2.5rem;
+    background-color: var(--primary);
+    color: #ffffff;
+    font-family: 'Manrope', sans-serif;
+    font-weight: 900;
+    font-size: 0.75rem;
+    border-radius: 1rem;
+    transition: all 0.2s;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+.primary-btn:hover {
+    box-shadow: 0 10px 30px rgba(0, 32, 69, 0.2);
+    transform: translateY(-2px);
+}
+
+.secondary-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.875rem 2rem;
+    background-color: #e9e7eb;
+    color: var(--primary);
+    font-family: 'Manrope', sans-serif;
+    font-weight: 900;
+    font-size: 0.75rem;
+    border-radius: 1rem;
+    transition: all 0.2s;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* Stats UI */
+.stat-label {
+    color: var(--on-surface-variant);
+    font-size: 10px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 0.25rem;
+    opacity: 0.6;
+}
+
+/* Modal States - Generic for all overlays */
+.modal-overlay.active {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+}
+.modal-overlay.active .modal-content {
+    transform: scale(1) !important;
+}
+
+/* Mobile Specific */
+.mobile-nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem 0;
+    transition: all 0.2s;
+}
+.mobile-nav-item.active {
+    color: var(--primary);
+    transform: scale(1.1);
+}
+
+.mobile-inventory-card {
+    background-color: #ffffff;
+    padding: 1.5rem;
+    border-radius: 2rem;
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    border: 1px solid rgba(0,0,0,0.02);
+    box-shadow: 0 4px 20px -4px rgba(26,54,93,0.04);
+}
+
+/* Material Symbols Adjustments */
+.material-symbols-outlined {
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+.material-symbols-outlined.filled {
+    font-variation-settings: 'FILL' 1;
+}
+
+/* Category Chips Styling */
+.chip {
+    padding: 0.5rem 1rem;
+    border-radius: 0.75rem;
+    font-size: 10px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    background-color: transparent;
+    color: var(--on-surface-variant);
+    transition: all 0.2s;
+    border: 1px solid rgba(0,0,0,0.05);
+}
+.chip:hover {
+    background-color: rgba(0,0,0,0.02);
+}
+.chip.active {
+    background-color: var(--primary) !important;
+    color: #ffffff !important;
+    border-color: var(--primary);
+    box-shadow: 0 4px 12px rgba(0, 32, 69, 0.2);
+}
+
+/* Custom Premium Scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.1);
+}
