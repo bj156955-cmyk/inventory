@@ -108,29 +108,23 @@
         <!-- Main Content Wrapper -->
         <div class="flex-1 lg:ml-72 flex flex-col h-screen overflow-hidden">
             
-            <!-- Premium TopBar -->
-            <header class="w-full sticky top-0 z-50 glass flex justify-between items-center h-16 lg:h-20 px-4 lg:px-10 border-b border-black/[0.03]">
-                <div class="flex items-center gap-6">
-                    <div class="relative hidden md:block w-80 lg:w-96">
+            <!-- Native Mobile Header & Branding -->
+            <header class="w-full sticky top-0 z-50 glass flex items-center justify-between h-16 lg:h-20 px-6 lg:px-10 border-b border-black/[0.02]">
+                <div class="flex items-center gap-3">
+                    <div class="lg:hidden w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-white"><span class="material-symbols-outlined text-sm filled">inventory_2</span></div>
+                    <h1 class="text-lg lg:text-xl font-black font-headline text-primary tracking-tight">Atelier Inventory</h1>
+                </div>
+                
+                <div class="flex items-center gap-4">
+                    <div class="relative hidden lg:block w-80 lg:w-96">
                         <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant/40">search</span>
                         <input type="text" id="search-input-desktop" placeholder="Search architectural items..." class="pl-12 pr-4 py-3 bg-white/50 border-none rounded-2xl text-sm w-full outline-none focus:ring-2 focus:ring-primary/5 transition-all" autocomplete="off">
-                        
-                        <!-- Search Results Dropdown -->
-                        <div id="search-results-dropdown" class="absolute top-14 left-0 w-full bg-white/95 backdrop-blur-2xl rounded-[1.5rem] shadow-2xl border border-black/[0.03] p-4 z-[100] hidden">
-                            <div class="text-[9px] font-black text-on-surface-variant/40 uppercase tracking-[0.2em] mb-3 px-2">Quick Results</div>
-                            <div id="search-results-list" class="max-h-64 overflow-y-auto custom-scrollbar space-y-1">
-                                <!-- Results will be rendered here -->
-                            </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button class="icon-btn-sm lg:flex hidden"><span class="material-symbols-outlined">notifications</span></button>
+                        <div class="w-9 h-9 lg:w-11 lg:h-11 rounded-xl bg-primary/5 flex items-center justify-center border border-black/5 shadow-sm ml-2 overflow-hidden">
+                            <span class="material-symbols-outlined text-primary text-xl">person</span>
                         </div>
-                    </div>
-                </div>
-                <div class="flex items-center gap-2 lg:gap-8">
-                    <div class="flex items-center gap-1">
-                        <button class="icon-btn-sm"><span class="material-symbols-outlined">notifications</span></button>
-                    </div>
-                    <div class="flex items-center gap-4 pl-4 lg:pl-8 border-l border-black/5">
-                        <div class="text-right hidden sm:block"><p class="text-sm font-black font-headline text-primary-container leading-none" id="user-display-name-desktop">Warehouse Admin</p><p class="text-[10px] text-on-surface-variant font-bold uppercase tracking-widest mt-1">Warehouse 01</p></div>
-                        <div class="w-9 h-9 lg:w-11 lg:h-11 rounded-xl lg:rounded-2xl bg-primary/5 flex items-center justify-center border border-black/5 shadow-sm"><span class="material-symbols-outlined text-primary text-lg lg:text-xl">person</span></div>
                     </div>
                 </div>
             </header>
@@ -149,43 +143,42 @@
                     </div>
                 </div>
 
-                <!-- Bento Stats Grid (Dashboard Only) - Reordered -->
-                <div id="section-stats" class="grid grid-cols-1 md:grid-cols-4 gap-6 shrink-0">
-                    <!-- 1. Total Items (Clickable Filter) -->
-                    <div id="filter-total" class="no-line-card bg-surface-container-lowest p-5 lg:p-7 rounded-[2rem] cursor-pointer hover:shadow-xl transition-all active:scale-95">
-                        <div class="flex justify-between items-start mb-6">
-                            <div class="w-10 h-10 bg-primary-fixed rounded-xl flex items-center justify-center"><span class="material-symbols-outlined text-primary">inventory_2</span></div>
-                            <span class="text-[10px] font-black text-primary px-3 py-1 bg-primary/5 rounded-md uppercase">Current</span>
+                <!-- Bento Stats Grid (2x2 on Mobile, 1x4 on Desktop) -->
+                <div id="section-stats" class="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 shrink-0">
+                    <!-- 1. Total Items -->
+                    <div id="filter-total" class="bg-white p-5 lg:p-7 rounded-[2rem] shadow-sm lg:shadow-md cursor-pointer active:scale-95 transition-all">
+                        <div class="flex justify-between items-start mb-4 lg:mb-6">
+                            <div class="stat-label">Total Items</div>
+                            <span class="material-symbols-outlined text-primary/20 text-lg">inventory_2</span>
                         </div>
-                        <p class="stat-label">Total Items</p>
-                        <h3 class="text-3xl font-black font-headline text-primary-container mt-1" id="total-items">0</h3>
+                        <h3 id="total-items" class="text-2xl lg:text-3xl font-black text-primary-container tabular-nums">0</h3>
                     </div>
-                    <!-- 2. Low Stock Alerts (Clickable Filter) -->
-                    <div id="filter-low" class="no-line-card bg-surface-container-lowest p-5 lg:p-7 rounded-[2rem] cursor-pointer hover:shadow-xl transition-all active:scale-95 group">
-                        <div class="flex justify-between items-start mb-6">
-                            <div class="w-10 h-10 bg-orange-400/20 rounded-xl flex items-center justify-center group-hover:bg-orange-400/40 transition-colors"><span class="material-symbols-outlined text-orange-500">warning</span></div>
-                            <span class="text-[10px] font-black text-orange-600 px-2 py-1 bg-orange-100 rounded-md uppercase">Attention</span>
+
+                    <!-- 2. Value -->
+                    <div class="bg-white p-5 lg:p-7 rounded-[2rem] shadow-sm lg:shadow-md">
+                        <div class="flex justify-between items-start mb-4 lg:mb-6">
+                            <div class="stat-label">Total Value</div>
+                            <span class="material-symbols-outlined text-primary/20 text-lg">payments</span>
                         </div>
-                        <p class="stat-label">Low Stock Alerts</p>
-                        <h3 class="text-3xl font-black font-headline text-orange-500 mt-1" id="low-stock">0</h3>
+                        <h3 id="total-value" class="text-xl lg:text-2xl font-black text-primary-container tabular-nums">₩0</h3>
                     </div>
-                    <!-- 3. Out of Stock (Clickable Filter) -->
-                    <div id="filter-out" class="no-line-card bg-surface-container-lowest p-5 lg:p-7 rounded-[2rem] cursor-pointer hover:shadow-xl transition-all active:scale-95 group">
-                        <div class="flex justify-between items-start mb-6">
-                            <div class="w-10 h-10 bg-error-container rounded-xl flex items-center justify-center group-hover:bg-error transition-colors"><span class="material-symbols-outlined text-error group-hover:text-white transition-colors">dangerous</span></div>
-                            <span class="text-[10px] font-black text-white bg-error px-2 py-1 rounded-md uppercase">Critical</span>
+
+                    <!-- 3. Low Stock -->
+                    <div id="filter-low" class="bg-red-50 p-5 lg:p-7 rounded-[2rem] shadow-sm border border-red-100/50 cursor-pointer active:scale-95 transition-all">
+                        <div class="flex justify-between items-start mb-4 lg:mb-6">
+                            <div class="stat-label text-red-600/60">Low Stock</div>
+                            <span class="material-symbols-outlined text-red-600/40 text-lg">warning</span>
                         </div>
-                        <p class="stat-label">Out of Stock</p>
-                        <h3 class="text-3xl font-black font-headline text-error mt-1" id="out-of-stock">0</h3>
+                        <h3 id="low-stock" class="text-2xl lg:text-3xl font-black text-red-600 tabular-nums">0</h3>
                     </div>
-                    <!-- 4. Total Value (No Filter) -->
-                    <div class="no-line-card bg-surface-container-lowest p-5 lg:p-7 rounded-[2rem]">
-                        <div class="flex justify-between items-start mb-6">
-                            <div class="w-10 h-10 bg-tertiary-fixed rounded-xl flex items-center justify-center"><span class="material-symbols-outlined text-tertiary">payments</span></div>
-                            <span class="text-[10px] font-black text-on-tertiary-fixed-variant px-2 py-1 bg-tertiary-fixed rounded-md uppercase">Optimal</span>
+
+                    <!-- 4. Out of Stock -->
+                    <div id="filter-out" class="bg-surface-container-low p-5 lg:p-7 rounded-[2rem] shadow-sm cursor-pointer active:scale-95 transition-all">
+                        <div class="flex justify-between items-start mb-4 lg:mb-6">
+                            <div class="stat-label text-on-surface-variant/40">Out of Stock</div>
+                            <span class="material-symbols-outlined text-on-surface-variant/20 text-lg">block</span>
                         </div>
-                        <p class="stat-label">Total Value</p>
-                        <h3 class="text-3xl font-black font-headline text-primary-container mt-1" id="total-value">₩0</h3>
+                        <h3 id="out-of-stock" class="text-2xl lg:text-3xl font-black text-on-surface-variant tabular-nums">0</h3>
                     </div>
                 </div>
 
@@ -342,27 +335,32 @@
         </div>
     </div>
 
-    <!-- Mobile Navigation & Actions -->
-    <div class="lg:hidden fixed bottom-8 right-6 z-[200]">
-        <button id="add-item-btn-mobile" class="w-14 h-14 bg-primary text-white rounded-full flex items-center justify-center shadow-[0_8px_25px_rgba(0,32,69,0.4)] active:scale-90 transition-all">
-            <span class="material-symbols-outlined text-2xl">add</span>
+    <!-- High-Fidelity Mobile Floating Action -->
+    <div class="lg:hidden fixed bottom-24 right-6 z-[200]">
+        <button id="add-item-btn-mobile" class="w-16 h-16 bg-primary text-white rounded-[1.5rem] flex items-center justify-center shadow-lg active:scale-90 transition-all">
+            <span class="material-symbols-outlined text-3xl font-black">add</span>
         </button>
     </div>
 
-    <nav class="lg:hidden fixed bottom-0 left-0 w-full bg-white/95 backdrop-blur-2xl border-t border-black/[0.03] px-6 py-3 flex justify-between items-center z-[150] shadow-[0_-4px_20px_rgba(0,0,0,0.03)]">
+    <!-- Capsule-Style Bottom Navigation -->
+    <nav class="lg:hidden fixed bottom-0 left-0 w-full bg-white/95 backdrop-blur-2xl border-t border-black/[0.02] px-4 py-3 pb-8 flex justify-between items-center z-[150] shadow-[0_-4px_30px_rgba(0,0,0,0.03)]">
         <a href="#" class="mobile-nav-item nav-item active" data-view="dashboard">
+            <div class="nav-capsule"></div>
             <span class="material-symbols-outlined filled">dashboard</span>
             <span class="text-[9px] font-black uppercase tracking-widest mt-1">Dash</span>
         </a>
         <a href="#" class="mobile-nav-item nav-item" data-view="inventory">
+            <div class="nav-capsule"></div>
             <span class="material-symbols-outlined">inventory_2</span>
             <span class="text-[9px] font-black uppercase tracking-widest mt-1">Stock</span>
         </a>
         <a href="#" class="mobile-nav-item nav-item" data-view="team">
+            <div class="nav-capsule"></div>
             <span class="material-symbols-outlined">group</span>
             <span class="text-[9px] font-black uppercase tracking-widest mt-1">Team</span>
         </a>
         <a href="#" id="logout-btn-mobile" class="mobile-nav-item">
+            <div class="nav-capsule"></div>
             <span class="material-symbols-outlined">logout</span>
             <span class="text-[9px] font-black uppercase tracking-widest mt-1">Exit</span>
         </a>
