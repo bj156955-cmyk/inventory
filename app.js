@@ -681,22 +681,22 @@ function setupEventListeners() {
     if (fTotal) {
         fTotal.onclick = () => {
             currentStatusFilter = 'all';
-            switchView('inventory');
             renderInventory();
+            document.getElementById('section-inventory').scrollIntoView({ behavior: 'smooth', block: 'center' });
         };
     }
     if (fLow) {
         fLow.onclick = () => {
             currentStatusFilter = 'low';
-            switchView('inventory');
             renderInventory();
+            document.getElementById('section-inventory').scrollIntoView({ behavior: 'smooth', block: 'center' });
         };
     }
     if (fOut) {
         fOut.onclick = () => {
             currentStatusFilter = 'out';
-            switchView('inventory');
             renderInventory();
+            document.getElementById('section-inventory').scrollIntoView({ behavior: 'smooth', block: 'center' });
         };
     }
 }
