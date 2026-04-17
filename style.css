@@ -357,3 +357,40 @@ body.platform-pc table td:nth-child(4) {
 body.platform-pc .flex-1.overflow-x-auto {
     scrollbar-width: thin;
 }
+/* ... existing styles ... */
+
+/* Injected styles for layout stability */
+body.platform-pc table {
+    table-layout: fixed !important;
+    width: 100% !important;
+}
+body.platform-pc table th:nth-child(4), 
+body.platform-pc table td:nth-child(4) {
+    width: 180px !important;
+    min-width: 180px !important;
+}
+.stock-container {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    white-space: nowrap !important;
+    align-items: center;
+    gap: 4px;
+}
+
+/* Toast Notification Styles */
+.toast {
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+}
+.toast-primary {
+    background: rgba(0, 32, 69, 0.9);
+    color: #ffffff;
+}
+.toast-success {
+    background: rgba(34, 197, 94, 0.9);
+    color: #ffffff;
+}
+.toast-error {
+    background: rgba(186, 26, 26, 0.9);
+    color: #ffffff;
+}
