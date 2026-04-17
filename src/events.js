@@ -83,13 +83,13 @@ export function setupEventListeners() {
                 ui.renderCategoryChips();
                 ui.renderInventory();
                 break;
-            case 'increment':
+            case 'order':
                 e.stopPropagation();
-                handleQuantityAdjustment(id, 1);
+                handleOrder(id);
                 break;
-            case 'decrement':
+            case 'receipt':
                 e.stopPropagation();
-                handleQuantityAdjustment(id, -1);
+                handleReceipt(id);
                 break;
         }
     });
@@ -254,7 +254,6 @@ function setupFormListeners() {
             const { data: { user } } = await state.supabaseClient.auth.getUser();
             const data = {
                 name: document.getElementById('item-name').value,
-                sku: document.getElementById('item-sku').value.trim() || null,
                 category: document.getElementById('item-category').value,
                 stock_quantity: parseInt(document.getElementById('item-stock').value),
                 target_quantity: parseInt(document.getElementById('item-target').value || 0),
@@ -387,73 +386,77 @@ function handleGlobalSearch(query) {
     }
 }
 
-async function handleQuantityAdjustment(id, delta) {
+async function handleOrder(id) {
     const p = state.products.find(item => item.id === id);
     if (!p) return;
 
-    const newStock = Math.max(0, (p.stock_quantity || 0) + delta);
-    if (newStock === p.stock_quantity) return;
+    const input = prompt(`${p.name} 주문 수량을 입력하세요:`, "0");
+    const qty = parseInt(input);
+    
+    if (isNaN(qty) || qty <= 0) return;
 
-    // 1. Optimistic Local Update
-    p.stock_quantity = newStock;
-    const status = ui.getStatus(p);
-    const target = p.target_quantity || 0;
-    const ratioPercent = target > 0 ? Math.round((newStock / target) * 100) : 0;
+    try {
+        const { data: { user } } = await state.supabaseClient.auth.getUser();
+        const newPending = (p.pending_quantity || 0) + qty;
+        
+        await api.updateProduct(id, {
+            pending_quantity: newPending,
+            updated_at: new Date().toISOString(),
+            updated_by: user ? user.email.replace(DOMAIN, "") : 'System'
+        });
 
-    // Targeted DOM Update for Mobile Card
-    const card = document.querySelector(`.mobile-inventory-card[data-id="${id}"]`);
-    if (card) {
-        const countEl = card.querySelector('.mobile-stock-count');
-        if (countEl) countEl.textContent = newStock;
-
-        const statusEl = card.querySelector('.mobile-stock-status');
-        if (statusEl) {
-            statusEl.classList.remove('text-error', 'text-red-500', 'text-primary-container');
-            statusEl.classList.add(status === 'OUT' ? 'text-error' : (status === 'LOW' ? 'text-red-500' : 'text-primary-container'));
-        }
-
-        const progressEl = card.querySelector('.mobile-stock-progress');
-        if (progressEl) {
-            progressEl.style.width = `${Math.min(ratioPercent, 100)}%`;
-            progressEl.classList.remove('bg-error', 'bg-red-400', 'bg-primary');
-            progressEl.classList.add(status === 'OUT' ? 'bg-error' : (status === 'LOW' ? 'bg-red-400' : 'bg-primary'));
-        }
-
-        const ratioEl = card.querySelector('.mobile-stock-ratio');
-        if (ratioEl) ratioEl.textContent = `${ratioPercent}%`;
-
-        const badgeContainer = card.querySelector('.mobile-stock-badge-container');
-        if (badgeContainer) {
-            badgeContainer.innerHTML = (status === 'LOW' || status === 'OUT') 
-                ? `<span class="mt-1 px-2 py-0.5 bg-red-50 text-red-600 text-[8px] font-black rounded-md border border-red-100 uppercase tracking-tighter">Low stock</span>`
-                : '';
-        }
+        await api.addActivity('ORDER', `${p.name} ${qty}개 주문함`, user?.email || 'unknown');
+        
+        // Refresh local state and UI
+        await api.fetchProducts();
+        await api.fetchActivities();
+        ui.renderInventory();
+        ui.renderActivities();
+        ui.updateStats();
+        
+        ui.showToast(`${p.name} ${qty}개 주문 완료`, "success");
+    } catch (err) {
+        ui.showToast(err.message, "error");
     }
-
-    // Update global stats counters
-    ui.updateStats();
-
-    // 2. Debounced Sync with DB
-    if (state.syncDebounceMap.has(id)) {
-        clearTimeout(state.syncDebounceMap.get(id));
-    }
-
-    const timer = setTimeout(async () => {
-        state.syncDebounceMap.delete(id);
-        try {
-            const { data: { user } } = await state.supabaseClient.auth.getUser();
-            await api.updateProduct(id, {
-                stock_quantity: p.stock_quantity,
-                updated_at: new Date().toISOString(),
-                updated_by: user ? user.email.replace(DOMAIN, "") : 'System/Swipe'
-            });
-        } catch (err) {
-            ui.showToast(err.message, "error");
-        }
-    }, 500);
-
-    state.syncDebounceMap.set(id, timer);
 }
+
+async function handleReceipt(id) {
+    const p = state.products.find(item => item.id === id);
+    if (!p || !p.pending_quantity) return;
+
+    ui.showConfirm({
+        title: "입고 확인",
+        message: `${p.name} ${p.pending_quantity}개를 입고 처리하시겠습니까?`,
+        onConfirm: async () => {
+            try {
+                const { data: { user } } = await state.supabaseClient.auth.getUser();
+                const newStock = (p.stock_quantity || 0) + p.pending_quantity;
+                const receivedQty = p.pending_quantity;
+
+                await api.updateProduct(id, {
+                    stock_quantity: newStock,
+                    pending_quantity: 0,
+                    updated_at: new Date().toISOString(),
+                    updated_by: user ? user.email.replace(DOMAIN, "") : 'System'
+                });
+
+                await api.addActivity('RECEIVE', `${p.name} ${receivedQty}개 입고 완료`, user?.email || 'unknown');
+
+                // Refresh local state and UI
+                await api.fetchProducts();
+                await api.fetchActivities();
+                ui.renderInventory();
+                ui.renderActivities();
+                ui.updateStats();
+
+                ui.showToast(`${p.name} 입고 완료`, "success");
+            } catch (err) {
+                ui.showToast(err.message, "error");
+            }
+        }
+    });
+}
+
 
 function setupSwipeHandling() {
     let startX = 0;

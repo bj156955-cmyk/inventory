@@ -118,9 +118,12 @@ export function renderInventory() {
 
     filtered.forEach(p => {
         const status = getStatus(p);
-        const target = p.target_quantity || 0;
+        const target = p.target_quantity || 1;
         const stock = p.stock_quantity || 0;
-        const ratioPercent = target > 0 ? Math.round((stock / target) * 100) : 0;
+        const pending = p.pending_quantity || 0;
+        const ratioPercent = Math.round((stock / target) * 100);
+        const pendingPercent = Math.round((pending / target) * 100);
+        const totalPercent = Math.min(ratioPercent + pendingPercent, 100);
 
         // Desktop Row
         const tr = document.createElement('tr');
@@ -134,20 +137,24 @@ export function renderInventory() {
                     <span class="text-sm font-black text-primary-container tracking-tight">${p.name}</span>
                 </div>
             </td>
-            <td class="px-8 py-6 text-xs font-black text-on-surface-variant/40 tracking-widest">${p.sku || 'NONE'}</td>
             <td class="px-8 py-6"><span class="text-[10px] font-black px-3 py-1 bg-surface-container-high rounded-lg text-primary-container uppercase tracking-widest">${p.category || 'N/A'}</span></td>
             <td class="px-8 py-6">
-                <div class="flex flex-col gap-2">
+                <div class="flex flex-col gap-3">
                     <div class="flex items-center justify-between flex-nowrap gap-4">
                         <div class="flex items-baseline gap-1 whitespace-nowrap shrink-0 ${status === 'OUT' ? 'text-error' : (status === 'LOW' ? 'text-orange-500' : 'text-primary-container')}">
                             <span class="text-sm font-black">${stock}</span>
-                            <span class="text-[10px] opacity-30">/</span>
-                            <span class="text-sm font-black">${target}</span>
+                            ${pending > 0 ? `<span class="text-[10px] text-primary/40 ml-1">+${pending}</span>` : ''}
+                            <span class="text-[10px] opacity-30 mx-1">/</span>
+                            <span class="text-sm font-black opacity-30">${target}</span>
                         </div>
-                        <span class="text-[10px] font-bold text-on-surface-variant/40 shrink-0">${ratioPercent}%</span>
+                        <div class="flex gap-2">
+                             <button data-id="${p.id}" data-action="order" class="btn-action btn-order"><span class="material-symbols-outlined text-[14px]">shopping_cart</span>Order</button>
+                             <button data-id="${p.id}" data-action="receipt" class="btn-action btn-receipt ${pending <= 0 ? 'opacity-20 pointer-events-none' : ''}"><span class="material-symbols-outlined text-[14px]">local_shipping</span>Receipt</button>
+                        </div>
                     </div>
-                    <div class="w-full bg-surface-container-low h-1 rounded-full overflow-hidden">
+                    <div class="w-full bg-surface-container-low h-1.5 rounded-full overflow-hidden flex">
                         <div class="h-full ${status === 'OUT' ? 'bg-error' : (status === 'LOW' ? 'bg-orange-400' : 'bg-primary')}" style="width: ${Math.min(ratioPercent, 100)}%"></div>
+                        <div class="h-full progress-dashed ${status === 'OUT' ? 'text-error' : (status === 'LOW' ? 'text-orange-400' : 'text-primary')}" style="width: ${Math.min(pendingPercent, 100 - ratioPercent)}%"></div>
                     </div>
                 </div>
             </td>
@@ -162,8 +169,8 @@ export function renderInventory() {
         wrapper.className = "mobile-card-wrapper";
         wrapper.innerHTML = `
             <div class="mobile-card-actions">
-                <button data-id="${p.id}" data-action="increment" class="swipe-btn increment"><span class="material-symbols-outlined">add</span></button>
-                <button data-id="${p.id}" data-action="decrement" class="swipe-btn decrement"><span class="material-symbols-outlined">remove</span></button>
+                <button data-id="${p.id}" data-action="order" class="swipe-btn increment"><span class="material-symbols-outlined">shopping_cart</span></button>
+                <button data-id="${p.id}" data-action="receipt" class="swipe-btn" style="background-color: #22c55e;"><span class="material-symbols-outlined">local_shipping</span></button>
                 <button data-id="${p.id}" data-action="delete" class="swipe-btn delete"><span class="material-symbols-outlined">delete</span></button>
             </div>
         `;
@@ -180,23 +187,23 @@ export function renderInventory() {
             <div class="flex-1 min-w-0">
                 <p class="font-black text-sm text-primary-container tracking-tight truncate">${p.name}</p>
                 <div class="flex items-center gap-2 mt-1">
-                    <span class="text-[9px] font-black text-on-surface-variant/40 uppercase tracking-widest">SKU: ${p.sku || 'NONE'}</span>
-                    <span class="w-1 h-1 rounded-full bg-black/5"></span>
                     <span class="text-[9px] font-black text-on-surface-variant/40 uppercase tracking-widest">${p.category || 'N/A'}</span>
                 </div>
                 <div class="flex items-center gap-2 mt-3">
-                    <div class="flex-1 bg-surface-container-low h-1 rounded-full overflow-hidden">
+                    <div class="flex-1 bg-surface-container-low h-1.5 rounded-full overflow-hidden flex">
                         <div class="mobile-stock-progress h-full ${status === 'OUT' ? 'bg-error' : (status === 'LOW' ? 'bg-red-400' : 'bg-primary')}" style="width: ${Math.min(ratioPercent, 100)}%"></div>
+                        <div class="h-full progress-dashed ${status === 'OUT' ? 'text-error' : (status === 'LOW' ? 'text-red-400' : 'text-primary')}" style="width: ${Math.min(pendingPercent, 100 - ratioPercent)}%"></div>
                     </div>
                 </div>
             </div>
             <div class="text-right flex flex-col items-end gap-1">
                 <div class="mobile-stock-status flex items-baseline gap-1 whitespace-nowrap shrink-0 ${status === 'OUT' ? 'text-error' : (status === 'LOW' ? 'text-red-500' : 'text-primary-container')}">
                     <span class="mobile-stock-count text-[10px] font-black">${stock}</span>
+                    ${pending > 0 ? `<span class="text-[8px] opacity-40"> +${pending}</span>` : ''}
                     <span class="text-[8px] opacity-30">/</span>
-                    <span class="text-[10px] font-black">${target}</span>
+                    <span class="text-[10px] font-black opacity-30">${target}</span>
                 </div>
-                <p class="mobile-stock-ratio text-[9px] font-black text-on-surface-variant/20 uppercase">${ratioPercent}%</p>
+                <p class="mobile-stock-ratio text-[9px] font-black text-on-surface-variant/20 uppercase">${Math.round(totalPercent)}%</p>
                 <div class="mobile-stock-badge-container">
                     ${status === 'LOW' || status === 'OUT' ? `<span class="mt-1 px-2 py-0.5 bg-red-50 text-red-600 text-[8px] font-black rounded-md border border-red-100 uppercase tracking-tighter">Low stock</span>` : ''}
                 </div>
@@ -395,7 +402,6 @@ export function editItem(id) {
     updateState({ editingId: id });
     document.getElementById('modal-title').textContent = "Adjust Item Details";
     document.getElementById('item-name').value = p.name;
-    document.getElementById('item-sku').value = p.sku || ''; 
     document.getElementById('item-category').value = p.category || '';
     document.getElementById('item-stock').value = p.stock_quantity;
     document.getElementById('item-target').value = p.target_quantity || 0;

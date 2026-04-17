@@ -426,3 +426,55 @@ body.platform-pc table td:nth-child(4) {
     background: rgba(186, 26, 26, 0.9);
     color: #ffffff;
 }
+/* Progress Bar Enhancements */
+.progress-container {
+    display: flex;
+    height: 100%;
+    width: 100%;
+    border-radius: inherit;
+}
+
+.progress-dashed {
+    height: 100%;
+    background-image: linear-gradient(90deg, currentColor 4px, transparent 4px);
+    background-size: 8px 100%;
+    opacity: 0.4;
+    transition: width 0.3s ease;
+}
+
+/* Action Buttons for Inventory */
+.btn-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    padding: 0.4rem 0.8rem;
+    border-radius: 0.75rem;
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    transition: all 0.2s;
+}
+
+.btn-order {
+    background-color: var(--primary-container);
+    color: white;
+}
+.btn-order:hover {
+    background-color: var(--primary);
+    box-shadow: 0 4px 12px rgba(0, 32, 69, 0.2);
+}
+
+.btn-receipt {
+    background-color: #22c55e;
+    color: white;
+}
+.btn-receipt:hover {
+    background-color: #16a34a;
+    box-shadow: 0 4px 12px rgba(34, 197, 94, 0.2);
+}
+
+.btn-action:active {
+    scale: 0.95;
+}
