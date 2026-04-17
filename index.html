@@ -160,6 +160,12 @@
                                     <p class="text-[10px] font-black uppercase tracking-widest text-on-surface-variant/40">Active User</p>
                                     <p id="user-name-dropdown" class="text-xs font-bold text-primary-container truncate mt-1">N/A</p>
                                 </div>
+                                <div class="px-2 py-1">
+                                    <button id="change-password-btn-trigger" class="w-full text-left px-4 py-3 text-xs font-bold text-primary flex items-center gap-2 hover:bg-primary/5 rounded-xl transition-all">
+                                        <span class="material-symbols-outlined text-lg">key</span>
+                                        <span>Change Password</span>
+                                    </button>
+                                </div>
                                 <button id="logout-btn-dropdown" class="w-full text-left px-4 py-3 text-xs font-bold text-error flex items-center gap-2 hover:bg-red-50 transition-colors">
                                     <span class="material-symbols-outlined text-lg">logout</span>
                                     <span>Sign Out</span>
@@ -309,6 +315,30 @@
                     </div>
                 </div>
             </main>
+        </div>
+    </div>
+
+    <!-- Password Change Modal -->
+    <div id="password-modal-overlay" class="modal-overlay fixed inset-0 bg-black/40 backdrop-blur-md z-[400] flex items-center justify-center opacity-0 pointer-events-none transition-all duration-300">
+        <div class="bg-white w-[95%] lg:w-[500px] rounded-[3rem] shadow-[0_32px_80px_rgba(0,0,0,0.4)] p-12 transform scale-95 transition-transform" id="password-modal-content">
+            <h3 class="text-3xl font-black font-headline text-primary-container mb-8 tracking-tighter">Secure Update</h3>
+            <form id="password-form" class="space-y-6">
+                <div class="space-y-4">
+                    <div class="flex flex-col gap-1.5">
+                        <label class="label-xs ml-1 font-black">New Password</label>
+                        <input type="password" id="new-password" required minlength="6" class="form-input w-full" placeholder="Min 6 characters">
+                    </div>
+                    <div class="flex flex-col gap-1.5">
+                        <label class="label-xs ml-1 font-black">Confirm Password</label>
+                        <input type="password" id="confirm-password" required minlength="6" class="form-input w-full" placeholder="Repeat new password">
+                    </div>
+                </div>
+                <div id="password-error" class="hidden text-[10px] font-black uppercase text-error tracking-widest mt-2 px-2 py-1 bg-red-50 rounded-lg"></div>
+                <div class="pt-8 flex gap-4">
+                    <button type="button" id="close-password-modal" class="flex-1 py-5 border border-black/5 rounded-[1.5rem] font-black text-primary hover:bg-surface-container-low transition-all">Cancel</button>
+                    <button type="submit" class="flex-1 py-5 bg-primary text-white rounded-[1.5rem] font-black shadow-lg hover:shadow-2xl active:scale-95 transition-all">Update Key</button>
+                </div>
+            </form>
         </div>
     </div>
 

@@ -135,6 +135,21 @@ function showApp(user) {
     setupPresence(username);
 }
 
+function openPasswordModal() {
+    const overlay = document.getElementById('password-modal-overlay');
+    if (overlay) {
+        overlay.classList.add('active');
+        document.getElementById('new-password').value = '';
+        document.getElementById('confirm-password').value = '';
+        document.getElementById('password-error').classList.add('hidden');
+    }
+}
+
+function closePasswordModal() {
+    const overlay = document.getElementById('password-modal-overlay');
+    if (overlay) overlay.classList.remove('active');
+}
+
 function showAuth() {
     const app = document.getElementById('app-container');
     const auth = document.getElementById('auth-container');
@@ -608,6 +623,64 @@ function setupEventListeners() {
                 location.reload();
             }
         };
+    }
+
+    const passwordForm = document.getElementById('password-form');
+    if (passwordForm) {
+        passwordForm.onsubmit = async (e) => {
+            e.preventDefault();
+            const newPass = document.getElementById('new-password').value;
+            const confirmPass = document.getElementById('confirm-password').value;
+            const errorDiv = document.getElementById('password-error');
+            
+            if (newPass !== confirmPass) {
+                errorDiv.innerText = "Passwords do not match";
+                errorDiv.classList.remove('hidden');
+                return;
+            }
+            
+            errorDiv.classList.add('hidden');
+            const submitBtn = passwordForm.querySelector('button[type="submit"]');
+            submitBtn.innerText = "Updating...";
+            submitBtn.disabled = true;
+
+            try {
+                const { error } = await supabaseClient.auth.updateUser({ password: newPass });
+                if (error) throw error;
+                
+                // Success
+                submitBtn.innerText = "Updated!";
+                setTimeout(() => {
+                    closePasswordModal();
+                    submitBtn.innerText = "Update Key";
+                    submitBtn.disabled = false;
+                }, 1500);
+            } catch (err) {
+                console.error("Atelier: Password update error", err);
+                errorDiv.innerText = err.message || "Update failed";
+                errorDiv.classList.remove('hidden');
+                submitBtn.innerText = "Update Key";
+                submitBtn.disabled = false;
+            }
+        };
+    }
+
+    const changePassTrigger = document.getElementById('change-password-btn-trigger');
+    if (changePassTrigger) {
+        changePassTrigger.onclick = () => {
+            console.log("Atelier: Change Password clicked");
+            const userMenu = document.getElementById('user-dropdown-menu');
+            if (userMenu) {
+                userMenu.classList.remove('show');
+                userMenu.classList.add('hidden');
+            }
+            openPasswordModal();
+        };
+    }
+
+    const closePassModalBtn = document.getElementById('close-password-modal');
+    if (closePassModalBtn) {
+        closePassModalBtn.onclick = closePasswordModal;
     }
 
     const authForm = document.getElementById('auth-form');
