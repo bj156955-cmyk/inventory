@@ -10,6 +10,27 @@ function detectPlatform() {
     console.log("Atelier: Platform detected -", isMobile ? "Mobile" : "PC");
 }
 
+/* CSS Injection for Layout Stability */
+const style = document.createElement('style');
+style.innerHTML = `
+    body.platform-pc table {
+        table-layout: fixed !important;
+        width: 100% !important;
+    }
+    body.platform-pc table th:nth-child(4), 
+    body.platform-pc table td:nth-child(4) {
+        width: 180px !important;
+        min-width: 180px !important;
+    }
+    .stock-container {
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        white-space: nowrap !important;
+        align-items: center;
+        gap: 4px;
+    }
+`;
+document.head.appendChild(style);
 
 console.log("Atelier: Whitelisted Core loaded");
 
@@ -375,9 +396,13 @@ function renderInventory() {
             <td class="px-8 py-6"><span class="text-[10px] font-black px-3 py-1 bg-surface-container-high rounded-lg text-primary-container uppercase tracking-widest">${p.category || 'N/A'}</span></td>
             <td class="px-8 py-6">
                 <div class="flex flex-col gap-2">
-                    <div class="flex items-center justify-between">
-                        <span class="text-sm font-black ${status === 'OUT' ? 'text-error' : (status === 'LOW' ? 'text-orange-500' : 'text-primary-container')}">${stock} / ${target}</span>
-                        <span class="text-[10px] font-bold text-on-surface-variant/40">${ratioPercent}%</span>
+                    <div class="flex items-center justify-between flex-nowrap gap-4">
+                        <div class="flex items-baseline gap-1 whitespace-nowrap shrink-0 ${status === 'OUT' ? 'text-error' : (status === 'LOW' ? 'text-orange-500' : 'text-primary-container')}">
+                            <span class="text-sm font-black">${stock}</span>
+                            <span class="text-[10px] opacity-30">/</span>
+                            <span class="text-sm font-black">${target}</span>
+                        </div>
+                        <span class="text-[10px] font-bold text-on-surface-variant/40 shrink-0">${ratioPercent}%</span>
                     </div>
                     <div class="w-full bg-surface-container-low h-1 rounded-full overflow-hidden">
                         <div class="h-full ${status === 'OUT' ? 'bg-error' : (status === 'LOW' ? 'bg-orange-400' : 'bg-primary')}" style="width: ${Math.min(ratioPercent, 100)}%"></div>
@@ -408,7 +433,11 @@ function renderInventory() {
                 </div>
             </div>
             <div class="text-right flex flex-col items-end gap-1">
-                <p class="text-[10px] font-black ${status === 'OUT' ? 'text-error' : (status === 'LOW' ? 'text-red-500' : 'text-primary-container')} uppercase">${stock} / ${target}</p>
+                <div class="flex items-baseline gap-1 whitespace-nowrap shrink-0 ${status === 'OUT' ? 'text-error' : (status === 'LOW' ? 'text-red-500' : 'text-primary-container')}">
+                    <span class="text-[10px] font-black">${stock}</span>
+                    <span class="text-[8px] opacity-30">/</span>
+                    <span class="text-[10px] font-black">${target}</span>
+                </div>
                 <p class="text-[9px] font-black text-on-surface-variant/20 uppercase">${ratioPercent}%</p>
                 ${status === 'LOW' || status === 'OUT' ? `<span class="mt-1 px-2 py-0.5 bg-red-50 text-red-600 text-[8px] font-black rounded-md border border-red-100 uppercase tracking-tighter">Low stock</span>` : ''}
             </div>

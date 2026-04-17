@@ -324,6 +324,11 @@ body.platform-pc table td:nth-child(2) {
     min-width: 120px; /* Protect SKU clarity */
 }
 
+body.platform-pc table th:nth-child(4), 
+body.platform-pc table td:nth-child(4) {
+    min-width: 140px; /* Prevent Stock/Target from wrapping */
+}
+
 body.platform-pc .flex-1.overflow-x-auto {
     scrollbar-width: thin;
 }
