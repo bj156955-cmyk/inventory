@@ -43,6 +43,9 @@ export function setupEventListeners() {
         };
     });
 
+    const closeModalBtn = document.getElementById('close-modal');
+    if (closeModalBtn) closeModalBtn.onclick = ui.closeModal;
+
     // Activity
     const addActivityBtn = document.getElementById('add-activity-btn');
     if (addActivityBtn) addActivityBtn.onclick = ui.openActivityModal;
