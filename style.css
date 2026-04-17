@@ -280,29 +280,25 @@ body.platform-pc header {
     padding-right: 2.5rem !important;
 }
 
-/* PC Grid Stability: Stats & Content */
+/* Fluid Workstation Layout: Adapts naturally to any window size */
 body.platform-pc #section-stats {
     display: grid !important;
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important; /* Default 2x2 for very narrow windows */
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)) !important;
     gap: 1.5rem !important;
 }
 
-@media (min-width: 1024px) {
-    body.platform-pc #section-stats {
-        grid-template-columns: repeat(4, minmax(0, 1fr)) !important; /* 1x4 for workstation view */
-    }
-}
-
 body.platform-pc #main-layout-grid {
-    display: grid !important;
-    grid-template-columns: 1fr !important; /* Vertical stack for truly narrow windows */
+    display: flex !important;
+    flex-wrap: wrap !important;
     gap: 2rem !important;
 }
 
-@media (min-width: 1024px) {
-    body.platform-pc #main-layout-grid {
-        grid-template-columns: 3fr 1fr !important; /* Side-by-side for workstation view */
-    }
+body.platform-pc #section-inventory {
+    flex: 3 1 720px !important; /* Prioritize list with a min-feel of 720px */
+}
+
+body.platform-pc #section-activity {
+    flex: 1 1 320px !important; /* Activity fills the remaining 1 part, snaps below if < 320px effectively */
 }
 
 /* Prevent Table Column Crushing */

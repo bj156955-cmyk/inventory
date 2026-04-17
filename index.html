@@ -184,7 +184,7 @@
                     </div>
                 </div>
 
-                <div id="section-stats" class="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 shrink-0">
+                <div id="section-stats" class="gap-4 lg:gap-6 shrink-0">
                     <!-- 1. Total Items -->
                     <div id="filter-total" class="bg-white p-5 lg:p-7 rounded-[2rem] shadow-sm lg:shadow-md cursor-pointer active:scale-95 transition-all">
                         <div class="flex justify-between items-start mb-4 lg:mb-6">
@@ -222,11 +222,11 @@
                     </div>
                 </div>
 
-                <!-- New 2-Column Main Layout: List (Large) + Activity (Sidebar) -->
-                <div id="main-layout-grid" class="grid grid-cols-1 lg:grid-cols-4 gap-8 pb-2">
+                <!-- New Fluid Main Layout: List + Activity Section -->
+                <div id="main-layout-grid" class="flex flex-col gap-8 pb-2">
                     
-                    <!-- (Left) Real Inventory Table Section - BIG & MIDDLE (3/4 width) -->
-                    <div id="section-inventory" class="lg:col-span-3 bg-white rounded-[2.5rem] no-line-card flex flex-col">
+                    <!-- (Left) Real Inventory Table Section -->
+                    <div id="section-inventory" class="bg-white rounded-[2.5rem] no-line-card flex flex-col">
                         <div class="px-8 py-6 border-b border-black/[0.03] flex justify-between items-center shrink-0">
                             <div>
                                 <h4 class="text-2xl font-black font-headline text-primary-container tracking-tight">Atelier Inventory List</h4>
@@ -257,7 +257,7 @@
                     </div>
 
                     <!-- (Right) Activity Log Section - LONG & SIDEBAR (1/4 width) -->
-                    <div id="section-activity" class="lg:col-span-1 flex flex-col">
+                    <div id="section-activity" class="flex flex-col">
                         <div class="bg-surface-container-lowest p-8 rounded-[2.5rem] no-line-card flex flex-col h-full min-h-0">
                             <div class="flex justify-between items-center mb-8 shrink-0">
                                 <h4 class="text-xl font-black font-headline text-primary-container">Recent Activity</h4>
