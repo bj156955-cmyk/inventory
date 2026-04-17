@@ -83,6 +83,14 @@ export function setupEventListeners() {
                 ui.renderCategoryChips();
                 ui.renderInventory();
                 break;
+            case 'increment':
+                e.stopPropagation();
+                handleQuantityAdjustment(id, 1);
+                break;
+            case 'decrement':
+                e.stopPropagation();
+                handleQuantityAdjustment(id, -1);
+                break;
         }
     });
 
@@ -178,6 +186,9 @@ export function setupEventListeners() {
 
     // Forms
     setupFormListeners();
+
+    // Swipe Handling
+    setupSwipeHandling();
 }
 
 function setupFormListeners() {
@@ -374,4 +385,87 @@ function handleGlobalSearch(query) {
     } else if (dropdown) {
         dropdown.classList.add('hidden');
     }
+}
+
+async function handleQuantityAdjustment(id, delta) {
+    const p = state.products.find(item => item.id === id);
+    if (!p) return;
+
+    const newStock = Math.max(0, (p.stock_quantity || 0) + delta);
+    if (newStock === p.stock_quantity) return;
+
+    try {
+        const { data: { user } } = await state.supabaseClient.auth.getUser();
+        await api.updateProduct(id, {
+            stock_quantity: newStock,
+            updated_at: new Date().toISOString(),
+            updated_by: user ? user.email.replace(DOMAIN, "") : 'System/Swipe'
+        });
+        ui.showToast(`Stock updated to ${newStock}`, "success");
+        api.fetchProducts().then(() => ui.renderInventory());
+    } catch (err) {
+        ui.showToast(err.message, "error");
+    }
+}
+
+function setupSwipeHandling() {
+    let startX = 0;
+    let currentX = 0;
+    let activeCard = null;
+    let isDragging = false;
+
+    const container = document.getElementById('mobile-inventory-list');
+    if (!container) return;
+
+    container.addEventListener('touchstart', (e) => {
+        const card = e.target.closest('.mobile-inventory-card');
+        if (!card) return;
+
+        if (activeCard && activeCard !== card) {
+            activeCard.style.transform = 'translateX(0)';
+        }
+
+        activeCard = card;
+        startX = e.touches[0].clientX;
+        currentX = startX;
+        isDragging = true;
+        card.style.transition = 'none';
+    }, { passive: true });
+
+    container.addEventListener('touchmove', (e) => {
+        if (!isDragging || !activeCard) return;
+        currentX = e.touches[0].clientX;
+        const diff = currentX - startX;
+
+        if (diff < 0) {
+            const move = Math.max(diff, -180);
+            activeCard.style.transform = `translateX(${move}px)`;
+        } else if (diff > 0 && activeCard.style.transform !== 'translateX(0px)') {
+            const currentTranslate = parseInt(activeCard.style.transform.replace('translateX(', '').replace('px)', '')) || 0;
+            const move = Math.min(0, currentTranslate + diff);
+            activeCard.style.transform = `translateX(${move}px)`;
+        }
+    }, { passive: true });
+
+    container.addEventListener('touchend', () => {
+        if (!isDragging || !activeCard) return;
+        isDragging = false;
+        
+        const diff = currentX - startX;
+        activeCard.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+
+        if (diff < -80) {
+            activeCard.style.transform = 'translateX(-180px)';
+        } else {
+            activeCard.style.transform = 'translateX(0)';
+            activeCard = null;
+        }
+    });
+
+    document.addEventListener('click', (e) => {
+        if (activeCard && !activeCard.contains(e.target) && !e.target.closest('.mobile-card-actions')) {
+            activeCard.style.transform = 'translateX(0)';
+            activeCard = null;
+        }
+    });
 }

@@ -45,7 +45,7 @@ body { -webkit-font-smoothing: antialiased; background-color: var(--surface); }
 /* Navigation & Architecture */
 .nav-item {
     display: flex;
-    items-center;
+    align-items: center;
     gap: 1rem;
     padding: 1rem 1.25rem;
     color: var(--on-surface-variant);
@@ -53,7 +53,6 @@ body { -webkit-font-smoothing: antialiased; background-color: var(--surface); }
     font-size: 0.875rem;
     border-radius: 1rem;
     transition: all 0.3s;
-    align-items: center;
 }
 .nav-item:hover {
     background-color: rgba(255, 255, 255, 0.6);
@@ -172,6 +171,36 @@ body { -webkit-font-smoothing: antialiased; background-color: var(--surface); }
     opacity: 1;
 }
 
+.mobile-card-wrapper {
+    position: relative;
+    overflow: hidden;
+    border-radius: 2.5rem;
+    touch-action: pan-y;
+    background-color: #f8fafc;
+    margin-bottom: 1rem;
+}
+.mobile-card-actions {
+    position: absolute;
+    right: 0;
+    top: 0;
+    height: 100%;
+    display: flex;
+    z-index: 1;
+}
+.swipe-btn {
+    width: 60px;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.swipe-btn span { font-variation-settings: 'wght' 700; }
+.swipe-btn.increment { background-color: var(--primary); }
+.swipe-btn.decrement { background-color: #f59e0b; }
+.swipe-btn.delete { background-color: var(--error); border-top-right-radius: 2.5rem; border-bottom-right-radius: 2.5rem; }
+
 .mobile-inventory-card {
     background-color: #ffffff;
     padding: 1.25rem;
@@ -180,7 +209,10 @@ body { -webkit-font-smoothing: antialiased; background-color: var(--surface); }
     align-items: center;
     gap: 1.25rem;
     box-shadow: var(--shadow-md);
-    transition: transform 0.2s;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    z-index: 10;
+    width: 100%;
 }
 .mobile-inventory-card:active {
     transform: scale(0.98);

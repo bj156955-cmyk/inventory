@@ -157,6 +157,17 @@ export function renderInventory() {
         `;
         dtFragment.appendChild(tr);
 
+        // Mobile Card Wrapper
+        const wrapper = document.createElement('div');
+        wrapper.className = "mobile-card-wrapper";
+        wrapper.innerHTML = `
+            <div class="mobile-card-actions" onclick="event.stopPropagation()">
+                <button data-id="${p.id}" data-action="increment" class="swipe-btn increment"><span class="material-symbols-outlined">add</span></button>
+                <button data-id="${p.id}" data-action="decrement" class="swipe-btn decrement"><span class="material-symbols-outlined">remove</span></button>
+                <button data-id="${p.id}" data-action="delete" class="swipe-btn delete"><span class="material-symbols-outlined">delete</span></button>
+            </div>
+        `;
+
         // Mobile Card
         const card = document.createElement('div');
         card.className = "mobile-inventory-card";
@@ -186,7 +197,8 @@ export function renderInventory() {
                 ${status === 'LOW' || status === 'OUT' ? `<span class="mt-1 px-2 py-0.5 bg-red-50 text-red-600 text-[8px] font-black rounded-md border border-red-100 uppercase tracking-tighter">Low stock</span>` : ''}
             </div>
         `;
-        mbFragment.appendChild(card);
+        wrapper.appendChild(card);
+        mbFragment.appendChild(wrapper);
     });
 
     desktopBody.innerHTML = '';
