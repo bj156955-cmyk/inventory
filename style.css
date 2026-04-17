@@ -248,8 +248,15 @@ body.platform-pc .pc-only { display: block !important; }
 body.platform-pc aside.pc-only { display: flex !important; }
 body.platform-pc table.pc-only { display: table !important; }
 
-/* Ensure PC layout is stable with compact sidebar */
+/* Ensure PC layout is stable with a centered, non-stretching container */
 body.platform-pc #app-container {
+    width: 100%;
+    display: flex;
+}
+
+body.platform-pc .main-content-wrapper {
+    max-width: 1800px; /* Prevent excessive stretching on ultra-wide screens */
+    margin: 0 auto;
     width: 100%;
 }
 
@@ -280,25 +287,30 @@ body.platform-pc header {
     padding-right: 2.5rem !important;
 }
 
-/* Fluid Workstation Layout: Adapts naturally to any window size */
+/* Stats Grid: Restricted to 2-2 or 4-0 layouts to maintain symmetry */
 body.platform-pc #section-stats {
     display: grid !important;
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)) !important;
+    grid-template-columns: repeat(2, 1fr) !important; /* Default 2-2 for PC */
     gap: 1.5rem !important;
 }
 
+@media (min-width: 1360px) {
+    body.platform-pc #section-stats {
+        grid-template-columns: repeat(4, 1fr) !important; /* 4-0 for wide workstation view */
+    }
+}
+
 body.platform-pc #main-layout-grid {
-    display: flex !important;
-    flex-wrap: wrap !important;
+    display: grid !important;
+    grid-template-columns: 3fr 1fr !important; /* Force side-by-side for workstation */
     gap: 2rem !important;
 }
 
-body.platform-pc #section-inventory {
-    flex: 3 1 720px !important; /* Prioritize list with a min-feel of 720px */
-}
-
-body.platform-pc #section-activity {
-    flex: 1 1 320px !important; /* Activity fills the remaining 1 part, snaps below if < 320px effectively */
+/* Fallback to stacked view only if the viewport is truly small (Tablet/Small Laptop) */
+@media (max-width: 1100px) {
+    body.platform-pc #main-layout-grid {
+        grid-template-columns: 1fr !important;
+    }
 }
 
 /* Prevent Table Column Crushing */
