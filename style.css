@@ -434,12 +434,18 @@ body.platform-pc table td:nth-child(4) {
     border-radius: inherit;
 }
 
-.progress-dashed {
+.progress-pending {
     height: 100%;
-    background-image: linear-gradient(90deg, currentColor 4px, transparent 4px);
-    background-size: 8px 100%;
-    opacity: 0.4;
+    background-color: currentColor;
+    opacity: 0.25;
     transition: width 0.3s ease;
+    animation: progress-pulse 2s infinite ease-in-out;
+}
+
+@keyframes progress-pulse {
+    0% { opacity: 0.2; }
+    50% { opacity: 0.4; }
+    100% { opacity: 0.2; }
 }
 
 /* Action Buttons for Inventory */

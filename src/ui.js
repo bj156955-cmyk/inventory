@@ -143,14 +143,13 @@ export function renderInventory() {
                     <div class="flex items-center justify-between flex-nowrap gap-4">
                         <div class="flex items-baseline gap-1 whitespace-nowrap shrink-0 ${status === 'OUT' ? 'text-error' : (status === 'LOW' ? 'text-orange-500' : 'text-primary-container')}">
                             <span class="text-sm font-black">${stock}</span>
-                            ${pending > 0 ? `<span class="text-[10px] text-primary/40 ml-1">+${pending}</span>` : ''}
                             <span class="text-[10px] opacity-30 mx-1">/</span>
                             <span class="text-sm font-black opacity-30">${target}</span>
                         </div>
                     </div>
                     <div class="w-full bg-surface-container-low h-1.5 rounded-full overflow-hidden flex">
                         <div class="h-full ${status === 'OUT' ? 'bg-error' : (status === 'LOW' ? 'bg-orange-400' : 'bg-primary')}" style="width: ${Math.min(ratioPercent, 100)}%"></div>
-                        <div class="h-full progress-dashed ${status === 'OUT' ? 'text-error' : (status === 'LOW' ? 'text-orange-400' : 'text-primary')}" style="width: ${Math.min(pendingPercent, 100 - ratioPercent)}%"></div>
+                        <div class="h-full progress-pending ${status === 'OUT' ? 'text-error' : (status === 'LOW' ? 'text-orange-400' : 'text-primary')}" style="width: ${Math.min(pendingPercent, 100 - ratioPercent)}%"></div>
                     </div>
                 </div>
             </td>
@@ -194,14 +193,13 @@ export function renderInventory() {
                 <div class="flex items-center gap-2 mt-3">
                     <div class="flex-1 bg-surface-container-low h-1.5 rounded-full overflow-hidden flex">
                         <div class="mobile-stock-progress h-full ${status === 'OUT' ? 'bg-error' : (status === 'LOW' ? 'bg-red-400' : 'bg-primary')}" style="width: ${Math.min(ratioPercent, 100)}%"></div>
-                        <div class="h-full progress-dashed ${status === 'OUT' ? 'text-error' : (status === 'LOW' ? 'text-red-400' : 'text-primary')}" style="width: ${Math.min(pendingPercent, 100 - ratioPercent)}%"></div>
+                        <div class="h-full progress-pending ${status === 'OUT' ? 'text-error' : (status === 'LOW' ? 'text-red-400' : 'text-primary')}" style="width: ${Math.min(pendingPercent, 100 - ratioPercent)}%"></div>
                     </div>
                 </div>
             </div>
             <div class="text-right flex flex-col items-end gap-1">
                 <div class="mobile-stock-status flex items-baseline gap-1 whitespace-nowrap shrink-0 ${status === 'OUT' ? 'text-error' : (status === 'LOW' ? 'text-red-500' : 'text-primary-container')}">
                     <span class="mobile-stock-count text-[10px] font-black">${stock}</span>
-                    ${pending > 0 ? `<span class="text-[8px] opacity-40"> +${pending}</span>` : ''}
                     <span class="text-[8px] opacity-30">/</span>
                     <span class="text-[10px] font-black opacity-30">${target}</span>
                 </div>
