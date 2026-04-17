@@ -243,6 +243,13 @@ body.platform-mobile .pc-only { display: none !important; }
 body.platform-mobile .mobile-only { display: block !important; }
 body.platform-mobile nav.mobile-only { display: flex !important; }
 
+/* Mobile Stacked UI to Grid */
+body.platform-mobile #section-stats {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 0.75rem !important;
+}
+
 /* PC specific display types when platform-pc is active (Safe-guard) */
 body.platform-pc .pc-only { display: block !important; }
 body.platform-pc aside.pc-only { display: flex !important; }
