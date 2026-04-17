@@ -490,19 +490,24 @@ function setupSwipeHandling() {
         isDragging = false;
         
         const diff = currentX - startX;
+        const id = activeCard.getAttribute('data-id');
         activeCard.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
 
         if (diff < -80) {
             activeCard.style.transform = 'translateX(-180px)';
+            updateState({ activeSwipeId: id });
         } else {
             activeCard.style.transform = 'translateX(0)';
+            if (state.activeSwipeId === id) updateState({ activeSwipeId: null });
             activeCard = null;
         }
     });
 
     document.addEventListener('click', (e) => {
         if (activeCard && !activeCard.contains(e.target) && !e.target.closest('.mobile-card-actions')) {
+            const id = activeCard.getAttribute('data-id');
             activeCard.style.transform = 'translateX(0)';
+            if (state.activeSwipeId === id) updateState({ activeSwipeId: null });
             activeCard = null;
         }
     });

@@ -173,6 +173,9 @@ export function renderInventory() {
         card.className = "mobile-inventory-card";
         card.setAttribute('data-id', p.id);
         card.setAttribute('data-action', 'edit');
+        if (state.activeSwipeId === p.id) {
+            card.style.transform = 'translateX(-180px)';
+        }
         card.innerHTML = `
             <div class="flex-1 min-w-0">
                 <p class="font-black text-sm text-primary-container tracking-tight truncate">${p.name}</p>

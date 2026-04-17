@@ -7,6 +7,7 @@ export const state = {
     isSignUp: false,
     currentCategory: 'all',
     currentStatusFilter: 'all',
+    activeSwipeId: null,
     supabaseClient: null,
     currentUser: null,
 };
