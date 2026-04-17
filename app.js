@@ -97,6 +97,12 @@ function showApp(user) {
     const nameLabel = document.getElementById('user-display-name-desktop');
     if (nameLabel) nameLabel.textContent = username.toUpperCase();
 
+    const nameLabelDropdown = document.getElementById('user-name-dropdown');
+    if (nameLabelDropdown) nameLabelDropdown.textContent = username.toUpperCase();
+
+    const nameLabelHeader = document.getElementById('user-display-id-header');
+    if (nameLabelHeader) nameLabelHeader.textContent = username.toUpperCase();
+
     // Team Access visible to all team members
     const navTeam = document.getElementById('nav-team');
     if (navTeam) navTeam.classList.remove('hidden');
@@ -520,6 +526,13 @@ function setupEventListeners() {
         if (dropdown && !dropdown.contains(e.target) && e.target !== searchInput) {
             dropdown.classList.add('hidden');
         }
+
+        // Close user dropdown if clicking outside
+        const userMenu = document.getElementById('user-dropdown-menu');
+        if (userMenu && !userMenu.contains(e.target) && e.target.id !== 'user-profile-trigger') {
+            userMenu.classList.remove('show');
+            userMenu.classList.add('hidden');
+        }
     });
 
     const addActivityBtn = document.getElementById('add-activity-btn');
@@ -528,6 +541,26 @@ function setupEventListeners() {
             console.log("Atelier: Add Activity clicked");
             openActivityModal();
         });
+    }
+
+    // New Header + Button (PC)
+    const addItemBtnPC = document.getElementById('add-item-btn-pc');
+    if (addItemBtnPC) {
+        addItemBtnPC.onclick = () => {
+            console.log("Atelier: Header Add clicked");
+            openModal();
+        };
+    }
+
+    // User Dropdown Logic
+    const profileTrigger = document.getElementById('user-profile-trigger');
+    const userMenu = document.getElementById('user-dropdown-menu');
+    if (profileTrigger && userMenu) {
+        profileTrigger.onclick = (e) => {
+            e.stopPropagation();
+            userMenu.classList.toggle('show');
+            userMenu.classList.toggle('hidden');
+        };
     }
 
     const closeActivityBtn = document.getElementById('close-activity-modal');
@@ -673,6 +706,10 @@ function setupEventListeners() {
 
     const logoutBtnMob = document.getElementById('logout-btn-mobile');
     if (logoutBtnMob) logoutBtnMob.onclick = async () => { await supabaseClient.auth.signOut(); location.reload(); };
+
+    // New Dropdown Logout
+    const logoutBtnDropdown = document.getElementById('logout-btn-dropdown');
+    if (logoutBtnDropdown) logoutBtnDropdown.onclick = async () => { await supabaseClient.auth.signOut(); location.reload(); };
     
     const refreshBtn = document.getElementById('refresh-btn');
     if (refreshBtn) refreshBtn.onclick = fetchProducts;

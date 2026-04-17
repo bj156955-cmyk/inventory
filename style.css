@@ -248,15 +248,31 @@ body.platform-pc .pc-only { display: block !important; }
 body.platform-pc aside.pc-only { display: flex !important; }
 body.platform-pc table.pc-only { display: table !important; }
 
-/* Ensure PC layout doesn't collapse too much on small PC windows */
+/* Ensure PC layout is stable with compact sidebar */
 body.platform-pc #app-container {
     min-width: 1024px;
     overflow-x: auto;
 }
 
+/* Compact Sidebar Adjustments */
+body.platform-pc aside.pc-only {
+    width: 5rem !important; /* 80px */
+}
+
+body.platform-pc .main-content-wrapper {
+    margin-left: 5rem !important; /* Matches Compact Sidebar */
+}
+
+/* User Dropdown Animation */
+#user-dropdown-menu.show {
+    display: block !important;
+    opacity: 1 !important;
+    transform: translateY(0) !important;
+}
+
 /* PC specific layout stability rules */
 body.platform-pc .main-content-wrapper {
-    margin-left: 18rem !important; /* Forces Sidebar Space */
+    margin-left: 5rem !important; /* Updated for Compact Sidebar */
 }
 
 body.platform-pc header {

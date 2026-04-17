@@ -88,27 +88,36 @@
         
         <!-- Premium Sidebar -->
         <!-- Premium Sidebar -->
-        <aside class="pc-only h-screen w-72 bg-surface-container-low flex flex-col p-8 space-y-2 border-r border-black/[0.03] z-[100] fixed">
+        <!-- Premium Compact Sidebar -->
+        <aside class="pc-only h-screen w-20 bg-surface-container-low flex flex-col items-center py-10 space-y-8 border-r border-black/[0.03] z-[100] fixed">
 
-            <div class="mb-12 px-2 flex items-center gap-4">
+            <div class="px-2 flex items-center justify-center">
                 <div class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center shadow-lg"><span class="material-symbols-outlined text-white text-xl">inventory_2</span></div>
-                <h1 class="text-xl font-black text-primary-container font-headline tracking-tighter">Atelier Inventory</h1>
             </div>
-            <nav class="flex-1 space-y-2">
-                <a href="#" class="nav-item active" data-view="dashboard"><span class="material-symbols-outlined filled">dashboard</span><span>Dashboard</span></a>
-                <a href="#" class="nav-item" data-view="inventory"><span class="material-symbols-outlined">inventory_2</span><span>Full Inventory</span></a>
-                <a href="#" class="nav-item" data-view="movements"><span class="material-symbols-outlined">swap_horiz</span><span>Movements</span></a>
-                <a href="#" class="nav-item" id="nav-team" data-view="team"><span class="material-symbols-outlined">group</span><span>Team Access</span></a>
-                <a href="#" class="nav-item" data-view="reports"><span class="material-symbols-outlined">analytics</span><span>Reports</span></a>
+            
+            <nav class="flex-1 space-y-4">
+                <a href="#" class="nav-item active flex justify-center p-0 w-12 h-12" data-view="dashboard" title="Dashboard">
+                    <span class="material-symbols-outlined filled">dashboard</span>
+                </a>
+                <a href="#" class="nav-item flex justify-center p-0 w-12 h-12" data-view="inventory" title="Full Inventory">
+                    <span class="material-symbols-outlined">inventory_2</span>
+                </a>
+                <a href="#" class="nav-item flex justify-center p-0 w-12 h-12" data-view="movements" title="Movements">
+                    <span class="material-symbols-outlined">swap_horiz</span>
+                </a>
+                <a href="#" class="nav-item flex justify-center p-0 w-12 h-12" id="nav-team" data-view="team" title="Team Access">
+                    <span class="material-symbols-outlined">group</span>
+                </a>
+                <a href="#" class="nav-item flex justify-center p-0 w-12 h-12" data-view="reports" title="Reports">
+                    <span class="material-symbols-outlined">analytics</span>
+                </a>
             </nav>
-            <div class="pt-6 border-t border-black/[0.05] space-y-4">
-                <button id="add-item-btn-desktop" class="w-full bg-primary text-white py-4 rounded-2xl font-headline font-black text-sm shadow-lg hover:shadow-2xl transition-all active:scale-95">Create New Entry</button>
-                <div id="logout-btn-desktop" class="flex items-center gap-3 px-4 py-2 text-on-surface-variant font-bold text-xs uppercase tracking-widest cursor-pointer hover:text-primary transition-colors"><span class="material-symbols-outlined text-lg">logout</span><span>Sign Out</span></div>
-            </div>
+            
+            <!-- Sidebar Footer is now empty/minimized -->
         </aside>
 
         <!-- Main Content Wrapper -->
-        <div id="main-wrapper" class="main-content-wrapper flex-1 lg:ml-72 flex flex-col min-h-screen lg:h-screen lg:overflow-hidden">
+        <div id="main-wrapper" class="main-content-wrapper flex-1 lg:ml-20 flex flex-col min-h-screen lg:h-screen lg:overflow-hidden">
             
             <!-- Native Mobile Header & Branding -->
             <header class="w-full sticky top-0 z-50 glass flex items-center justify-between h-16 lg:h-20 px-6 lg:px-10 border-b border-black/[0.02]">
@@ -130,11 +139,33 @@
                 
                 <div class="flex items-center gap-4">
                     <div class="flex items-center gap-2">
+                        <!-- Desktop Header actions (Compact UI) -->
+                        <button id="add-item-btn-pc" class="pc-only w-9 h-9 rounded-xl bg-primary/5 text-primary flex items-center justify-center shadow-sm active:scale-95 transition-all hover:bg-primary hover:text-white mr-2">
+                            <span class="material-symbols-outlined text-sm">add</span>
+                        </button>
+                        
                         <!-- Mobile-only Add Button -->
                         <button id="add-item-btn-header" class="mobile-only w-9 h-9 rounded-xl bg-primary text-white flex items-center justify-center shadow-sm active:scale-95 transition-all"><span class="material-symbols-outlined text-sm">add</span></button>
+                        
                         <button class="icon-btn-sm lg:flex hidden"><span class="material-symbols-outlined">notifications</span></button>
-                        <div class="w-9 h-9 lg:w-11 lg:h-11 rounded-xl bg-primary/5 flex items-center justify-center border border-black/5 shadow-sm ml-1 overflow-hidden">
-                            <span class="material-symbols-outlined text-primary text-xl">person</span>
+                        
+                        <!-- User Profile icon with Dropdown -->
+                        <div class="relative">
+                            <div id="user-profile-trigger" class="px-4 h-9 lg:h-11 rounded-xl bg-primary/5 flex items-center justify-center border border-black/5 shadow-sm ml-1 overflow-hidden cursor-pointer hover:border-primary/20 transition-all">
+                                <span id="user-display-id-header" class="text-xs font-black text-primary tracking-tighter">User</span>
+                            </div>
+                            
+                            <!-- Profile Dropdown (Glassmorphism) -->
+                            <div id="user-dropdown-menu" class="absolute top-full right-0 mt-3 w-48 bg-white/80 backdrop-blur-xl border border-black/5 rounded-[1.5rem] shadow-2xl py-2 z-[600] hidden opacity-0 translate-y-2 transition-all duration-200">
+                                <div class="px-4 py-3 border-b border-black/[0.03]">
+                                    <p class="text-[10px] font-black uppercase tracking-widest text-on-surface-variant/40">Active User</p>
+                                    <p id="user-name-dropdown" class="text-xs font-bold text-primary-container truncate mt-1">N/A</p>
+                                </div>
+                                <button id="logout-btn-dropdown" class="w-full text-left px-4 py-3 text-xs font-bold text-error flex items-center gap-2 hover:bg-red-50 transition-colors">
+                                    <span class="material-symbols-outlined text-lg">logout</span>
+                                    <span>Sign Out</span>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
