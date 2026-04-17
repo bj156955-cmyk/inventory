@@ -243,6 +243,7 @@ body.platform-mobile .pc-only { display: none !important; }
 
 /* Show as block by default, but allow flex overrides */
 body.platform-mobile .mobile-only { display: block; }
+body.platform-mobile span.mobile-only { display: inline-block !important; }
 body.platform-mobile .mobile-only.flex { display: flex !important; }
 body.platform-mobile .mobile-only.grid { display: grid !important; }
 body.platform-mobile nav.mobile-only { display: flex !important; }
