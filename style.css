@@ -198,9 +198,9 @@ body { -webkit-font-smoothing: antialiased; background-color: var(--surface); }
     flex-shrink: 0;
 }
 
-/* Material Symbols Adjustments */
+/* Material Symbols Adjustments - Thinner, more premium look (200) */
 .material-symbols-outlined {
-    font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+    font-variation-settings: 'FILL' 0, 'wght' 200, 'GRAD' 0, 'opsz' 24;
 }
 .material-symbols-outlined.filled {
     font-variation-settings: 'FILL' 1;
@@ -243,6 +243,7 @@ body.platform-mobile .pc-only { display: none !important; }
 
 /* Show as block by default, but allow flex overrides */
 body.platform-mobile .mobile-only { display: block; }
+body.platform-mobile div.mobile-only { display: block !important; }
 body.platform-mobile span.mobile-only { display: inline-block !important; }
 body.platform-mobile .mobile-only.flex { display: flex !important; }
 body.platform-mobile .mobile-only.grid { display: grid !important; }
