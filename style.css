@@ -306,16 +306,21 @@ body.platform-pc header {
 }
 
 /* Stats Grid: Restricted to 2-2 or 4-0 layouts to maintain symmetry */
-body.platform-pc #section-stats {
+body.platform-pc #section-stats:not(.hidden) {
     display: grid !important;
     grid-template-columns: repeat(2, 1fr) !important; /* Default 2-2 for PC */
     gap: 1.5rem !important;
 }
 
 @media (min-width: 1360px) {
-    body.platform-pc #section-stats {
+    body.platform-pc #section-stats:not(.hidden) {
         grid-template-columns: repeat(4, 1fr) !important; /* 4-0 for wide workstation view */
     }
+}
+
+/* Global Hidden Override for PC to respect display: none !important */
+body.platform-pc .hidden {
+    display: none !important;
 }
 
 body.platform-pc #main-layout-grid {
