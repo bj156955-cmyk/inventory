@@ -868,17 +868,17 @@ function switchView(view) {
 
     if (!title || !subtitle) return;
 
+    // Reset visibility logic
+    if (stats) stats.classList.add('hidden');
+    if (inventory) inventory.classList.add('hidden');
+    if (activity) activity.classList.add('hidden');
+    if (team) team.classList.add('hidden');
+
     if (view === 'inventory') {
-        if (stats) stats.classList.add('hidden');
-        if (activity) activity.classList.add('hidden');
-        if (team) team.classList.add('hidden');
         if (inventory) inventory.classList.remove('hidden');
         title.textContent = "Full Inventory Management";
         subtitle.textContent = "Complete list of architectural assets across all zones.";
     } else if (view === 'team') {
-        if (stats) stats.classList.add('hidden');
-        if (activity) activity.classList.add('hidden');
-        if (inventory) inventory.classList.add('hidden');
         if (team) team.classList.remove('hidden');
         title.textContent = "Team Access Management";
         subtitle.textContent = "Manage whitelisted IDs and active warehouse members.";
@@ -886,9 +886,14 @@ function switchView(view) {
         if (stats) stats.classList.remove('hidden');
         if (activity) activity.classList.remove('hidden');
         if (inventory) inventory.classList.remove('hidden');
-        if (team) team.classList.add('hidden');
         title.textContent = "Main Atelier Dashboard";
         subtitle.textContent = "Real-time oversight of architectural stock movements.";
+    } else if (view === 'movements') {
+        title.textContent = "Stock Movements";
+        subtitle.textContent = "Log and track material transfers and shipments.";
+    } else if (view === 'reports') {
+        title.textContent = "Operational Reports";
+        subtitle.textContent = "Analytics and performance metrics for the warehouse.";
     }
 }
 

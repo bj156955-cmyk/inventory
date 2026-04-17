@@ -240,14 +240,25 @@ body.platform-mobile .pc-only { display: none !important; }
 
 /* Mobile Only items are hidden by default. Shown ONLY if platform-mobile class is added. */
 .mobile-only { display: none !important; }
-body.platform-mobile .mobile-only { display: block !important; }
+
+/* Show as block by default, but allow flex overrides */
+body.platform-mobile .mobile-only { display: block; }
+body.platform-mobile .mobile-only.flex { display: flex !important; }
+body.platform-mobile .mobile-only.grid { display: grid !important; }
 body.platform-mobile nav.mobile-only { display: flex !important; }
 
 /* Mobile Stacked UI to Grid */
-body.platform-mobile #section-stats {
+body.platform-mobile #section-stats:not(.hidden) {
     display: grid !important;
     grid-template-columns: repeat(2, 1fr) !important;
     gap: 0.75rem !important;
+}
+
+/* Ensure hidden always works even with !important grid/flex */
+body.platform-mobile .hidden, 
+body.platform-mobile .pc-only.hidden, 
+body.platform-mobile .mobile-only.hidden { 
+    display: none !important; 
 }
 
 /* PC specific display types when platform-pc is active (Safe-guard) */
