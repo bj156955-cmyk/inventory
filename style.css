@@ -253,3 +253,41 @@ body.platform-pc #app-container {
     min-width: 1024px;
     overflow-x: auto;
 }
+
+/* PC specific layout stability rules */
+body.platform-pc .main-content-wrapper {
+    margin-left: 18rem !important; /* Forces Sidebar Space */
+}
+
+body.platform-pc header {
+    height: 5rem !important;
+    padding-left: 2.5rem !important;
+    padding-right: 2.5rem !important;
+}
+
+/* PC Grid Stability: Stats & Content */
+body.platform-pc #section-stats {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+}
+
+body.platform-pc #main-layout-grid {
+    display: grid !important;
+    grid-template-columns: 3fr 1fr !important; /* Maintain 3:1 ratio on PC */
+    gap: 2rem !important;
+}
+
+/* Prevent Table Column Crushing */
+body.platform-pc table th:first-child, 
+body.platform-pc table td:first-child {
+    min-width: 240px; /* Protect Item Name clarity */
+}
+
+body.platform-pc table th:nth-child(2), 
+body.platform-pc table td:nth-child(2) {
+    min-width: 120px; /* Protect SKU clarity */
+}
+
+body.platform-pc .flex-1.overflow-x-auto {
+    scrollbar-width: thin;
+}
