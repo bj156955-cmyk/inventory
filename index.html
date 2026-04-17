@@ -445,7 +445,7 @@
             <div class="flex flex-col space-y-8">
                 <div class="flex items-center justify-between">
                     <h3 class="text-2xl font-black font-headline text-primary-container tracking-tighter" id="order-modal-title">Order Item</h3>
-                    <button onclick="ui.closeOrderModal()" class="w-10 h-10 rounded-full hover:bg-black/5 flex items-center justify-center transition-all"><span class="material-symbols-outlined">close</span></button>
+                    <button id="order-modal-close-btn" class="w-10 h-10 rounded-full hover:bg-black/5 flex items-center justify-center transition-all"><span class="material-symbols-outlined">close</span></button>
                 </div>
                 
                 <div class="space-y-4">
@@ -464,7 +464,7 @@
                 </div>
 
                 <div class="flex gap-4 pt-2">
-                    <button type="button" onclick="ui.closeOrderModal()" class="flex-1 py-5 border border-black/5 rounded-[1.5rem] font-black text-primary hover:bg-surface-container-low transition-all">Cancel</button>
+                    <button type="button" id="order-modal-cancel-btn" class="flex-1 py-5 border border-black/5 rounded-[1.5rem] font-black text-primary hover:bg-surface-container-low transition-all">Cancel</button>
                     <button type="button" id="order-modal-confirm-btn" class="flex-1 py-5 bg-primary text-white rounded-[1.5rem] font-black shadow-lg hover:shadow-2xl active:scale-95 transition-all">Confirm Order</button>
                 </div>
             </div>

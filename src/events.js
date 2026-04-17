@@ -123,6 +123,12 @@ export function setupEventListeners() {
     const closeActivityBtn = document.getElementById('close-activity-modal');
     if (closeActivityBtn) closeActivityBtn.onclick = ui.closeActivityModal;
 
+    // Order Modal
+    const closeOrderBtn = document.getElementById('order-modal-close-btn');
+    if (closeOrderBtn) closeOrderBtn.onclick = ui.closeOrderModal;
+    const cancelOrderBtn = document.getElementById('order-modal-cancel-btn');
+    if (cancelOrderBtn) cancelOrderBtn.onclick = ui.closeOrderModal;
+
     // User Dropdown
     const profileTrigger = document.getElementById('user-profile-trigger');
     const userMenu = document.getElementById('user-dropdown-menu');
