@@ -484,3 +484,18 @@ body.platform-pc table td:nth-child(4) {
 .btn-action:active {
     scale: 0.95;
 }
+/* Order Modal Input UX Improvement */
+#order-modal-qty:focus::placeholder {
+    color: transparent;
+}
+
+/* Hide number input arrows */
+#order-modal-qty::-webkit-inner-spin-button,
+#order-modal-qty::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+#order-modal-qty {
+    -moz-appearance: textfield;
+    caret-color: var(--primary);
+}
