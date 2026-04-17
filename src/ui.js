@@ -15,12 +15,10 @@ export function showToast(message, type = 'primary') {
     
     container.appendChild(toast);
     
-    // Trigger animation
     setTimeout(() => {
         toast.classList.remove('translate-y-10', 'opacity-0');
     }, 10);
     
-    // Remove after delay
     setTimeout(() => {
         toast.classList.add('opacity-0', 'translate-y--2');
         setTimeout(() => toast.remove(), 500);
@@ -59,11 +57,7 @@ export function showApp(user) {
         app.style.pointerEvents = 'auto';
     }
 
-    const nameLabels = [
-        'user-display-name-desktop',
-        'user-name-dropdown',
-        'user-display-id-header'
-    ];
+    const nameLabels = ['user-display-name-desktop', 'user-name-dropdown', 'user-display-id-header'];
     nameLabels.forEach(id => {
         const el = document.getElementById(id);
         if (el) el.textContent = username.toUpperCase();
@@ -85,25 +79,25 @@ export function renderCategoryChips() {
     if (!container) return;
 
     const categories = ['all', ...new Set(state.products.map(p => p.category).filter(c => c))];
-    container.innerHTML = '';
+    const fragment = document.createDocumentFragment();
+    
     categories.forEach(cat => {
         const btn = document.createElement('button');
         btn.className = `chip ${state.currentCategory === cat ? 'active' : ''}`;
         btn.textContent = cat === 'all' ? 'All Items' : cat;
-        btn.onclick = () => {
-            updateState({ currentCategory: cat });
-            renderCategoryChips();
-            renderInventory();
-        };
-        container.appendChild(btn);
+        btn.setAttribute('data-action', 'filter-category');
+        btn.setAttribute('data-category', cat);
+        fragment.appendChild(btn);
     });
+    
+    container.innerHTML = '';
+    container.appendChild(fragment);
 }
 
 export function getStatus(p) {
     const target = p.target_quantity || 1;
     const stock = p.stock_quantity || 0;
     const ratio = stock / target;
-
     if (stock <= 0) return 'OUT';
     if (ratio <= 0.25) return 'LOW';
     return 'OK';
@@ -114,14 +108,13 @@ export function renderInventory() {
     const mobileList = document.getElementById('mobile-inventory-list');
     if (!desktopBody || !mobileList) return;
 
-    desktopBody.innerHTML = '';
-    mobileList.innerHTML = '';
-
     let filtered = state.products;
     if (state.currentCategory !== 'all') filtered = filtered.filter(p => p.category === state.currentCategory);
-    
     if (state.currentStatusFilter === 'low') filtered = filtered.filter(p => getStatus(p) === 'LOW');
     else if (state.currentStatusFilter === 'out') filtered = filtered.filter(p => getStatus(p) === 'OUT');
+
+    const dtFragment = document.createDocumentFragment();
+    const mbFragment = document.createDocumentFragment();
 
     filtered.forEach(p => {
         const status = getStatus(p);
@@ -132,7 +125,8 @@ export function renderInventory() {
         // Desktop Row
         const tr = document.createElement('tr');
         tr.className = "group hover:bg-surface-container-low transition-all cursor-pointer";
-        tr.onclick = () => editItem(p.id);
+        tr.setAttribute('data-id', p.id);
+        tr.setAttribute('data-action', 'edit');
         tr.innerHTML = `
             <td class="px-8 py-6">
                 <div class="flex items-center gap-4">
@@ -158,16 +152,18 @@ export function renderInventory() {
                 </div>
             </td>
             <td class="px-8 py-6 text-right">
-                <button onclick="event.stopPropagation(); window.deleteItem('${p.id}')" class="p-2 text-on-surface-variant/20 hover:text-error opacity-0 group-hover:opacity-100 transition-all"><span class="material-symbols-outlined text-sm">delete</span></button>
+                <button data-id="${p.id}" data-action="delete" class="p-2 text-on-surface-variant/20 hover:text-error opacity-0 group-hover:opacity-100 transition-all"><span class="material-symbols-outlined text-sm">delete</span></button>
             </td>
         `;
-        desktopBody.appendChild(tr);
+        dtFragment.appendChild(tr);
 
         // Mobile Card
         const card = document.createElement('div');
         card.className = "mobile-inventory-card";
+        card.setAttribute('data-id', p.id);
+        card.setAttribute('data-action', 'edit');
         card.innerHTML = `
-            <div class="flex-1 min-w-0" onclick="window.editItem('${p.id}')">
+            <div class="flex-1 min-w-0">
                 <p class="font-black text-sm text-primary-container tracking-tight truncate">${p.name}</p>
                 <div class="flex items-center gap-2 mt-1">
                     <span class="text-[9px] font-black text-on-surface-variant/40 uppercase tracking-widest">SKU: ${p.sku || 'NONE'}</span>
@@ -190,20 +186,25 @@ export function renderInventory() {
                 ${status === 'LOW' || status === 'OUT' ? `<span class="mt-1 px-2 py-0.5 bg-red-50 text-red-600 text-[8px] font-black rounded-md border border-red-100 uppercase tracking-tighter">Low stock</span>` : ''}
             </div>
         `;
-        mobileList.appendChild(card);
+        mbFragment.appendChild(card);
     });
+
+    desktopBody.innerHTML = '';
+    desktopBody.appendChild(dtFragment);
+    mobileList.innerHTML = '';
+    mobileList.appendChild(mbFragment);
 }
 
 export function renderActivities() {
     const container = document.getElementById('activity-log-container');
     if (!container) return;
-    container.innerHTML = '';
-
+    
     if (state.activities.length === 0) {
         container.innerHTML = '<p class="text-[10px] text-on-surface-variant/40 font-bold uppercase tracking-widest text-center mt-10">No recent activity</p>';
         return;
     }
 
+    const fragment = document.createDocumentFragment();
     state.activities.forEach(act => {
         const date = new Date(act.created_at).toLocaleString('ko-KR', { hour: '2-digit', minute: '2-digit' });
         const userPrefix = act.user_email ? act.user_email.replace(DOMAIN, "").toUpperCase() : 'SYSTEM';
@@ -220,19 +221,22 @@ export function renderActivities() {
                     ${userPrefix} • ${date}
                 </p>
             </div>
-            <button onclick="window.deleteActivity('${act.id}')" class="absolute -right-2 top-0 p-1 text-on-surface-variant/10 hover:text-error opacity-0 group-hover:opacity-100 transition-all">
+            <button data-id="${act.id}" data-action="delete-activity" class="absolute -right-2 top-0 p-1 text-on-surface-variant/10 hover:text-error opacity-0 group-hover:opacity-100 transition-all">
                 <span class="material-symbols-outlined text-[14px]">close</span>
             </button>
         `;
-        container.appendChild(card);
+        fragment.appendChild(card);
     });
+    
+    container.innerHTML = '';
+    container.appendChild(fragment);
 }
 
 export function renderAllowedUsers() {
     const container = document.getElementById('whitelist-container');
     if (!container) return;
-    container.innerHTML = '';
-
+    
+    const fragment = document.createDocumentFragment();
     state.allowedUsers.forEach(user => {
         const card = document.createElement('div');
         card.className = "flex justify-between items-center p-5 bg-surface-container-low rounded-3xl group transition-all";
@@ -244,12 +248,15 @@ export function renderAllowedUsers() {
                     <p class="text-[9px] font-black text-on-surface-variant/40 uppercase tracking-widest mt-0.5">Invited by ${user.created_by || 'Admin'}</p>
                 </div>
             </div>
-            <button onclick="window.removeWhitelistedUser('${user.id}')" class="p-2 text-on-surface-variant/20 hover:text-error opacity-0 group-hover:opacity-100 transition-all">
+            <button data-id="${user.id}" data-action="remove-whitelist" class="p-2 text-on-surface-variant/20 hover:text-error opacity-0 group-hover:opacity-100 transition-all">
                 <span class="material-symbols-outlined text-sm">remove_circle</span>
             </button>
         `;
-        container.appendChild(card);
+        fragment.appendChild(card);
     });
+    
+    container.innerHTML = '';
+    container.appendChild(fragment);
 }
 
 export function renderActiveUsers() {
@@ -257,10 +264,10 @@ export function renderActiveUsers() {
     const badge = document.getElementById('active-user-count');
     if (!container) return;
     
-    container.innerHTML = '';
     const uniqueUsers = Object.keys(state.onlineUsers);
     if (badge) badge.textContent = uniqueUsers.length;
 
+    const fragment = document.createDocumentFragment();
     uniqueUsers.forEach(user => {
         const item = document.createElement('div');
         item.className = "flex items-center gap-3 p-3 bg-white/50 rounded-2xl";
@@ -274,18 +281,19 @@ export function renderActiveUsers() {
                 <p class="text-[8px] font-bold text-green-600 uppercase">Online Now</p>
             </div>
         `;
-        container.appendChild(item);
+        fragment.appendChild(item);
     });
+    
+    container.innerHTML = '';
+    container.appendChild(fragment);
 }
 
 export function updateStats() {
     document.querySelectorAll('#total-items').forEach(el => el.textContent = state.products.length.toLocaleString());
     const totalValue = state.products.reduce((sum, p) => sum + ((p.price || 0) * (p.stock_quantity || 0)), 0);
     document.querySelectorAll('#total-value').forEach(el => el.textContent = `₩${totalValue.toLocaleString()}`);
-    
     const lowStock = state.products.filter(p => getStatus(p) === 'LOW').length;
     document.querySelectorAll('#low-stock').forEach(el => el.textContent = lowStock);
-    
     const outOfStock = state.products.filter(p => getStatus(p) === 'OUT').length;
     document.querySelectorAll('#out-of-stock').forEach(el => el.textContent = outOfStock);
 }
@@ -297,6 +305,37 @@ export function openActivityModal() { document.getElementById('activity-modal-ov
 export function closeActivityModal() { document.getElementById('activity-modal-overlay').classList.remove('active'); }
 export function openPasswordModal() { document.getElementById('password-modal-overlay').classList.add('active'); }
 export function closePasswordModal() { document.getElementById('password-modal-overlay').classList.remove('active'); }
+
+/**
+ * Custom Confirmation Modal
+ * @param {Object} options { title, message, onConfirm }
+ */
+export function showConfirm({ title, message, onConfirm }) {
+    const overlay = document.getElementById('confirm-modal-overlay');
+    const titleEl = document.getElementById('confirm-modal-title');
+    const msgEl = document.getElementById('confirm-modal-message');
+    const confirmBtn = document.getElementById('confirm-modal-btn-confirm');
+    const cancelBtn = document.getElementById('confirm-modal-btn-cancel');
+
+    if (!overlay) return;
+
+    titleEl.textContent = title || "Are you sure?";
+    msgEl.textContent = message || "This action cannot be undone.";
+    
+    overlay.classList.add('active');
+
+    const closeHandler = () => {
+        overlay.classList.remove('active');
+        confirmBtn.onclick = null;
+        cancelBtn.onclick = null;
+    };
+
+    confirmBtn.onclick = () => {
+        if (onConfirm) onConfirm();
+        closeHandler();
+    };
+    cancelBtn.onclick = closeHandler;
+}
 
 export function switchView(view) {
     const items = document.querySelectorAll('.nav-item');
@@ -313,7 +352,6 @@ export function switchView(view) {
 
     const title = document.getElementById('view-title');
     const subtitle = document.getElementById('view-subtitle');
-
     if (view === 'inventory') {
         const el = document.getElementById('section-inventory');
         if (el) el.classList.remove('hidden');
@@ -334,7 +372,6 @@ export function switchView(view) {
     }
 }
 
-// Helper to expose functions to window (needed for inline onclicks until fully refactored)
 export function editItem(id) {
     const p = state.products.find(i => i.id === id);
     if (!p) return;
@@ -356,36 +393,3 @@ export function editItem(id) {
     }
     openModal();
 }
-
-// Global functions for inline handlers
-window.editItem = editItem;
-window.deleteItem = async (id) => {
-    if (confirm('Permanently delete this item?')) {
-        try {
-            await api.deleteProduct(id);
-            showToast("Item deleted", "success");
-        } catch (e) {
-            showToast(e.message, "error");
-        }
-    }
-};
-window.deleteActivity = async (id) => {
-    if (confirm('Delete this activity?')) {
-        try {
-            await api.deleteActivity(id);
-            showToast("Activity deleted", "success");
-        } catch (e) {
-            showToast(e.message, "error");
-        }
-    }
-};
-window.removeWhitelistedUser = async (id) => {
-    if (confirm('Revoke access for this user?')) {
-        try {
-            await api.removeWhitelistedUser(id);
-            showToast("Access revoked", "success");
-        } catch (e) {
-            showToast(e.message, "error");
-        }
-    }
-};

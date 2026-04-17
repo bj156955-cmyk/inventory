@@ -6,7 +6,7 @@ import { DOMAIN } from './config.js';
 export function setupEventListeners() {
     console.log("Atelier: Setting up UI listeners");
 
-    // Global click listener for dropdowns
+    // Global click listener for dropdowns and delegation
     document.addEventListener('click', (e) => {
         // Search Results Dropdown
         const dropdown = document.getElementById('search-results-dropdown');
@@ -21,6 +21,68 @@ export function setupEventListeners() {
         if (userMenu && !userMenu.contains(e.target) && !userTrigger?.contains(e.target)) {
             userMenu.classList.remove('show');
             userMenu.classList.add('hidden');
+        }
+
+        // --- Event Delegation ---
+        const target = e.target.closest('[data-action]');
+        if (!target) return;
+
+        const action = target.getAttribute('data-action');
+        const id = target.getAttribute('data-id');
+
+        switch (action) {
+            case 'edit':
+                ui.editItem(id);
+                break;
+            case 'delete':
+                e.stopPropagation();
+                ui.showConfirm({
+                    title: "Delete Item?",
+                    message: "This item will be permanently removed from the inventory.",
+                    onConfirm: async () => {
+                        try {
+                            await api.deleteProduct(id);
+                            ui.showToast("Item deleted", "success");
+                        } catch (err) {
+                            ui.showToast(err.message, "error");
+                        }
+                    }
+                });
+                break;
+            case 'delete-activity':
+                ui.showConfirm({
+                    title: "Delete Activity?",
+                    message: "This activity record will be removed from the timeline.",
+                    onConfirm: async () => {
+                        try {
+                            await api.deleteActivity(id);
+                            ui.showToast("Activity deleted", "success");
+                        } catch (err) {
+                            ui.showToast(err.message, "error");
+                        }
+                    }
+                });
+                break;
+            case 'remove-whitelist':
+                ui.showConfirm({
+                    title: "Revoke Access?",
+                    message: "This user will no longer be able to access the Atelier.",
+                    onConfirm: async () => {
+                        try {
+                            await api.removeWhitelistedUser(id);
+                            ui.showToast("Access revoked", "success");
+                        } catch (err) {
+                            ui.showToast(err.message, "error");
+                        }
+                    }
+                });
+                break;
+            case 'filter-category':
+                const category = target.getAttribute('data-category');
+                updateState({ currentCategory: category });
+                ui.renderCategoryChips();
+                ui.renderInventory();
+                break;
         }
     });
 

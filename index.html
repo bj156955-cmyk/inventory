@@ -422,6 +422,25 @@
         </div>
     </div>
 
+    <!-- Confirmation Modal -->
+    <div id="confirm-modal-overlay" class="modal-overlay fixed inset-0 bg-black/40 backdrop-blur-md z-[500] flex items-center justify-center opacity-0 pointer-events-none transition-all duration-300">
+        <div class="bg-white w-[95%] lg:w-[450px] rounded-[3rem] shadow-[0_32px_80px_rgba(0,0,0,0.4)] p-12 transform scale-95 transition-transform">
+            <div class="flex flex-col items-center text-center space-y-6">
+                <div class="w-16 h-16 bg-error/10 rounded-3xl flex items-center justify-center mb-2">
+                    <span class="material-symbols-outlined text-error text-3xl">warning</span>
+                </div>
+                <div>
+                    <h3 class="text-2xl font-black font-headline text-primary-container tracking-tighter" id="confirm-modal-title">Are you sure?</h3>
+                    <p class="text-on-surface-variant text-sm font-medium mt-2 leading-relaxed" id="confirm-modal-message">This action cannot be undone. Please confirm to proceed.</p>
+                </div>
+                <div class="w-full flex gap-4 pt-4">
+                    <button type="button" id="confirm-modal-btn-cancel" class="flex-1 py-5 border border-black/5 rounded-[1.5rem] font-black text-primary hover:bg-surface-container-low transition-all">Cancel</button>
+                    <button type="button" id="confirm-modal-btn-confirm" class="flex-1 py-5 bg-error text-white rounded-[1.5rem] font-black shadow-lg hover:shadow-2xl active:scale-95 transition-all">Delete Anyway</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Capsule-Style Bottom Navigation -->
     <nav class="mobile-only fixed bottom-0 left-0 w-full bg-white/95 backdrop-blur-2xl border-t border-black/[0.02] px-4 py-3 pb-8 flex justify-between items-center z-[150] shadow-[0_-4px_30px_rgba(0,0,0,0.03)]">
 
