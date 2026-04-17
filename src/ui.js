@@ -183,18 +183,20 @@ export function renderInventory() {
                 </div>
                 <div class="flex items-center gap-2 mt-3">
                     <div class="flex-1 bg-surface-container-low h-1 rounded-full overflow-hidden">
-                        <div class="h-full ${status === 'OUT' ? 'bg-error' : (status === 'LOW' ? 'bg-red-400' : 'bg-primary')}" style="width: ${Math.min(ratioPercent, 100)}%"></div>
+                        <div class="mobile-stock-progress h-full ${status === 'OUT' ? 'bg-error' : (status === 'LOW' ? 'bg-red-400' : 'bg-primary')}" style="width: ${Math.min(ratioPercent, 100)}%"></div>
                     </div>
                 </div>
             </div>
             <div class="text-right flex flex-col items-end gap-1">
-                <div class="flex items-baseline gap-1 whitespace-nowrap shrink-0 ${status === 'OUT' ? 'text-error' : (status === 'LOW' ? 'text-red-500' : 'text-primary-container')}">
-                    <span class="text-[10px] font-black">${stock}</span>
+                <div class="mobile-stock-status flex items-baseline gap-1 whitespace-nowrap shrink-0 ${status === 'OUT' ? 'text-error' : (status === 'LOW' ? 'text-red-500' : 'text-primary-container')}">
+                    <span class="mobile-stock-count text-[10px] font-black">${stock}</span>
                     <span class="text-[8px] opacity-30">/</span>
                     <span class="text-[10px] font-black">${target}</span>
                 </div>
-                <p class="text-[9px] font-black text-on-surface-variant/20 uppercase">${ratioPercent}%</p>
-                ${status === 'LOW' || status === 'OUT' ? `<span class="mt-1 px-2 py-0.5 bg-red-50 text-red-600 text-[8px] font-black rounded-md border border-red-100 uppercase tracking-tighter">Low stock</span>` : ''}
+                <p class="mobile-stock-ratio text-[9px] font-black text-on-surface-variant/20 uppercase">${ratioPercent}%</p>
+                <div class="mobile-stock-badge-container">
+                    ${status === 'LOW' || status === 'OUT' ? `<span class="mt-1 px-2 py-0.5 bg-red-50 text-red-600 text-[8px] font-black rounded-md border border-red-100 uppercase tracking-tighter">Low stock</span>` : ''}
+                </div>
             </div>
         `;
         wrapper.appendChild(card);

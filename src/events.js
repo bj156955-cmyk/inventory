@@ -394,6 +394,46 @@ async function handleQuantityAdjustment(id, delta) {
     const newStock = Math.max(0, (p.stock_quantity || 0) + delta);
     if (newStock === p.stock_quantity) return;
 
+    // Update local state
+    p.stock_quantity = newStock;
+    const status = ui.getStatus(p);
+    const target = p.target_quantity || 0;
+    const ratioPercent = target > 0 ? Math.round((newStock / target) * 100) : 0;
+
+    // Targeted DOM Update for Mobile Card
+    const card = document.querySelector(`.mobile-inventory-card[data-id="${id}"]`);
+    if (card) {
+        const countEl = card.querySelector('.mobile-stock-count');
+        if (countEl) countEl.textContent = newStock;
+
+        const statusEl = card.querySelector('.mobile-stock-status');
+        if (statusEl) {
+            statusEl.classList.remove('text-error', 'text-red-500', 'text-primary-container');
+            statusEl.classList.add(status === 'OUT' ? 'text-error' : (status === 'LOW' ? 'text-red-500' : 'text-primary-container'));
+        }
+
+        const progressEl = card.querySelector('.mobile-stock-progress');
+        if (progressEl) {
+            progressEl.style.width = `${Math.min(ratioPercent, 100)}%`;
+            progressEl.classList.remove('bg-error', 'bg-red-400', 'bg-primary');
+            progressEl.classList.add(status === 'OUT' ? 'bg-error' : (status === 'LOW' ? 'bg-red-400' : 'bg-primary'));
+        }
+
+        const ratioEl = card.querySelector('.mobile-stock-ratio');
+        if (ratioEl) ratioEl.textContent = `${ratioPercent}%`;
+
+        const badgeContainer = card.querySelector('.mobile-stock-badge-container');
+        if (badgeContainer) {
+            badgeContainer.innerHTML = (status === 'LOW' || status === 'OUT') 
+                ? `<span class="mt-1 px-2 py-0.5 bg-red-50 text-red-600 text-[8px] font-black rounded-md border border-red-100 uppercase tracking-tighter">Low stock</span>`
+                : '';
+        }
+    }
+
+    // Update global stats counters
+    ui.updateStats();
+
+    // Sync with DB in background
     try {
         const { data: { user } } = await state.supabaseClient.auth.getUser();
         await api.updateProduct(id, {
@@ -401,8 +441,6 @@ async function handleQuantityAdjustment(id, delta) {
             updated_at: new Date().toISOString(),
             updated_by: user ? user.email.replace(DOMAIN, "") : 'System/Swipe'
         });
-        ui.showToast(`Stock updated to ${newStock}`, "success");
-        api.fetchProducts().then(() => ui.renderInventory());
     } catch (err) {
         ui.showToast(err.message, "error");
     }
