@@ -406,14 +406,6 @@ async function handleOrder(id) {
         });
 
         await api.addActivity('ORDER', `${p.name} ${qty}개 주문함`, user?.email || 'unknown');
-        
-        // Refresh local state and UI
-        await api.fetchProducts();
-        await api.fetchActivities();
-        ui.renderInventory();
-        ui.renderActivities();
-        ui.updateStats();
-        
         ui.showToast(`${p.name} ${qty}개 주문 완료`, "success");
     } catch (err) {
         ui.showToast(err.message, "error");
@@ -441,14 +433,6 @@ async function handleReceipt(id) {
                 });
 
                 await api.addActivity('RECEIVE', `${p.name} ${receivedQty}개 입고 완료`, user?.email || 'unknown');
-
-                // Refresh local state and UI
-                await api.fetchProducts();
-                await api.fetchActivities();
-                ui.renderInventory();
-                ui.renderActivities();
-                ui.updateStats();
-
                 ui.showToast(`${p.name} 입고 완료`, "success");
             } catch (err) {
                 ui.showToast(err.message, "error");

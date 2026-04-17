@@ -92,6 +92,9 @@ function setupRealtime() {
     // Activities Channel
     state.supabaseClient.channel('db-activities')
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'activities' }, (payload) => {
+            // Check if already exists in local state to prevent double rendering
+            if (state.activities.some(act => act.id === payload.new.id)) return;
+
             state.activities.unshift(payload.new);
             if (state.activities.length > 20) state.activities.pop();
             ui.renderActivities();
