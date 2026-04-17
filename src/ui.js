@@ -139,7 +139,7 @@ export function renderInventory() {
             </td>
             <td class="px-8 py-6"><span class="text-[10px] font-black px-3 py-1 bg-surface-container-high rounded-lg text-primary-container uppercase tracking-widest">${p.category || 'N/A'}</span></td>
             <td class="px-8 py-6">
-                <div class="flex flex-col gap-3">
+                <div class="flex flex-col gap-3 min-w-[140px]">
                     <div class="flex items-center justify-between flex-nowrap gap-4">
                         <div class="flex items-baseline gap-1 whitespace-nowrap shrink-0 ${status === 'OUT' ? 'text-error' : (status === 'LOW' ? 'text-orange-500' : 'text-primary-container')}">
                             <span class="text-sm font-black">${stock}</span>
@@ -147,15 +147,17 @@ export function renderInventory() {
                             <span class="text-[10px] opacity-30 mx-1">/</span>
                             <span class="text-sm font-black opacity-30">${target}</span>
                         </div>
-                        <div class="flex gap-2">
-                             <button data-id="${p.id}" data-action="order" class="btn-action btn-order"><span class="material-symbols-outlined text-[14px]">shopping_cart</span>Order</button>
-                             <button data-id="${p.id}" data-action="receipt" class="btn-action btn-receipt ${pending <= 0 ? 'opacity-20 pointer-events-none' : ''}"><span class="material-symbols-outlined text-[14px]">local_shipping</span>Receipt</button>
-                        </div>
                     </div>
                     <div class="w-full bg-surface-container-low h-1.5 rounded-full overflow-hidden flex">
                         <div class="h-full ${status === 'OUT' ? 'bg-error' : (status === 'LOW' ? 'bg-orange-400' : 'bg-primary')}" style="width: ${Math.min(ratioPercent, 100)}%"></div>
                         <div class="h-full progress-dashed ${status === 'OUT' ? 'text-error' : (status === 'LOW' ? 'text-orange-400' : 'text-primary')}" style="width: ${Math.min(pendingPercent, 100 - ratioPercent)}%"></div>
                     </div>
+                </div>
+            </td>
+            <td class="px-8 py-6">
+                <div class="flex items-center justify-center gap-2">
+                    <button data-id="${p.id}" data-action="order" class="btn-action btn-order w-9 h-9 p-0" title="Order"><span class="material-symbols-outlined text-[18px]">shopping_cart</span></button>
+                    <button data-id="${p.id}" data-action="receipt" class="btn-action btn-receipt w-9 h-9 p-0 ${pending <= 0 ? 'opacity-20 pointer-events-none' : ''}" title="Receipt"><span class="material-symbols-outlined text-[18px]">local_shipping</span></button>
                 </div>
             </td>
             <td class="px-8 py-6 text-right">
@@ -212,6 +214,7 @@ export function renderInventory() {
         wrapper.appendChild(card);
         mbFragment.appendChild(wrapper);
     });
+
 
     desktopBody.innerHTML = '';
     desktopBody.appendChild(dtFragment);
