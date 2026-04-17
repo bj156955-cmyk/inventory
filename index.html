@@ -112,24 +112,26 @@
             
             <!-- Native Mobile Header & Branding -->
             <header class="w-full sticky top-0 z-50 glass flex items-center justify-between h-16 lg:h-20 px-6 lg:px-10 border-b border-black/[0.02]">
-                <div class="flex items-center gap-3">
-                    <div class="mobile-only w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-white"><span class="material-symbols-outlined text-sm filled">inventory_2</span></div>
-
-                    <h1 class="text-lg lg:text-xl font-black font-headline text-primary tracking-tight">Atelier Inventory</h1>
-                </div>
-                
-                <div class="flex items-center gap-4">
+                <div class="flex items-center gap-6">
+                    <!-- Mobile Branding (Logo only) -->
+                    <div class="mobile-only w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-white shrink-0"><span class="material-symbols-outlined text-sm filled">inventory_2</span></div>
+                    
+                    <!-- Search Bar (Moved to Left for PC) -->
                     <div class="relative pc-only w-80 lg:w-96">
                         <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant/40">search</span>
                         <input type="text" id="search-input-desktop" placeholder="Search architectural items..." class="pl-12 pr-4 py-3 bg-white/50 border-none rounded-2xl text-sm w-full outline-none focus:ring-2 focus:ring-primary/5 transition-all" autocomplete="off">
                         
-                        <!-- Search Results Dropdown (Restored) -->
+                        <!-- Search Results Dropdown -->
                         <div id="search-results-dropdown" class="absolute top-full left-0 w-full mt-2 bg-white rounded-2xl shadow-xl border border-black/5 z-[200] hidden glass overflow-hidden">
                             <div id="search-results-list" class="p-2 space-y-1"></div>
                         </div>
                     </div>
+                </div>
+                
+                <div class="flex items-center gap-4">
                     <div class="flex items-center gap-2">
-                        <button id="add-item-btn-header" class="w-9 h-9 rounded-xl bg-primary text-white flex items-center justify-center shadow-sm active:scale-95 transition-all"><span class="material-symbols-outlined text-sm">add</span></button>
+                        <!-- Mobile-only Add Button -->
+                        <button id="add-item-btn-header" class="mobile-only w-9 h-9 rounded-xl bg-primary text-white flex items-center justify-center shadow-sm active:scale-95 transition-all"><span class="material-symbols-outlined text-sm">add</span></button>
                         <button class="icon-btn-sm lg:flex hidden"><span class="material-symbols-outlined">notifications</span></button>
                         <div class="w-9 h-9 lg:w-11 lg:h-11 rounded-xl bg-primary/5 flex items-center justify-center border border-black/5 shadow-sm ml-1 overflow-hidden">
                             <span class="material-symbols-outlined text-primary text-xl">person</span>
@@ -147,13 +149,10 @@
                         <p id="view-subtitle" class="text-[10px] lg:text-sm text-on-surface-variant font-medium mt-1">Real-time oversight of architectural stock movements.</p>
                     </div>
                     <div class="pc-only sm:flex gap-4">
-
-                        <button class="secondary-btn"><span class="material-symbols-outlined text-lg">download</span>Export Report</button>
-                        <button class="primary-btn"><span class="material-symbols-outlined text-lg">add</span>Manual Adjust</button>
+                        <!-- Buttons removed as they are non-functional -->
                     </div>
                 </div>
 
-                <!-- Bento Stats Grid (2x2 on Mobile, 1x4 on Desktop) -->
                 <div id="section-stats" class="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 shrink-0">
                     <!-- 1. Total Items -->
                     <div id="filter-total" class="bg-white p-5 lg:p-7 rounded-[2rem] shadow-sm lg:shadow-md cursor-pointer active:scale-95 transition-all">
@@ -164,16 +163,7 @@
                         <h3 id="total-items" class="text-2xl lg:text-3xl font-black text-primary-container tabular-nums">0</h3>
                     </div>
 
-                    <!-- 2. Value -->
-                    <div class="bg-white p-5 lg:p-7 rounded-[2rem] shadow-sm lg:shadow-md">
-                        <div class="flex justify-between items-start mb-4 lg:mb-6">
-                            <div class="stat-label">Total Value</div>
-                            <span class="material-symbols-outlined text-primary/20 text-lg">payments</span>
-                        </div>
-                        <h3 id="total-value" class="text-xl lg:text-2xl font-black text-primary-container tabular-nums">₩0</h3>
-                    </div>
-
-                    <!-- 3. Low Stock -->
+                    <!-- 2. Low Stock -->
                     <div id="filter-low" class="bg-red-50 p-5 lg:p-7 rounded-[2rem] shadow-sm border border-red-100/50 cursor-pointer active:scale-95 transition-all">
                         <div class="flex justify-between items-start mb-4 lg:mb-6">
                             <div class="stat-label text-red-600/60">Low Stock</div>
@@ -182,13 +172,22 @@
                         <h3 id="low-stock" class="text-2xl lg:text-3xl font-black text-red-600 tabular-nums">0</h3>
                     </div>
 
-                    <!-- 4. Out of Stock -->
+                    <!-- 3. Out of Stock -->
                     <div id="filter-out" class="bg-surface-container-low p-5 lg:p-7 rounded-[2rem] shadow-sm cursor-pointer active:scale-95 transition-all">
                         <div class="flex justify-between items-start mb-4 lg:mb-6">
                             <div class="stat-label text-on-surface-variant/40">Out of Stock</div>
                             <span class="material-symbols-outlined text-on-surface-variant/20 text-lg">block</span>
                         </div>
                         <h3 id="out-of-stock" class="text-2xl lg:text-3xl font-black text-on-surface-variant tabular-nums">0</h3>
+                    </div>
+
+                    <!-- 4. Value -->
+                    <div class="bg-white p-5 lg:p-7 rounded-[2rem] shadow-sm lg:shadow-md">
+                        <div class="flex justify-between items-start mb-4 lg:mb-6">
+                            <div class="stat-label">Total Value</div>
+                            <span class="material-symbols-outlined text-primary/20 text-lg">payments</span>
+                        </div>
+                        <h3 id="total-value" class="text-xl lg:text-2xl font-black text-primary-container tabular-nums">₩0</h3>
                     </div>
                 </div>
 
