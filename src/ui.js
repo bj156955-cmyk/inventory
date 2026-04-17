@@ -156,7 +156,7 @@ export function renderInventory() {
             <td class="px-8 py-6">
                 <div class="flex items-center justify-center gap-2">
                     <button data-id="${p.id}" data-action="order" class="btn-action btn-order w-9 h-9 p-0" title="Order"><span class="material-symbols-outlined text-[18px]">shopping_cart</span></button>
-                    <button data-id="${p.id}" data-action="receipt" class="btn-action btn-receipt w-9 h-9 p-0 ${pending <= 0 ? 'opacity-20 pointer-events-none' : ''}" title="Receipt"><span class="material-symbols-outlined text-[18px]">local_shipping</span></button>
+                    <button data-id="${p.id}" data-action="receipt" class="btn-action btn-receipt w-9 h-9 p-0 ${pending <= 0 ? 'opacity-20 pointer-events-none' : ''}" title="수령 확인"><span class="material-symbols-outlined text-[18px]">local_shipping</span></button>
                 </div>
             </td>
             <td class="px-8 py-6 text-right">
@@ -333,19 +333,42 @@ export function closePasswordModal() { document.getElementById('password-modal-o
 
 /**
  * Custom Confirmation Modal
- * @param {Object} options { title, message, onConfirm }
+ * @param {Object} options { title, message, onConfirm, confirmText, confirmClass, icon, iconClass }
  */
-export function showConfirm({ title, message, onConfirm }) {
+export function showConfirm({ title, message, onConfirm, confirmText, confirmClass, icon, iconClass }) {
     const overlay = document.getElementById('confirm-modal-overlay');
     const titleEl = document.getElementById('confirm-modal-title');
     const msgEl = document.getElementById('confirm-modal-message');
     const confirmBtn = document.getElementById('confirm-modal-btn-confirm');
     const cancelBtn = document.getElementById('confirm-modal-btn-cancel');
+    const iconEl = document.getElementById('confirm-modal-icon');
+    const iconContainer = document.getElementById('confirm-modal-icon-container');
 
     if (!overlay) return;
 
+    // Set content
     titleEl.textContent = title || "Are you sure?";
     msgEl.textContent = message || "This action cannot be undone.";
+    confirmBtn.textContent = confirmText || "Accept";
+    
+    // Set Icon
+    if (icon && iconEl) iconEl.textContent = icon;
+    else if (iconEl) iconEl.textContent = "warning";
+
+    // Set Styles
+    if (confirmClass) {
+        confirmBtn.className = `flex-1 py-5 text-white rounded-[1.5rem] font-black shadow-lg hover:shadow-2xl active:scale-95 transition-all ${confirmClass}`;
+    } else {
+        confirmBtn.className = "flex-1 py-5 bg-error text-white rounded-[1.5rem] font-black shadow-lg hover:shadow-2xl active:scale-95 transition-all";
+    }
+
+    if (iconClass && iconContainer && iconEl) {
+        iconContainer.className = `w-16 h-16 rounded-3xl flex items-center justify-center mb-2 ${iconClass.replace('text-', 'bg-')}/10`;
+        iconEl.className = `material-symbols-outlined text-3xl ${iconClass}`;
+    } else if (iconContainer && iconEl) {
+        iconContainer.className = "w-16 h-16 bg-error/10 rounded-3xl flex items-center justify-center mb-2";
+        iconEl.className = "material-symbols-outlined text-error text-3xl";
+    }
     
     overlay.classList.add('active');
 
@@ -361,6 +384,36 @@ export function showConfirm({ title, message, onConfirm }) {
     };
     cancelBtn.onclick = closeHandler;
 }
+
+export function showOrderModal(p, onConfirm) {
+    const overlay = document.getElementById('order-modal-overlay');
+    const nameEl = document.getElementById('order-modal-item-name');
+    const qtyInput = document.getElementById('order-modal-qty');
+    const confirmBtn = document.getElementById('order-modal-confirm-btn');
+
+    if (!overlay) return;
+
+    nameEl.textContent = p.name;
+    qtyInput.value = '';
+    overlay.classList.add('active');
+    qtyInput.focus();
+
+    confirmBtn.onclick = () => {
+        const qty = parseInt(qtyInput.value);
+        if (isNaN(qty) || qty <= 0) {
+            qtyInput.classList.add('border-error');
+            setTimeout(() => qtyInput.classList.remove('border-error'), 500);
+            return;
+        }
+        if (onConfirm) onConfirm(qty);
+        closeOrderModal();
+    };
+}
+
+export function closeOrderModal() {
+    document.getElementById('order-modal-overlay').classList.remove('active');
+}
+
 
 export function switchView(view) {
     const items = document.querySelectorAll('.nav-item');

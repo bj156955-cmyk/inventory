@@ -390,26 +390,23 @@ async function handleOrder(id) {
     const p = state.products.find(item => item.id === id);
     if (!p) return;
 
-    const input = prompt(`${p.name} 주문 수량을 입력하세요:`, "0");
-    const qty = parseInt(input);
-    
-    if (isNaN(qty) || qty <= 0) return;
+    ui.showOrderModal(p, async (qty) => {
+        try {
+            const { data: { user } } = await state.supabaseClient.auth.getUser();
+            const newPending = (p.pending_quantity || 0) + qty;
+            
+            await api.updateProduct(id, {
+                pending_quantity: newPending,
+                updated_at: new Date().toISOString(),
+                updated_by: user ? user.email.replace(DOMAIN, "") : 'System'
+            });
 
-    try {
-        const { data: { user } } = await state.supabaseClient.auth.getUser();
-        const newPending = (p.pending_quantity || 0) + qty;
-        
-        await api.updateProduct(id, {
-            pending_quantity: newPending,
-            updated_at: new Date().toISOString(),
-            updated_by: user ? user.email.replace(DOMAIN, "") : 'System'
-        });
-
-        await api.addActivity('ORDER', `${p.name} ${qty}개 주문함`, user?.email || 'unknown');
-        ui.showToast(`${p.name} ${qty}개 주문 완료`, "success");
-    } catch (err) {
-        ui.showToast(err.message, "error");
-    }
+            await api.addActivity('ORDER', `${p.name} ${qty}개 주문함`, user?.email || 'unknown');
+            ui.showToast(`${p.name} ${qty}개 주문 완료`, "success");
+        } catch (err) {
+            ui.showToast(err.message, "error");
+        }
+    });
 }
 
 async function handleReceipt(id) {
@@ -417,8 +414,12 @@ async function handleReceipt(id) {
     if (!p || !p.pending_quantity) return;
 
     ui.showConfirm({
-        title: "입고 확인",
-        message: `${p.name} ${p.pending_quantity}개를 입고 처리하시겠습니까?`,
+        title: "수령 확인",
+        message: `${p.name} ${p.pending_quantity}개를 수령 처리하시겠습니까?`,
+        confirmText: "Accept",
+        confirmClass: "bg-[#16a34a]",
+        icon: "local_shipping",
+        iconClass: "text-[#16a34a]",
         onConfirm: async () => {
             try {
                 const { data: { user } } = await state.supabaseClient.auth.getUser();
@@ -432,8 +433,8 @@ async function handleReceipt(id) {
                     updated_by: user ? user.email.replace(DOMAIN, "") : 'System'
                 });
 
-                await api.addActivity('RECEIVE', `${p.name} ${receivedQty}개 입고 완료`, user?.email || 'unknown');
-                ui.showToast(`${p.name} 입고 완료`, "success");
+                await api.addActivity('RECEIVE', `${p.name} ${receivedQty}개 수령 완료`, user?.email || 'unknown');
+                ui.showToast(`${p.name} 수령 완료`, "success");
             } catch (err) {
                 ui.showToast(err.message, "error");
             }

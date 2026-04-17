@@ -406,7 +406,7 @@
                             <input type="radio" name="activity-type" value="RECEIVE" class="hidden peer">
                             <div class="p-4 rounded-3xl border-2 border-black/5 peer-checked:border-primary peer-checked:bg-primary/5 text-center transition-all">
                                 <span class="material-symbols-outlined block mb-1">local_shipping</span>
-                                <span class="text-[10px] font-black uppercase tracking-widest">Receive</span>
+                                <span class="text-[10px] font-black uppercase tracking-widest">수령</span>
                             </div>
                         </label>
                     </div>
@@ -424,8 +424,8 @@
     <div id="confirm-modal-overlay" class="modal-overlay fixed inset-0 bg-black/40 backdrop-blur-md z-[500] flex items-center justify-center opacity-0 pointer-events-none transition-all duration-300">
         <div class="bg-white w-[95%] lg:w-[450px] rounded-[3rem] shadow-[0_32px_80px_rgba(0,0,0,0.4)] p-12 transform scale-95 transition-transform">
             <div class="flex flex-col items-center text-center space-y-6">
-                <div class="w-16 h-16 bg-error/10 rounded-3xl flex items-center justify-center mb-2">
-                    <span class="material-symbols-outlined text-error text-3xl">warning</span>
+                <div id="confirm-modal-icon-container" class="w-16 h-16 bg-error/10 rounded-3xl flex items-center justify-center mb-2">
+                    <span id="confirm-modal-icon" class="material-symbols-outlined text-error text-3xl">warning</span>
                 </div>
                 <div>
                     <h3 class="text-2xl font-black font-headline text-primary-container tracking-tighter" id="confirm-modal-title">Are you sure?</h3>
@@ -433,7 +433,39 @@
                 </div>
                 <div class="w-full flex gap-4 pt-4">
                     <button type="button" id="confirm-modal-btn-cancel" class="flex-1 py-5 border border-black/5 rounded-[1.5rem] font-black text-primary hover:bg-surface-container-low transition-all">Cancel</button>
-                    <button type="button" id="confirm-modal-btn-confirm" class="flex-1 py-5 bg-error text-white rounded-[1.5rem] font-black shadow-lg hover:shadow-2xl active:scale-95 transition-all">Delete Anyway</button>
+                    <button type="button" id="confirm-modal-btn-confirm" class="flex-1 py-5 bg-error text-white rounded-[1.5rem] font-black shadow-lg hover:shadow-2xl active:scale-95 transition-all">Accept</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Order Quantity Modal -->
+    <div id="order-modal-overlay" class="modal-overlay fixed inset-0 bg-black/40 backdrop-blur-md z-[505] flex items-center justify-center opacity-0 pointer-events-none transition-all duration-300">
+        <div class="bg-white w-[95%] lg:w-[450px] rounded-[3rem] shadow-[0_32px_80px_rgba(0,0,0,0.4)] p-12 transform scale-95 transition-transform">
+            <div class="flex flex-col space-y-8">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-2xl font-black font-headline text-primary-container tracking-tighter" id="order-modal-title">Order Item</h3>
+                    <button onclick="ui.closeOrderModal()" class="w-10 h-10 rounded-full hover:bg-black/5 flex items-center justify-center transition-all"><span class="material-symbols-outlined">close</span></button>
+                </div>
+                
+                <div class="space-y-4">
+                    <div class="bg-surface-container-low p-6 rounded-3xl flex items-center gap-4 border border-black/[0.03]">
+                        <div class="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center text-primary"><span class="material-symbols-outlined">shopping_cart</span></div>
+                        <div class="flex-1">
+                            <p id="order-modal-item-name" class="font-black text-primary-container leading-tight">Product Name</p>
+                            <p class="text-[10px] font-black text-on-surface-variant/40 uppercase tracking-widest mt-1">New Inventory Order</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex flex-col gap-2">
+                    <label class="label-xs ml-1">주문 수량 (Order Quantity)</label>
+                    <input type="number" id="order-modal-qty" required min="1" step="1" class="form-input w-full py-6 text-2xl font-black text-center" placeholder="0">
+                </div>
+
+                <div class="flex gap-4 pt-2">
+                    <button type="button" onclick="ui.closeOrderModal()" class="flex-1 py-5 border border-black/5 rounded-[1.5rem] font-black text-primary hover:bg-surface-container-low transition-all">Cancel</button>
+                    <button type="button" id="order-modal-confirm-btn" class="flex-1 py-5 bg-primary text-white rounded-[1.5rem] font-black shadow-lg hover:shadow-2xl active:scale-95 transition-all">Confirm Order</button>
                 </div>
             </div>
         </div>
