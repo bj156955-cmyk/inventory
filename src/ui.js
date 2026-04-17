@@ -171,7 +171,7 @@ export function renderInventory() {
         wrapper.innerHTML = `
             <div class="mobile-card-actions">
                 <button data-id="${p.id}" data-action="order" class="swipe-btn increment"><span class="material-symbols-outlined">shopping_cart</span></button>
-                <button data-id="${p.id}" data-action="receipt" class="swipe-btn" style="background-color: #22c55e;"><span class="material-symbols-outlined">local_shipping</span></button>
+                <button data-id="${p.id}" data-action="receipt" class="swipe-btn ${pending <= 0 ? 'pointer-events-none opacity-50' : ''}" style="background-color: ${pending > 0 ? '#16a34a' : '#94a3b8'};"><span class="material-symbols-outlined">local_shipping</span></button>
                 <button data-id="${p.id}" data-action="delete" class="swipe-btn delete"><span class="material-symbols-outlined">delete</span></button>
             </div>
         `;

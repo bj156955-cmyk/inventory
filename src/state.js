@@ -11,6 +11,7 @@ export const state = {
     syncDebounceMap: new Map(),
     supabaseClient: null,
     currentUser: null,
+    isAppInitialized: false,
 };
 
 export function updateState(updates) {

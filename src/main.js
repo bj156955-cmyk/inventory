@@ -38,6 +38,9 @@ async function checkAuth() {
 }
 
 async function handleAuthenticatedSession(user) {
+    if (state.isAppInitialized) return;
+    updateState({ isAppInitialized: true });
+    
     ui.showApp(user);
     const username = user.email.split('@')[0];
     
