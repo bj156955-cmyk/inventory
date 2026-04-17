@@ -394,7 +394,7 @@ async function handleQuantityAdjustment(id, delta) {
     const newStock = Math.max(0, (p.stock_quantity || 0) + delta);
     if (newStock === p.stock_quantity) return;
 
-    // Update local state
+    // 1. Optimistic Local Update
     p.stock_quantity = newStock;
     const status = ui.getStatus(p);
     const target = p.target_quantity || 0;
@@ -433,17 +433,26 @@ async function handleQuantityAdjustment(id, delta) {
     // Update global stats counters
     ui.updateStats();
 
-    // Sync with DB in background
-    try {
-        const { data: { user } } = await state.supabaseClient.auth.getUser();
-        await api.updateProduct(id, {
-            stock_quantity: newStock,
-            updated_at: new Date().toISOString(),
-            updated_by: user ? user.email.replace(DOMAIN, "") : 'System/Swipe'
-        });
-    } catch (err) {
-        ui.showToast(err.message, "error");
+    // 2. Debounced Sync with DB
+    if (state.syncDebounceMap.has(id)) {
+        clearTimeout(state.syncDebounceMap.get(id));
     }
+
+    const timer = setTimeout(async () => {
+        state.syncDebounceMap.delete(id);
+        try {
+            const { data: { user } } = await state.supabaseClient.auth.getUser();
+            await api.updateProduct(id, {
+                stock_quantity: p.stock_quantity,
+                updated_at: new Date().toISOString(),
+                updated_by: user ? user.email.replace(DOMAIN, "") : 'System/Swipe'
+            });
+        } catch (err) {
+            ui.showToast(err.message, "error");
+        }
+    }, 500);
+
+    state.syncDebounceMap.set(id, timer);
 }
 
 function setupSwipeHandling() {

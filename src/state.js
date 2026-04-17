@@ -8,6 +8,7 @@ export const state = {
     currentCategory: 'all',
     currentStatusFilter: 'all',
     activeSwipeId: null,
+    syncDebounceMap: new Map(),
     supabaseClient: null,
     currentUser: null,
 };

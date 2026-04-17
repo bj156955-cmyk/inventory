@@ -67,6 +67,11 @@ function setupRealtime() {
     state.supabaseClient.channel('db-products')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, (payload) => {
             const { products } = state;
+            
+            // Protection: If we are currently debouncing a local sync for this ID, ignore the incoming update
+            // to prevent "stuttering" or "jumping" values.
+            if (payload.new && state.syncDebounceMap.has(payload.new.id)) return;
+
             if (payload.eventType === 'INSERT') products.push(payload.new);
             else if (payload.eventType === 'UPDATE') {
                 const index = products.findIndex(p => p.id === payload.new.id);
