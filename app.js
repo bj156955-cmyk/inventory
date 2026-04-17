@@ -754,7 +754,6 @@ function setupEventListeners() {
             if (editingId) await supabaseClient.from('products').update(data).eq('id', editingId);
             else await supabaseClient.from('products').insert([data]);
             
-            await fetchProducts(); // Immediate UI update
             closeModal();
         };
     }
@@ -776,7 +775,6 @@ function setupEventListeners() {
 
             if (error) alert(error.message);
             else {
-                await fetchActivities(); // Immediate UI update
                 closeActivityModal();
             }
         };
@@ -947,13 +945,11 @@ function closeModal() { document.getElementById('modal-overlay').classList.remov
 async function deleteItem(id) {
     if (confirm('Permanently delete this item?')) {
         await supabaseClient.from('products').delete().eq('id', id);
-        await fetchProducts(); // Immediate UI update
     }
 }
 
 async function deleteActivity(id) {
     if (confirm('Delete this activity from timeline?')) {
         await supabaseClient.from('activities').delete().eq('id', id);
-        await fetchActivities(); // Immediate UI update
     }
 }
