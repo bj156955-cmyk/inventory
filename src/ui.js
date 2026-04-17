@@ -161,7 +161,7 @@ export function renderInventory() {
         const wrapper = document.createElement('div');
         wrapper.className = "mobile-card-wrapper";
         wrapper.innerHTML = `
-            <div class="mobile-card-actions" onclick="event.stopPropagation()">
+            <div class="mobile-card-actions">
                 <button data-id="${p.id}" data-action="increment" class="swipe-btn increment"><span class="material-symbols-outlined">add</span></button>
                 <button data-id="${p.id}" data-action="decrement" class="swipe-btn decrement"><span class="material-symbols-outlined">remove</span></button>
                 <button data-id="${p.id}" data-action="delete" class="swipe-btn delete"><span class="material-symbols-outlined">delete</span></button>
