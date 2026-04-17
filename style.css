@@ -233,3 +233,14 @@ body { -webkit-font-smoothing: antialiased; background-color: var(--surface); }
     background: rgba(0, 0, 0, 0.05);
     border-radius: 10px;
 }
+
+/* Platform Gating Logic */
+/* By default, hide until detected, or hide based on platform */
+body.platform-pc .mobile-only { display: none !important; }
+body.platform-mobile .pc-only { display: none !important; }
+
+/* Ensure PC layout doesn't collapse too much on small PC windows */
+body.platform-pc #app-container {
+    min-width: 1024px;
+    overflow-x: auto;
+}

@@ -1,5 +1,16 @@
 // Atelier Inventory - Premium Real-time Core (Whitelisted ID Edition)
 
+function detectPlatform() {
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    if (isMobile) {
+        document.body.classList.add('platform-mobile');
+    } else {
+        document.body.classList.add('platform-pc');
+    }
+    console.log("Atelier: Platform detected -", isMobile ? "Mobile" : "PC");
+}
+
+
 console.log("Atelier: Whitelisted Core loaded");
 
 let supabaseClient;
@@ -24,6 +35,7 @@ const CONFIG_KEY = "sb_publishable_4OUEZ3TcBegF2JtqoldIzA_qo7sNkNm";
 
 window.onload = () => {
     console.log("Atelier: Window Loaded");
+    detectPlatform();
     setupEventListeners();
     checkSetup();
 };
