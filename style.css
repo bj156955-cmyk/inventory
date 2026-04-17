@@ -235,9 +235,18 @@ body { -webkit-font-smoothing: antialiased; background-color: var(--surface); }
 }
 
 /* Platform Gating Logic */
-/* By default, hide until detected, or hide based on platform */
-body.platform-pc .mobile-only { display: none !important; }
+/* PC Only items are visible by default. Hidden ONLY if platform-mobile class is added via JS detection. */
 body.platform-mobile .pc-only { display: none !important; }
+
+/* Mobile Only items are hidden by default. Shown ONLY if platform-mobile class is added. */
+.mobile-only { display: none !important; }
+body.platform-mobile .mobile-only { display: block !important; }
+body.platform-mobile nav.mobile-only { display: flex !important; }
+
+/* PC specific display types when platform-pc is active (Safe-guard) */
+body.platform-pc .pc-only { display: block !important; }
+body.platform-pc aside.pc-only { display: flex !important; }
+body.platform-pc table.pc-only { display: table !important; }
 
 /* Ensure PC layout doesn't collapse too much on small PC windows */
 body.platform-pc #app-container {

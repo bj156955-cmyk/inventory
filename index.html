@@ -120,9 +120,13 @@
                 
                 <div class="flex items-center gap-4">
                     <div class="relative pc-only w-80 lg:w-96">
-
                         <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant/40">search</span>
                         <input type="text" id="search-input-desktop" placeholder="Search architectural items..." class="pl-12 pr-4 py-3 bg-white/50 border-none rounded-2xl text-sm w-full outline-none focus:ring-2 focus:ring-primary/5 transition-all" autocomplete="off">
+                        
+                        <!-- Search Results Dropdown (Restored) -->
+                        <div id="search-results-dropdown" class="absolute top-full left-0 w-full mt-2 bg-white rounded-2xl shadow-xl border border-black/5 z-[200] hidden glass overflow-hidden">
+                            <div id="search-results-list" class="p-2 space-y-1"></div>
+                        </div>
                     </div>
                     <div class="flex items-center gap-2">
                         <button id="add-item-btn-header" class="w-9 h-9 rounded-xl bg-primary text-white flex items-center justify-center shadow-sm active:scale-95 transition-all"><span class="material-symbols-outlined text-sm">add</span></button>
