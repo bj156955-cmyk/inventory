@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
 import { 
   LayoutDashboard, 
   Package, 
@@ -15,6 +16,7 @@ import {
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const { signOut } = useAuth();
 
   const menuItems = [
     { name: "Dashboard", href: "/", icon: LayoutDashboard },
@@ -64,12 +66,13 @@ export default function Sidebar() {
 
         {/* Desktop Logout (Optional) */}
         <button 
-          onClick={() => {
-            // Logout logic will be plugged here if needed
-            alert("Atelier에서 로그아웃하시겠습니까?");
+          onClick={async () => {
+            if (window.confirm("Atelier에서 로그아웃하시겠습니까?")) {
+              await signOut();
+            }
           }}
           title="Sign Out" 
-          className="text-on-surface-variant hover:text-error hover:bg-red-50 dark:hover:bg-red-950/20 p-3 rounded-2xl transition-all duration-200"
+          className="text-on-surface-variant hover:text-error hover:bg-red-50 dark:hover:bg-red-950/20 p-3 rounded-2xl transition-all duration-200 cursor-pointer"
         >
           <LogOut className="w-5 h-5" />
         </button>
@@ -96,8 +99,12 @@ export default function Sidebar() {
           );
         })}
         <button 
-          onClick={() => alert("Atelier에서 로그아웃하시겠습니까?")}
-          className="flex flex-col items-center gap-1 text-on-surface-variant/60 dark:text-gray-400"
+          onClick={async () => {
+            if (window.confirm("Atelier에서 로그아웃하시겠습니까?")) {
+              await signOut();
+            }
+          }}
+          className="flex flex-col items-center gap-1 text-on-surface-variant/60 dark:text-gray-400 cursor-pointer"
         >
           <LogOut className="w-5 h-5" />
           <span className="text-[9px] uppercase tracking-widest">Exit</span>
