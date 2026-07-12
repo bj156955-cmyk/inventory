@@ -137,6 +137,17 @@ export default function LabPage() {
   const [showAddSelect, setShowAddSelect] = useState(false);
   const [loading, setLoading] = useState(true);
   
+  // Mobile day tab and reservation modal states
+  const getTodayDayString = () => {
+    const day = new Date().getDay();
+    if (day === 0 || day === 6) return "월";
+    return DAYS[day - 1];
+  };
+  const [selectedDayTab, setSelectedDayTab] = useState<string>(getTodayDayString());
+  const [mobileResModalOpen, setMobileResModalOpen] = useState(false);
+  const [mobileResTarget, setMobileResTarget] = useState<{ equipment: string, day: string, slot: string } | null>(null);
+  const [mobileResDuration, setMobileResDuration] = useState<number>(1);
+  
   // Orders states
   const [orders, setOrders] = useState<LabOrder[]>([]);
   const [orderDbId, setOrderDbId] = useState<string | null>(null);
@@ -259,110 +270,191 @@ export default function LabPage() {
     fetchLabData();
   }, []);
 
+  const saveReservationsState = async (updated: Reservation[]) => {
+    try {
+      if (resDbId) {
+        await supabase
+          .from("notices")
+          .update({ content: JSON.stringify(updated) })
+          .eq("id", resDbId);
+      } else {
+        const { data } = await supabase
+          .from("notices")
+          .insert([{
+            title: "__LAB_RESERVATIONS__",
+            content: JSON.stringify(updated),
+            created_by: "SYSTEM"
+          }])
+          .select();
+        if (data && data.length > 0) setResDbId(data[0].id);
+      }
+    } catch (err) {
+      console.error("Error saving reservations:", err);
+    }
+  };
+
+  const commitDurationReservation = async (equipment: string, day: string, startSlot: string, durationSlots: number) => {
+    const startIdx = SLOTS.indexOf(startSlot);
+    const rangeSlots = SLOTS.slice(startIdx, startIdx + durationSlots);
+    const currentUserInitials = user?.email?.split("@")[0].toUpperCase() || "UNKNOWN";
+
+    const isBlocked = rangeSlots.some(slot => {
+      const res = reservations.find(r => r.equipment === equipment && r.day === day && r.slot === slot);
+      return res && res.user !== currentUserInitials;
+    });
+
+    if (isBlocked) {
+      alert("다른 사용자의 예약과 겹치는 구간이 있어 예약할 수 없습니다.");
+      return;
+    }
+
+    const existingSlots = reservations
+      .filter(r => r.equipment === equipment && r.day === day && r.user === currentUserInitials && !rangeSlots.includes(r.slot))
+      .map(r => r.slot);
+    
+    const mergedSlots = Array.from(new Set([...existingSlots, ...rangeSlots]));
+    const mergedIndices = mergedSlots.map(slot => SLOTS.indexOf(slot)).sort((a, b) => a - b);
+
+    let maxStreak = 0;
+    let currentStreak = 0;
+    let lastIdx = -999;
+    for (const idx of mergedIndices) {
+      if (idx === lastIdx + 1) {
+        currentStreak++;
+      } else {
+        currentStreak = 1;
+      }
+      maxStreak = Math.max(maxStreak, currentStreak);
+      lastIdx = idx;
+    }
+
+    if (maxStreak > 4) {
+      alert("예약은 최대 연속 2시간(4칸)까지만 가능합니다.");
+      return;
+    }
+
+    let updated = [...reservations];
+    rangeSlots.forEach((slot) => {
+      updated = updated.filter(r => !(
+        r.equipment === equipment && 
+        r.day === day && 
+        r.slot === slot
+      ));
+      updated.push({
+        equipment,
+        day,
+        slot,
+        user: currentUserInitials
+      });
+    });
+
+    setReservations(updated);
+    await saveReservationsState(updated);
+    setMobileResModalOpen(false);
+  };
+
   // Global mouseup listener for cell drag selection
   useEffect(() => {
     const handleGlobalMouseUp = async () => {
       if (isDragging && activeDrag && dragStart !== null && dragEnd !== null) {
-        const minIdx = Math.min(dragStart, dragEnd);
-        const maxIdx = Math.max(dragStart, dragEnd);
-        const rangeSlots = SLOTS.slice(minIdx, maxIdx + 1);
-
+        setIsDragging(false);
         const currentUserInitials = user?.email?.split("@")[0].toUpperCase() || "UNKNOWN";
 
-        // Check which slots in the range are reserved by the current user
-        const myReservationsInRange = rangeSlots.filter(slot => {
-          const res = reservations.find(r => r.equipment === activeDrag.equipment && r.day === activeDrag.day && r.slot === slot);
-          return res && res.user === currentUserInitials;
-        });
-
-        const othersReservationsInRange = rangeSlots.filter(slot => {
-          const res = reservations.find(r => r.equipment === activeDrag.equipment && r.day === activeDrag.day && r.slot === slot);
-          return res && res.user !== currentUserInitials;
-        });
-
-        let updated = [...reservations];
-
-        if (myReservationsInRange.length === rangeSlots.length) {
-          // If all selected slots in the range are already reserved by me, cancel all of them
-          updated = updated.filter(r => !(
-            r.equipment === activeDrag.equipment && 
-            r.day === activeDrag.day && 
-            rangeSlots.includes(r.slot)
-          ));
-        } else {
-          // Check if booking these slots exceeds the 2-hour limit (4 consecutive slots)
-          const existingSlots = reservations
-            .filter(r => r.equipment === activeDrag.equipment && r.day === activeDrag.day && r.user === currentUserInitials)
-            .map(r => r.slot);
-          
-          const mergedSlots = Array.from(new Set([...existingSlots, ...rangeSlots]));
-          const mergedIndices = mergedSlots.map(slot => SLOTS.indexOf(slot)).sort((a, b) => a - b);
-
-          let maxStreak = 0;
-          let currentStreak = 0;
-          let lastIdx = -999;
-          for (const idx of mergedIndices) {
-            if (idx === lastIdx + 1) {
-              currentStreak++;
-            } else {
-              currentStreak = 1;
+        if (dragStart === dragEnd) {
+          // Tap/Click on a single slot
+          const slot = SLOTS[dragStart];
+          const existingRes = reservations.find(r => r.equipment === activeDrag.equipment && r.day === activeDrag.day && r.slot === slot);
+          if (existingRes) {
+            if (existingRes.user === currentUserInitials) {
+              if (window.confirm("이 예약을 취소하시겠습니까?")) {
+                const updated = reservations.filter(r => !(
+                  r.equipment === activeDrag.equipment &&
+                  r.day === activeDrag.day &&
+                  r.slot === slot
+                ));
+                setReservations(updated);
+                await saveReservationsState(updated);
+              }
             }
-            maxStreak = Math.max(maxStreak, currentStreak);
-            lastIdx = idx;
-          }
-
-          if (maxStreak > 4) {
-            alert("예약은 최대 연속 2시간(4칸)까지만 가능합니다.");
-            setIsDragging(false);
-            setActiveDrag(null);
-            setDragStart(null);
-            setDragEnd(null);
-            return;
-          }
-
-          // Otherwise, reserve all slots in the range (leaving others' reservations untouched)
-          rangeSlots.forEach((slot) => {
-            const isReservedByOther = othersReservationsInRange.includes(slot);
-            if (!isReservedByOther) {
-              // Remove old reservation by me if any
-              updated = updated.filter(r => !(
-                r.equipment === activeDrag.equipment && 
-                r.day === activeDrag.day && 
-                r.slot === slot
-              ));
-              // Add new reservation
-              updated.push({
-                equipment: activeDrag.equipment,
-                day: activeDrag.day,
-                slot,
-                user: currentUserInitials
-              });
-            }
-          });
-        }
-
-        setReservations(updated);
-
-        // Save to Database
-        try {
-          if (resDbId) {
-            await supabase
-              .from("notices")
-              .update({ content: JSON.stringify(updated) })
-              .eq("id", resDbId);
           } else {
-            const { data } = await supabase
-              .from("notices")
-              .insert([{
-                title: "__LAB_RESERVATIONS__",
-                content: JSON.stringify(updated),
-                created_by: "SYSTEM"
-              }])
-              .select();
-            if (data && data.length > 0) setResDbId(data[0].id);
+            // Open Duration select modal
+            setMobileResTarget({ equipment: activeDrag.equipment, day: activeDrag.day, slot });
+            setMobileResDuration(1);
+            setMobileResModalOpen(true);
           }
-        } catch (err) {
-          console.error("Error saving reservations:", err);
+        } else {
+          // Drag-select a range
+          const minIdx = Math.min(dragStart, dragEnd);
+          const maxIdx = Math.max(dragStart, dragEnd);
+          const rangeSlots = SLOTS.slice(minIdx, maxIdx + 1);
+
+          const myReservationsInRange = rangeSlots.filter(slot => {
+            const res = reservations.find(r => r.equipment === activeDrag.equipment && r.day === activeDrag.day && r.slot === slot);
+            return res && res.user === currentUserInitials;
+          });
+
+          const othersReservationsInRange = rangeSlots.filter(slot => {
+            const res = reservations.find(r => r.equipment === activeDrag.equipment && r.day === activeDrag.day && r.slot === slot);
+            return res && res.user !== currentUserInitials;
+          });
+
+          let updated = [...reservations];
+
+          if (myReservationsInRange.length === rangeSlots.length) {
+            updated = updated.filter(r => !(
+              r.equipment === activeDrag.equipment && 
+              r.day === activeDrag.day && 
+              rangeSlots.includes(r.slot)
+            ));
+          } else {
+            const existingSlots = reservations
+              .filter(r => r.equipment === activeDrag.equipment && r.day === activeDrag.day && r.user === currentUserInitials)
+              .map(r => r.slot);
+            
+            const mergedSlots = Array.from(new Set([...existingSlots, ...rangeSlots]));
+            const mergedIndices = mergedSlots.map(slot => SLOTS.indexOf(slot)).sort((a, b) => a - b);
+
+            let maxStreak = 0;
+            let currentStreak = 0;
+            let lastIdx = -999;
+            for (const idx of mergedIndices) {
+              if (idx === lastIdx + 1) {
+                currentStreak++;
+              } else {
+                currentStreak = 1;
+              }
+              maxStreak = Math.max(maxStreak, currentStreak);
+              lastIdx = idx;
+            }
+
+            if (maxStreak > 4) {
+              alert("예약은 최대 연속 2시간(4칸)까지만 가능합니다.");
+              setActiveDrag(null);
+              setDragStart(null);
+              setDragEnd(null);
+              return;
+            }
+
+            rangeSlots.forEach((slot) => {
+              const isReservedByOther = othersReservationsInRange.includes(slot);
+              if (!isReservedByOther) {
+                updated = updated.filter(r => !(
+                  r.equipment === activeDrag.equipment && 
+                  r.day === activeDrag.day && 
+                  r.slot === slot
+                ));
+                updated.push({
+                  equipment: activeDrag.equipment,
+                  day: activeDrag.day,
+                  slot,
+                  user: currentUserInitials
+                });
+              }
+            });
+          }
+
+          setReservations(updated);
+          await saveReservationsState(updated);
         }
       }
       setIsDragging(false);
@@ -634,6 +726,27 @@ export default function LabPage() {
       ) : (
         <div className="space-y-6 flex flex-col min-h-0 flex-1 overflow-y-auto pr-1 custom-scrollbar">
           
+          {/* Mobile Day Selector Tabs */}
+          <div className="flex md:hidden items-center justify-center gap-1.5 p-1 bg-white dark:bg-slate-800 rounded-2xl border border-black/[0.03] dark:border-white/[0.03] shadow-sm select-none shrink-0">
+            {DAYS.map((day) => {
+              const isActive = selectedDayTab === day;
+              return (
+                <button
+                  key={day}
+                  type="button"
+                  onClick={() => setSelectedDayTab(day)}
+                  className={`flex-1 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                    isActive 
+                      ? "bg-primary text-white dark:bg-blue-600 shadow-sm"
+                      : "text-on-surface-variant/60 dark:text-gray-400 hover:bg-black/5 dark:hover:bg-white/5"
+                  }`}
+                >
+                  {day}요일
+                </button>
+              );
+            })}
+          </div>
+
           {/* Top Section: Two Reservation Tables */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             
@@ -652,9 +765,21 @@ export default function LabPage() {
                   <thead className="sticky top-0 bg-slate-50 dark:bg-slate-700 text-on-surface-variant dark:text-gray-300 border-b border-black/[0.02] dark:border-white/[0.02] z-10">
                     <tr>
                       <th className="py-2 px-3 font-black bg-slate-100 dark:bg-slate-800/80 w-16">시간</th>
-                      {DAYS.map(day => (
-                        <th key={day} className="py-2 font-black w-[17.6%]">{day}</th>
-                      ))}
+                      {DAYS.map(day => {
+                        const isTabActive = day === selectedDayTab;
+                        return (
+                          <th 
+                            key={day} 
+                            className={`py-2 font-black ${
+                              isTabActive 
+                                ? "table-cell w-full md:w-[17.6%]" 
+                                : "hidden md:table-cell md:w-[17.6%]"
+                            }`}
+                          >
+                            {day}
+                          </th>
+                        );
+                      })}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-black/[0.02] dark:divide-white/[0.02]">
@@ -676,12 +801,16 @@ export default function LabPage() {
                             return idx >= min && idx <= max;
                           })();
 
+                          const isTabActive = day === selectedDayTab;
+
                           return (
                             <td 
                               key={day}
                               onMouseDown={() => handleCellMouseDown("A", day, slot)}
                               onMouseEnter={() => handleCellMouseEnter("A", day, slot)}
                               className={`py-1.5 px-0.5 border-r border-black/[0.01] dark:border-white/[0.01] cursor-pointer transition-all select-none ${
+                                isTabActive ? "table-cell" : "hidden md:table-cell"
+                              } ${
                                 userRes 
                                   ? `${color?.bg} ${color?.text} hover:opacity-90` 
                                   : isSelectedInDrag
@@ -717,9 +846,21 @@ export default function LabPage() {
                   <thead className="sticky top-0 bg-slate-50 dark:bg-slate-700 text-on-surface-variant dark:text-gray-300 border-b border-black/[0.02] dark:border-white/[0.02] z-10">
                     <tr>
                       <th className="py-2 px-3 font-black bg-slate-100 dark:bg-slate-800/80 w-16">시간</th>
-                      {DAYS.map(day => (
-                        <th key={day} className="py-2 font-black w-[17.6%]">{day}</th>
-                      ))}
+                      {DAYS.map(day => {
+                        const isTabActive = day === selectedDayTab;
+                        return (
+                          <th 
+                            key={day} 
+                            className={`py-2 font-black ${
+                              isTabActive 
+                                ? "table-cell w-full md:w-[17.6%]" 
+                                : "hidden md:table-cell md:w-[17.6%]"
+                            }`}
+                          >
+                            {day}
+                          </th>
+                        );
+                      })}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-black/[0.02] dark:divide-white/[0.02]">
@@ -741,12 +882,16 @@ export default function LabPage() {
                             return idx >= min && idx <= max;
                           })();
 
+                          const isTabActive = day === selectedDayTab;
+
                           return (
                             <td 
                               key={day}
                               onMouseDown={() => handleCellMouseDown("B", day, slot)}
                               onMouseEnter={() => handleCellMouseEnter("B", day, slot)}
                               className={`py-1.5 px-0.5 border-r border-black/[0.01] dark:border-white/[0.01] cursor-pointer transition-all select-none ${
+                                isTabActive ? "table-cell" : "hidden md:table-cell"
+                              } ${
                                 userRes 
                                   ? `${color?.bg} ${color?.text} hover:opacity-90` 
                                   : isSelectedInDrag
@@ -1014,7 +1159,35 @@ export default function LabPage() {
                           <td className="py-2 border-r border-black/[0.01] dark:border-white/[0.01]">
                             <div className="flex items-center justify-between gap-1.5 px-2">
                               <div className="flex items-center gap-1.5 min-w-0">
-                                <GripVertical className="w-3.5 h-3.5 text-on-surface-variant/30 shrink-0 cursor-grab active:cursor-grabbing" />
+                                {/* Desktop: Drag Grip */}
+                                <GripVertical className="hidden md:block w-3.5 h-3.5 text-on-surface-variant/30 shrink-0 cursor-grab active:cursor-grabbing" />
+                                
+                                {/* Mobile: Move Buttons */}
+                                <div className="flex md:hidden items-center gap-0.5 shrink-0 select-none">
+                                  <button
+                                    type="button"
+                                    disabled={idx === 0}
+                                    onClick={() => handleRowDrop(idx, idx - 1)}
+                                    className={`p-0.5 rounded text-[8px] font-black hover:bg-slate-100 dark:hover:bg-slate-700 ${
+                                      idx === 0 ? "opacity-20 cursor-not-allowed" : "text-primary dark:text-blue-400 cursor-pointer"
+                                    }`}
+                                    title="위로 이동"
+                                  >
+                                    ▲
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={idx === assignments.length - 1}
+                                    onClick={() => handleRowDrop(idx, idx + 1)}
+                                    className={`p-0.5 rounded text-[8px] font-black hover:bg-slate-100 dark:hover:bg-slate-700 ${
+                                      idx === assignments.length - 1 ? "opacity-20 cursor-not-allowed" : "text-primary dark:text-blue-400 cursor-pointer"
+                                    }`}
+                                    title="아래로 이동"
+                                  >
+                                    ▼
+                                  </button>
+                                </div>
+
                                 <span className="text-[10px] text-foreground dark:text-white font-bold truncate">
                                   {row.member}
                                 </span>
@@ -1062,6 +1235,116 @@ export default function LabPage() {
 
           </div>
 
+        </div>
+      )}
+
+      {/* Mobile/Tap Duration Select Reservation Modal */}
+      {mobileResModalOpen && mobileResTarget && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-md z-[200] flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-[400px] rounded-[2.5rem] shadow-2xl p-8 space-y-6">
+            
+            <div className="flex justify-between items-center pb-2 border-b border-black/[0.02] dark:border-white/[0.02]">
+              <h3 className="text-lg font-black text-primary dark:text-white flex items-center gap-2">
+                <FlaskConical className="w-5 h-5 text-blue-500" />
+                <span>{mobileResTarget.equipment === "A" ? "왼쪽 벤치" : "오른쪽 벤치"} 예약</span>
+              </h3>
+              <button 
+                onClick={() => setMobileResModalOpen(false)}
+                className="p-1 hover:bg-surface-container-low dark:hover:bg-slate-800 rounded-full cursor-pointer"
+              >
+                <X className="w-5 h-5 text-on-surface-variant/40" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="bg-slate-50 dark:bg-slate-800/80 p-4 rounded-2xl border border-black/[0.02] dark:border-white/[0.02] space-y-2">
+                <div className="text-xs font-bold text-on-surface-variant/60 dark:text-gray-400">
+                  📅 예약 일시: <span className="text-foreground dark:text-white font-extrabold">{mobileResTarget.day}요일 {mobileResTarget.slot}</span>
+                </div>
+                <div className="text-xs font-bold text-on-surface-variant/60 dark:text-gray-400">
+                  👤 예약자: <span className="text-foreground dark:text-white font-extrabold">{user?.email?.split("@")[0].toUpperCase()}</span>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <label className="text-[10px] font-black uppercase text-on-surface-variant/50 dark:text-gray-400 tracking-wider">이용 예정 시간</label>
+                <div className="grid grid-cols-1 gap-2">
+                  {(() => {
+                    const options = [];
+                    const startIdx = SLOTS.indexOf(mobileResTarget.slot);
+                    const currentUserInitials = user?.email?.split("@")[0].toUpperCase() || "UNKNOWN";
+                    
+                    for (let len = 1; len <= 4; len++) {
+                      const endIdx = startIdx + len - 1;
+                      if (endIdx >= SLOTS.length) break;
+                      
+                      const targetSlots = SLOTS.slice(startIdx, endIdx + 1);
+                      const isBlocked = targetSlots.some(s => {
+                        const res = reservations.find(r => r.equipment === mobileResTarget.equipment && r.day === mobileResTarget.day && r.slot === s);
+                        return res && res.user !== currentUserInitials;
+                      });
+                      
+                      if (isBlocked) break;
+                      
+                      const getEndText = (slotStr: string) => {
+                        const [h, m] = slotStr.split(":").map(Number);
+                        let newM = m + 30;
+                        let newH = h;
+                        if (newM >= 60) {
+                          newM = 0;
+                          newH += 1;
+                        }
+                        return `${String(newH).padStart(2, "0")}:${String(newM).padStart(2, "0")}`;
+                      };
+                      
+                      const endText = getEndText(targetSlots[targetSlots.length - 1]);
+                      options.push({
+                        count: len,
+                        label: `${len * 30}분 (${mobileResTarget.slot} ~ ${endText})`
+                      });
+                    }
+
+                    if (options.length === 0) {
+                      return <p className="text-xs text-red-500 font-bold p-2">선택 가능한 시간대가 없습니다 (다음 슬롯에 이미 예약이 있음).</p>;
+                    }
+
+                    return options.map(opt => (
+                      <button
+                        key={opt.count}
+                        type="button"
+                        onClick={() => setMobileResDuration(opt.count)}
+                        className={`p-3 rounded-xl text-left text-xs font-bold transition-all border cursor-pointer ${
+                          mobileResDuration === opt.count
+                            ? "bg-blue-500 border-blue-500 text-white shadow-sm font-extrabold"
+                            : "bg-white dark:bg-slate-900 border-black/5 dark:border-white/5 text-on-surface-variant/70 dark:text-gray-400 hover:bg-slate-50 dark:hover:bg-slate-800"
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    ));
+                  })()}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-4 pt-4 border-t border-black/5 dark:border-white/5">
+              <button
+                type="button"
+                onClick={() => setMobileResModalOpen(false)}
+                className="flex-1 py-3 border border-black/5 dark:border-white/5 rounded-2xl font-black text-sm text-primary dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all cursor-pointer"
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                onClick={() => commitDurationReservation(mobileResTarget.equipment, mobileResTarget.day, mobileResTarget.slot, mobileResDuration)}
+                className="flex-1 py-3 bg-primary dark:bg-blue-600 text-white rounded-2xl font-black text-sm shadow-md hover:shadow-lg active:scale-95 transition-all cursor-pointer"
+              >
+                예약 완료
+              </button>
+            </div>
+
+          </div>
         </div>
       )}
 

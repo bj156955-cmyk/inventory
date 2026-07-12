@@ -25,7 +25,8 @@ import {
   FileText,
   User,
   Trash2,
-  RefreshCw
+  RefreshCw,
+  Calendar
 } from "lucide-react";
 
 const FALLBACK_HOLIDAYS: { [key: string]: string } = {
@@ -178,6 +179,7 @@ const getColorForEvent = (createdBy: string) => {
 export default function CalendarPage() {
   const { user } = useAuth();
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
+  const [activeDay, setActiveDay] = useState<Date>(new Date());
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [holidays, setHolidays] = useState<{ [key: string]: string }>({});
@@ -293,6 +295,24 @@ export default function CalendarPage() {
     };
   }, []);
 
+  const handleDayClick = (day: Date) => {
+    if (isSameDay(day, activeDay)) {
+      setSelectedDate(day);
+      setSelectedEvent(null);
+      setFormTitle("");
+      setFormDesc("");
+      setFormStartDate(format(day, "yyyy-MM-dd"));
+      setFormEndDate(format(day, "yyyy-MM-dd"));
+      setFormStartTime("09:00");
+      setFormEndTime("18:00");
+      const defaultUser = user?.email?.split("@")[0].toUpperCase() || "UNKNOWN";
+      setSelectedMembers([defaultUser]);
+      setModalOpen(true);
+    } else {
+      setActiveDay(day);
+    }
+  };
+
   const handleMouseDown = (date: Date) => {
     setIsDragging(true);
     setDragStart(date);
@@ -313,6 +333,7 @@ export default function CalendarPage() {
       const d2 = dragStart < dragEnd ? dragEnd : dragStart;
       
       setSelectedDate(d1);
+      setActiveDay(d1);
       setSelectedEvent(null);
       setFormTitle("");
       setFormDesc("");
@@ -367,7 +388,7 @@ export default function CalendarPage() {
   };
 
   // Open modal to view/edit/delete event
-  const openViewModal = (e: React.MouseEvent, event: CalendarEvent) => {
+  const openViewModal = (e: React.SyntheticEvent, event: CalendarEvent) => {
     e.stopPropagation(); // Prevent trigger day click
     setSelectedEvent(event);
     const startDateObj = new Date(event.start_time);
@@ -476,149 +497,261 @@ export default function CalendarPage() {
       </div>
 
 
-      {/* Calendar Grid */}
-      <div className="flex-1 bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-md border border-black/[0.02] dark:border-white/[0.02] overflow-hidden flex flex-col min-h-[400px]">
-        {/* Days of Week Header */}
-        <div className="grid grid-cols-7 border-b border-black/[0.02] dark:border-white/[0.02] bg-surface-container-low/50 dark:bg-slate-700/50">
-          {["일", "월", "화", "수", "목", "금", "토"].map((day, idx) => (
-            <div 
-              key={day} 
-              className={`py-4 text-center text-[10px] font-black uppercase tracking-widest ${
-                idx === 0 ? "text-red-500" : idx === 6 ? "text-blue-500" : "text-on-surface-variant dark:text-gray-300"
-              }`}
-            >
-              {day}
+      {/* Master-Detail Layout: Calendar + Selected Day Agenda */}
+      <div className="flex-1 flex flex-col lg:flex-row gap-6 min-h-[400px]">
+        
+        {/* Left Column: Calendar Grid */}
+        <div className="flex-1 bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-md border border-black/[0.02] dark:border-white/[0.02] overflow-hidden flex flex-col min-h-[400px]">
+          {/* Days of Week Header */}
+          <div className="grid grid-cols-7 border-b border-black/[0.02] dark:border-white/[0.02] bg-surface-container-low/50 dark:bg-slate-700/50">
+            {["일", "월", "화", "수", "목", "금", "토"].map((day, idx) => (
+              <div 
+                key={day} 
+                className={`py-4 text-center text-[10px] font-black uppercase tracking-widest ${
+                  idx === 0 ? "text-red-500" : idx === 6 ? "text-blue-500" : "text-on-surface-variant dark:text-gray-300"
+                }`}
+              >
+                {day}
+              </div>
+            ))}
+          </div>
+
+          {/* Days Grid */}
+          {loading ? (
+            <div className="flex-1 flex items-center justify-center">
+              <RefreshCw className="w-8 h-8 text-primary dark:text-blue-500 animate-spin" />
             </div>
-          ))}
+          ) : (
+            <div className="flex-1 grid grid-cols-7 grid-rows-6 divide-x divide-y divide-black/[0.02] dark:divide-white/[0.02] border-t border-black/[0.02] dark:border-white/[0.02]">
+              {days.map((day, dayIdx) => {
+                const dayStr = format(day, "yyyy-MM-dd");
+                const dayEvents = events.filter((e) => {
+                  const startStr = format(new Date(e.start_time), "yyyy-MM-dd");
+                  const endStr = format(new Date(e.end_time), "yyyy-MM-dd");
+                  return dayStr >= startStr && dayStr <= endStr;
+                });
+
+                // Sort events deterministically so they align horizontally in the grid
+                dayEvents.sort((a, b) => {
+                  const aDuration = new Date(a.end_time).getTime() - new Date(a.start_time).getTime();
+                  const bDuration = new Date(b.end_time).getTime() - new Date(b.start_time).getTime();
+                  if (bDuration !== aDuration) {
+                    return bDuration - aDuration; // longer duration first
+                  }
+                  const aStart = new Date(a.start_time).getTime();
+                  const bStart = new Date(b.start_time).getTime();
+                  if (aStart !== bStart) {
+                    return aStart - bStart; // earlier start time first
+                  }
+                  return a.id.localeCompare(b.id);
+                });
+
+                const isCurrentMonth = day.getMonth() === currentMonth.getMonth();
+                const isToday = isSameDay(day, new Date());
+                const holidayName = holidays[dayStr];
+                const isSunday = day.getDay() === 0;
+                const isHoliday = !!holidayName;
+                const isSelectedInDrag = (() => {
+                  if (!dragStart || !dragEnd) return false;
+                  const start = dragStart < dragEnd ? dragStart : dragEnd;
+                  const end = dragStart < dragEnd ? dragEnd : dragStart;
+                  const startStr = format(start, "yyyy-MM-dd");
+                  const endStr = format(end, "yyyy-MM-dd");
+                  return dayStr >= startStr && dayStr <= endStr;
+                })();
+                
+                const isActive = isSameDay(day, activeDay);
+                
+                return (
+                  <div
+                    key={day.toString()}
+                    onMouseDown={() => handleMouseDown(day)}
+                    onMouseEnter={() => handleMouseEnter(day)}
+                    onClick={() => handleDayClick(day)}
+                    className={`pt-2 pb-1.5 flex flex-col space-y-1.5 h-full min-h-[70px] overflow-hidden cursor-pointer select-none transition-all ${
+                      isSelectedInDrag 
+                        ? "bg-blue-100/60 dark:bg-blue-900/30 ring-2 ring-blue-400/60 dark:ring-blue-600/50" 
+                        : isActive
+                        ? "bg-primary/5 dark:bg-blue-500/10 ring-2 ring-primary dark:ring-blue-500"
+                        : "hover:bg-surface-container-lowest/50 dark:hover:bg-slate-700/20"
+                    } ${
+                      isCurrentMonth ? "text-primary dark:text-white" : "text-on-surface-variant/30 dark:text-gray-600"
+                    }`}
+                  >
+                    {/* Day Header */}
+                    <div className="flex justify-between items-center px-2">
+                      <span className={`text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full ${
+                        isToday 
+                          ? "bg-primary text-white dark:bg-blue-600" 
+                          : isSunday || isHoliday
+                          ? "text-red-500" 
+                          : day.getDay() === 6 
+                          ? "text-blue-500" 
+                          : ""
+                      }`}>
+                        {format(day, "d")}
+                      </span>
+                      {dayEvents.length > 0 && (
+                        <span className="text-[9px] font-black px-1.5 py-0.5 bg-primary/5 dark:bg-blue-500/10 text-primary dark:text-blue-400 rounded-md">
+                          {dayEvents.length}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Day Events List (Desktop Only) */}
+                    <div className="hidden md:flex flex-1 flex-col gap-1 overflow-y-auto custom-scrollbar px-0">
+                      {isHoliday && (
+                        <div className="mx-2 px-2 py-0.5 bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/30 text-[9px] font-black text-red-600 dark:text-red-400 rounded-md truncate select-none flex items-center gap-1 shrink-0">
+                          <span>🎈</span> {holidayName}
+                        </div>
+                      )}
+                      {dayEvents.slice(0, isHoliday ? 2 : 3).map((event) => {
+                        const color = getColorForEvent(event.created_by);
+                        const startStr = format(new Date(event.start_time), "yyyy-MM-dd");
+                        const endStr = format(new Date(event.end_time), "yyyy-MM-dd");
+                        const isStartDay = dayStr === startStr;
+                        const isEndDay = dayStr === endStr;
+                        const isMultiDay = startStr !== endStr;
+
+                        let cellStyle = "mx-2 rounded-lg";
+                        if (isMultiDay) {
+                          if (isStartDay) {
+                            cellStyle = "ml-2 mr-0 rounded-l-lg border-r-0";
+                          } else if (isEndDay) {
+                            cellStyle = "mr-2 ml-0 rounded-r-lg border-l-0";
+                          } else {
+                            cellStyle = "mx-0 rounded-none border-l-0 border-r-0";
+                          }
+                        }
+
+                        return (
+                          <div
+                            key={event.id}
+                            onMouseDown={(e) => e.stopPropagation()}
+                            onClick={(e) => openViewModal(e, event)}
+                            className={`px-2 py-1 ${color.bg} border ${color.border} text-[9px] font-bold ${color.text} ${cellStyle} truncate ${color.hoverBg} transition-colors`}
+                          >
+                            <span className="opacity-75 font-normal mr-0.5">{format(new Date(event.start_time), "HH:mm")}</span>
+                            <span className="font-extrabold mr-1 bg-black/[0.04] dark:bg-white/[0.08] px-1 rounded-sm text-[8px] tracking-tight">{event.created_by}</span>
+                            {event.title}
+                          </div>
+                        );
+                      })}
+                      {dayEvents.length > (isHoliday ? 2 : 3) && (
+                        <div className="text-[8px] font-black text-on-surface-variant/40 dark:text-gray-500 text-center uppercase tracking-wider mx-2">
+                          + {dayEvents.length - (isHoliday ? 2 : 3)} more
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Day Events Dots (Mobile Only) */}
+                    <div className="flex md:hidden flex-row flex-wrap gap-0.5 px-2 items-center justify-center min-h-[8px] overflow-hidden">
+                      {dayEvents.slice(0, 3).map((event) => {
+                        const color = getColorForEvent(event.created_by);
+                        return (
+                          <span 
+                            key={event.id} 
+                            className={`w-1.5 h-1.5 rounded-full ${color.dot} shrink-0`} 
+                          />
+                        );
+                      })}
+                      {dayEvents.length > 3 && (
+                        <span className="w-1 h-1 bg-slate-400 rounded-full shrink-0" />
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
-        {/* Days Grid */}
-        {loading ? (
-          <div className="flex-1 flex items-center justify-center">
-            <RefreshCw className="w-8 h-8 text-primary dark:text-blue-500 animate-spin" />
+        {/* Right Column: Selected Day's Agenda Detail */}
+        <div className="w-full lg:w-[320px] bg-white dark:bg-slate-800 rounded-[2.5rem] p-6 shadow-md border border-black/[0.02] dark:border-white/[0.02] flex flex-col shrink-0">
+          <div className="flex justify-between items-center pb-3 border-b border-black/[0.02] dark:border-white/[0.02] shrink-0">
+            <h3 className="text-sm font-black text-primary dark:text-white">
+              📅 {format(activeDay, "M월 d일 (E)", { locale: ko })}
+            </h3>
+            <button
+              onClick={() => {
+                setSelectedDate(activeDay);
+                setSelectedEvent(null);
+                setFormTitle("");
+                setFormDesc("");
+                setFormStartDate(format(activeDay, "yyyy-MM-dd"));
+                setFormEndDate(format(activeDay, "yyyy-MM-dd"));
+                setFormStartTime("09:00");
+                setFormEndTime("18:00");
+                const defaultUser = user?.email?.split("@")[0].toUpperCase() || "UNKNOWN";
+                setSelectedMembers([defaultUser]);
+                setModalOpen(true);
+              }}
+              className="p-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg flex items-center justify-center font-bold shadow-sm transition-all cursor-pointer"
+              title="새 일정 추가"
+            >
+              <Plus className="w-3.5 h-3.5" />
+            </button>
           </div>
-        ) : (
-          <div className="flex-1 grid grid-cols-7 grid-rows-6 divide-x divide-y divide-black/[0.02] dark:divide-white/[0.02] border-t border-black/[0.02] dark:border-white/[0.02]">
-            {days.map((day, dayIdx) => {
-              const dayStr = format(day, "yyyy-MM-dd");
-              const dayEvents = events.filter((e) => {
+
+          {/* Agenda Scrollable List */}
+          <div className="flex-1 overflow-y-auto mt-4 space-y-3 pr-1 custom-scrollbar min-h-[200px]">
+            {(() => {
+              const activeDayStr = format(activeDay, "yyyy-MM-dd");
+              const activeDayEvents = events.filter((e) => {
                 const startStr = format(new Date(e.start_time), "yyyy-MM-dd");
                 const endStr = format(new Date(e.end_time), "yyyy-MM-dd");
-                return dayStr >= startStr && dayStr <= endStr;
+                return activeDayStr >= startStr && activeDayStr <= endStr;
               });
 
-              // Sort events deterministically so they align horizontally in the grid
-              dayEvents.sort((a, b) => {
-                const aDuration = new Date(a.end_time).getTime() - new Date(a.start_time).getTime();
-                const bDuration = new Date(b.end_time).getTime() - new Date(b.start_time).getTime();
-                if (bDuration !== aDuration) {
-                  return bDuration - aDuration; // longer duration first
-                }
-                const aStart = new Date(a.start_time).getTime();
-                const bStart = new Date(b.start_time).getTime();
-                if (aStart !== bStart) {
-                  return aStart - bStart; // earlier start time first
-                }
-                return a.id.localeCompare(b.id);
-              });
+              // Sort activeDayEvents by start time
+              activeDayEvents.sort((a, b) => a.start_time.localeCompare(b.start_time));
 
-              const isCurrentMonth = day.getMonth() === currentMonth.getMonth();
-              const isToday = isSameDay(day, new Date());
-              const holidayName = holidays[dayStr];
-              const isSunday = day.getDay() === 0;
-              const isHoliday = !!holidayName;
-              const isSelectedInDrag = (() => {
-                if (!dragStart || !dragEnd) return false;
-                const start = dragStart < dragEnd ? dragStart : dragEnd;
-                const end = dragStart < dragEnd ? dragEnd : dragStart;
-                const startStr = format(start, "yyyy-MM-dd");
-                const endStr = format(end, "yyyy-MM-dd");
-                return dayStr >= startStr && dayStr <= endStr;
-              })();
-              
-              return (
-                <div
-                  key={day.toString()}
-                  onMouseDown={() => handleMouseDown(day)}
-                  onMouseEnter={() => handleMouseEnter(day)}
-                  className={`pt-2 pb-1.5 flex flex-col space-y-1.5 h-full min-h-[70px] overflow-hidden cursor-pointer select-none transition-all ${
-                    isSelectedInDrag 
-                      ? "bg-blue-100/60 dark:bg-blue-900/30 ring-2 ring-blue-400/60 dark:ring-blue-600/50" 
-                      : "hover:bg-surface-container-lowest/50 dark:hover:bg-slate-700/20"
-                  } ${
-                    isCurrentMonth ? "text-primary dark:text-white" : "text-on-surface-variant/30 dark:text-gray-600"
-                  }`}
-                >
-                  {/* Day Header */}
-                  <div className="flex justify-between items-center px-2">
-                    <span className={`text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full ${
-                      isToday 
-                        ? "bg-primary text-white dark:bg-blue-600" 
-                        : isSunday || isHoliday
-                        ? "text-red-500" 
-                        : day.getDay() === 6 
-                        ? "text-blue-500" 
-                        : ""
-                    }`}>
-                      {format(day, "d")}
-                    </span>
-                    {dayEvents.length > 0 && (
-                      <span className="text-[9px] font-black px-1.5 py-0.5 bg-primary/5 dark:bg-blue-500/10 text-primary dark:text-blue-400 rounded-md">
-                        {dayEvents.length}
+              if (activeDayEvents.length === 0) {
+                return (
+                  <div className="h-full flex flex-col items-center justify-center text-center p-6 text-on-surface-variant/40 dark:text-gray-500">
+                    <Calendar className="w-10 h-10 mb-2 opacity-30" />
+                    <span className="text-[11px] font-bold">이날은 등록된 일정이 없습니다.</span>
+                  </div>
+                );
+              }
+
+              return activeDayEvents.map((event) => {
+                const color = getColorForEvent(event.created_by);
+                const startStr = format(new Date(event.start_time), "yyyy-MM-dd");
+                const endStr = format(new Date(event.end_time), "yyyy-MM-dd");
+                const isMultiDay = startStr !== endStr;
+
+                return (
+                  <div
+                    key={event.id}
+                    onClick={(e) => openViewModal(e, event)}
+                    className={`p-3.5 rounded-2xl border ${color.bg} ${color.border} ${color.text} hover:scale-[1.02] cursor-pointer transition-all duration-200 flex flex-col gap-1.5`}
+                  >
+                    <div className="flex justify-between items-start gap-2">
+                      <span className="font-extrabold text-xs tracking-tight line-clamp-1">{event.title}</span>
+                      <span className="text-[9px] font-medium opacity-80 shrink-0">
+                        {isMultiDay ? "종일" : `${format(new Date(event.start_time), "HH:mm")} ~ ${format(new Date(event.end_time), "HH:mm")}`}
                       </span>
+                    </div>
+                    {event.description && (
+                      <p className="text-[10px] opacity-75 line-clamp-2 leading-relaxed">{event.description}</p>
                     )}
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      {event.created_by.split(",").map(m => {
+                        const memberColor = getColorForUser(m.trim());
+                        return (
+                          <span key={m} className={`px-2 py-0.5 text-[8px] font-black rounded-md ${memberColor.badge}`}>
+                            {m.trim()}
+                          </span>
+                        );
+                      })}
+                    </div>
                   </div>
-
-                  {/* Day Events List */}
-                  <div className="flex-1 flex flex-col gap-1 overflow-y-auto custom-scrollbar px-0">
-                    {isHoliday && (
-                      <div className="mx-2 px-2 py-0.5 bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/30 text-[9px] font-black text-red-600 dark:text-red-400 rounded-md truncate select-none flex items-center gap-1 shrink-0">
-                        <span>🎈</span> {holidayName}
-                      </div>
-                    )}
-                    {dayEvents.slice(0, isHoliday ? 2 : 3).map((event) => {
-                      const color = getColorForEvent(event.created_by);
-                      const startStr = format(new Date(event.start_time), "yyyy-MM-dd");
-                      const endStr = format(new Date(event.end_time), "yyyy-MM-dd");
-                      const isStartDay = dayStr === startStr;
-                      const isEndDay = dayStr === endStr;
-                      const isMultiDay = startStr !== endStr;
-
-                      let cellStyle = "mx-2 rounded-lg";
-                      if (isMultiDay) {
-                        if (isStartDay) {
-                          cellStyle = "ml-2 mr-0 rounded-l-lg border-r-0";
-                        } else if (isEndDay) {
-                          cellStyle = "mr-2 ml-0 rounded-r-lg border-l-0";
-                        } else {
-                          cellStyle = "mx-0 rounded-none border-l-0 border-r-0";
-                        }
-                      }
-
-                      return (
-                        <div
-                          key={event.id}
-                          onMouseDown={(e) => e.stopPropagation()}
-                          onClick={(e) => openViewModal(e, event)}
-                          className={`px-2 py-1 ${color.bg} border ${color.border} text-[9px] font-bold ${color.text} ${cellStyle} truncate ${color.hoverBg} transition-colors`}
-                        >
-                          <span className="opacity-75 font-normal mr-0.5">{format(new Date(event.start_time), "HH:mm")}</span>
-                          <span className="font-extrabold mr-1 bg-black/[0.04] dark:bg-white/[0.08] px-1 rounded-sm text-[8px] tracking-tight">{event.created_by}</span>
-                          {event.title}
-                        </div>
-                      );
-                    })}
-                    {dayEvents.length > (isHoliday ? 2 : 3) && (
-                      <div className="text-[8px] font-black text-on-surface-variant/40 dark:text-gray-500 text-center uppercase tracking-wider mx-2">
-                        + {dayEvents.length - (isHoliday ? 2 : 3)} more
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
+                );
+              });
+            })()}
           </div>
-        )}
+        </div>
       </div>
 
       {/* Add / Edit / View Modal */}
