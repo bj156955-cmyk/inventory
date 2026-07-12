@@ -15,7 +15,9 @@ import {
   HelpCircle,
   Plus,
   GripVertical,
-  X
+  X,
+  ShoppingCart,
+  Truck
 } from "lucide-react";
 
 // Maintain UI consistency
@@ -93,7 +95,7 @@ const SLOTS = [
   "09:00", "09:30", "10:00", "10:30", "11:00", "11:30", 
   "12:00", "12:30", "13:00", "13:30", "14:00", "14:30", 
   "15:00", "15:30", "16:00", "16:30", "17:00", "17:30", 
-  "18:00", "18:30", "19:00", "19:30"
+  "18:00", "18:30", "19:00"
 ];
 
 interface Reservation {
@@ -114,6 +116,18 @@ interface CleaningState {
   baseWeek: number;
 }
 
+interface LabOrder {
+  id: string;
+  itemName: string;
+  requestedBy: string;
+  status: "REQUESTED" | "ORDERED" | "RECEIVED";
+  createdAt: string;
+  orderedAt?: string;
+  orderedBy?: string;
+  receivedAt?: string;
+  receivedBy?: string;
+}
+
 export default function LabPage() {
   const { user } = useAuth();
   const [members, setMembers] = useState<string[]>([]);
@@ -123,6 +137,12 @@ export default function LabPage() {
   const [showAddSelect, setShowAddSelect] = useState(false);
   const [loading, setLoading] = useState(true);
   
+  // Orders states
+  const [orders, setOrders] = useState<LabOrder[]>([]);
+  const [orderDbId, setOrderDbId] = useState<string | null>(null);
+  const [showAddOrderInput, setShowAddOrderInput] = useState(false);
+  const [newItemName, setNewItemName] = useState("");
+
   // Drag states
   const [dragStart, setDragStart] = useState<number | null>(null);
   const [dragEnd, setDragEnd] = useState<number | null>(null);
@@ -210,6 +230,22 @@ export default function LabPage() {
         }
       } else {
         setCleaningState(null);
+      }
+
+      // Fetch lab orders
+      const { data: orderData, error: orderError } = await supabase
+        .from("notices")
+        .select("*")
+        .eq("title", "__LAB_ORDERS__")
+        .limit(1);
+      
+      if (orderError) throw orderError;
+
+      if (orderData && orderData.length > 0) {
+        setOrderDbId(orderData[0].id);
+        setOrders(JSON.parse(orderData[0].content) as LabOrder[]);
+      } else {
+        setOrders([]);
       }
     } catch (err) {
       console.error("Error fetching lab workspace data:", err);
@@ -457,6 +493,76 @@ export default function LabPage() {
     await saveCleaningState(newState);
   };
 
+  // 5. Item Order Handlers (Live Sync)
+  const saveOrdersState = async (updatedOrders: LabOrder[]) => {
+    try {
+      if (orderDbId) {
+        await supabase
+          .from("notices")
+          .update({ content: JSON.stringify(updatedOrders) })
+          .eq("id", orderDbId);
+      } else {
+        const { data } = await supabase
+          .from("notices")
+          .insert([{
+            title: "__LAB_ORDERS__",
+            content: JSON.stringify(updatedOrders),
+            created_by: "SYSTEM"
+          }])
+          .select();
+        if (data && data.length > 0) setOrderDbId(data[0].id);
+      }
+    } catch (err) {
+      console.error("Error saving orders:", err);
+    }
+  };
+
+  const handleAddOrder = async (itemName: string) => {
+    if (!itemName.trim()) return;
+    const currentUserInitials = user?.email?.split("@")[0].toUpperCase() || "UNKNOWN";
+    
+    const newOrder: LabOrder = {
+      id: Math.random().toString(36).substring(2, 9),
+      itemName: itemName.trim(),
+      requestedBy: currentUserInitials,
+      status: "REQUESTED",
+      createdAt: new Date().toISOString()
+    };
+    
+    const updated = [...orders, newOrder];
+    setOrders(updated);
+    setNewItemName("");
+    setShowAddOrderInput(false);
+    await saveOrdersState(updated);
+  };
+
+  const handleUpdateOrderStatus = async (orderId: string, newStatus: "ORDERED" | "RECEIVED") => {
+    const currentUserInitials = user?.email?.split("@")[0].toUpperCase() || "UNKNOWN";
+    
+    const updated = orders.map(order => {
+      if (order.id === orderId) {
+        return {
+          ...order,
+          status: newStatus,
+          orderedAt: newStatus === "ORDERED" ? new Date().toISOString() : order.orderedAt,
+          orderedBy: newStatus === "ORDERED" ? currentUserInitials : order.orderedBy,
+          receivedAt: newStatus === "RECEIVED" ? new Date().toISOString() : order.receivedAt,
+          receivedBy: newStatus === "RECEIVED" ? currentUserInitials : order.receivedBy
+        };
+      }
+      return order;
+    });
+    
+    setOrders(updated);
+    await saveOrdersState(updated);
+  };
+
+  const handleDeleteOrder = async (orderId: string) => {
+    const updated = orders.filter(order => order.id !== orderId);
+    setOrders(updated);
+    await saveOrdersState(updated);
+  };
+
   const currentWeek = getWeekOffset();
   const baseWeek = cleaningState?.baseWeek !== undefined ? cleaningState.baseWeek : currentWeek;
   const shift = currentWeek - baseWeek;
@@ -491,32 +597,35 @@ export default function LabPage() {
     };
   });
 
+  const threeDaysAgo = Date.now() - 3 * 24 * 60 * 60 * 1000;
+  const visibleOrders = orders.filter(order => {
+    if (order.status !== "RECEIVED") return true;
+    if (!order.receivedAt) return true;
+    return new Date(order.receivedAt).getTime() >= threeDaysAgo;
+  });
   // Find helper to search reservation state
   const getReservedUser = (equipment: string, day: string, slot: string) => {
     return reservations.find(r => r.equipment === equipment && r.day === day && r.slot === slot)?.user || "";
   };
 
+  // Get weekly date range string: (MM.DD ~ MM.DD)
+  const getWeeklyDateRangeString = () => {
+    const today = new Date();
+    const day = today.getDay();
+    const daysToMonday = day === 0 ? 6 : day - 1;
+    
+    const monday = new Date(today);
+    monday.setDate(today.getDate() - daysToMonday);
+    
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    
+    const format = (d: Date) => `${d.getMonth() + 1}.${d.getDate()}`;
+    return `(${format(monday)} ~ ${format(sunday)})`;
+  };
+
   return (
-    <div className="flex-1 p-6 md:p-10 space-y-6 bg-surface dark:bg-slate-900 flex flex-col min-h-0">
-      
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shrink-0">
-        <div>
-          <h2 className="text-3xl font-black font-headline text-primary dark:text-blue-400 tracking-tighter">
-            Lab Equipment & Workspace Hub
-          </h2>
-          <p className="text-xs md:text-sm text-on-surface-variant dark:text-gray-400 font-semibold mt-1">
-            연구실 내 벤치 예약 상태를 점검하고 주간 청소당번 배정을 확인합니다.
-          </p>
-        </div>
-        
-        <button
-          onClick={fetchLabData}
-          className="p-3 bg-white dark:bg-slate-800 text-on-surface-variant dark:text-gray-400 rounded-2xl hover:text-primary dark:hover:text-white border border-black/[0.03] dark:border-white/[0.03] shadow-sm hover:shadow transition-all"
-        >
-          <RefreshCw className="w-5 h-5" />
-        </button>
-      </div>
+    <div className="flex-1 p-6 md:p-10 bg-surface dark:bg-slate-900 flex flex-col min-h-0">
 
       {loading ? (
         <div className="flex-1 flex items-center justify-center">
@@ -529,29 +638,29 @@ export default function LabPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             
             {/* Table 1: Equipment A */}
-            <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] p-6 shadow-md border border-black/[0.02] dark:border-white/[0.02] flex flex-col h-[520px]">
+            <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] p-6 shadow-md border border-black/[0.02] dark:border-white/[0.02] flex flex-col h-full">
               <div className="pb-3 border-b border-black/[0.02] dark:border-white/[0.02] shrink-0">
                 <h3 className="text-base font-black text-primary dark:text-white flex items-center gap-2">
-                  <FlaskConical className="w-5 h-5 text-blue-500 animate-pulse" />
-                  <span>오른쪽 벤치</span>
+                  <FlaskConical className="w-5 h-5 text-emerald-500 animate-pulse" />
+                  <span>왼쪽 벤치</span>
                 </h3>
               </div>
 
-              {/* Scrollable Scheduler */}
-              <div className="flex-1 overflow-auto mt-4 border border-black/[0.03] dark:border-white/[0.03] rounded-2xl custom-scrollbar">
+              {/* Scroll-free Scheduler */}
+              <div className="mt-4 border border-black/[0.03] dark:border-white/[0.03] rounded-2xl">
                 <table className="w-full table-fixed text-center border-collapse text-[11px] font-semibold">
                   <thead className="sticky top-0 bg-slate-50 dark:bg-slate-700 text-on-surface-variant dark:text-gray-300 border-b border-black/[0.02] dark:border-white/[0.02] z-10">
                     <tr>
-                      <th className="py-2.5 px-3 font-black bg-slate-100 dark:bg-slate-800/80 w-16">시간</th>
+                      <th className="py-2 px-3 font-black bg-slate-100 dark:bg-slate-800/80 w-16">시간</th>
                       {DAYS.map(day => (
-                        <th key={day} className="py-2.5 font-black w-[17.6%]">{day}</th>
+                        <th key={day} className="py-2 font-black w-[17.6%]">{day}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-black/[0.02] dark:divide-white/[0.02]">
                     {SLOTS.map((slot) => (
                       <tr key={slot} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/20 transition-all">
-                        <td className="py-2 bg-slate-50/50 dark:bg-slate-800/40 text-[10px] font-black border-r border-black/[0.01] dark:border-white/[0.01] sticky left-0 z-0 select-none">
+                        <td className="py-1.5 bg-slate-50/50 dark:bg-slate-800/40 text-[10px] font-black border-r border-black/[0.01] dark:border-white/[0.01] sticky left-0 z-0 select-none">
                           {slot}
                         </td>
                         {DAYS.map((day) => {
@@ -572,7 +681,7 @@ export default function LabPage() {
                               key={day}
                               onMouseDown={() => handleCellMouseDown("A", day, slot)}
                               onMouseEnter={() => handleCellMouseEnter("A", day, slot)}
-                              className={`py-1.5 px-1 border-r border-black/[0.01] dark:border-white/[0.01] cursor-pointer transition-all select-none ${
+                              className={`py-1.5 px-0.5 border-r border-black/[0.01] dark:border-white/[0.01] cursor-pointer transition-all select-none ${
                                 userRes 
                                   ? `${color?.bg} ${color?.text} hover:opacity-90` 
                                   : isSelectedInDrag
@@ -594,29 +703,29 @@ export default function LabPage() {
             </div>
 
             {/* Table 2: Equipment B */}
-            <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] p-6 shadow-md border border-black/[0.02] dark:border-white/[0.02] flex flex-col h-[520px]">
+            <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] p-6 shadow-md border border-black/[0.02] dark:border-white/[0.02] flex flex-col h-full">
               <div className="pb-3 border-b border-black/[0.02] dark:border-white/[0.02] shrink-0">
                 <h3 className="text-base font-black text-primary dark:text-white flex items-center gap-2">
-                  <FlaskConical className="w-5 h-5 text-emerald-500 animate-pulse" />
-                  <span>왼쪽 벤치</span>
+                  <FlaskConical className="w-5 h-5 text-blue-500 animate-pulse" />
+                  <span>오른쪽 벤치</span>
                 </h3>
               </div>
 
-              {/* Scrollable Scheduler */}
-              <div className="flex-1 overflow-auto mt-4 border border-black/[0.03] dark:border-white/[0.03] rounded-2xl custom-scrollbar">
+              {/* Scroll-free Scheduler */}
+              <div className="mt-4 border border-black/[0.03] dark:border-white/[0.03] rounded-2xl">
                 <table className="w-full table-fixed text-center border-collapse text-[11px] font-semibold">
                   <thead className="sticky top-0 bg-slate-50 dark:bg-slate-700 text-on-surface-variant dark:text-gray-300 border-b border-black/[0.02] dark:border-white/[0.02] z-10">
                     <tr>
-                      <th className="py-2.5 px-3 font-black bg-slate-100 dark:bg-slate-800/80 w-16">시간</th>
+                      <th className="py-2 px-3 font-black bg-slate-100 dark:bg-slate-800/80 w-16">시간</th>
                       {DAYS.map(day => (
-                        <th key={day} className="py-2.5 font-black w-[17.6%]">{day}</th>
+                        <th key={day} className="py-2 font-black w-[17.6%]">{day}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-black/[0.02] dark:divide-white/[0.02]">
                     {SLOTS.map((slot) => (
                       <tr key={slot} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/20 transition-all">
-                        <td className="py-2 bg-slate-50/50 dark:bg-slate-800/40 text-[10px] font-black border-r border-black/[0.01] dark:border-white/[0.01] sticky left-0 z-0 select-none">
+                        <td className="py-1.5 bg-slate-50/50 dark:bg-slate-800/40 text-[10px] font-black border-r border-black/[0.01] dark:border-white/[0.01] sticky left-0 z-0 select-none">
                           {slot}
                         </td>
                         {DAYS.map((day) => {
@@ -637,7 +746,7 @@ export default function LabPage() {
                               key={day}
                               onMouseDown={() => handleCellMouseDown("B", day, slot)}
                               onMouseEnter={() => handleCellMouseEnter("B", day, slot)}
-                              className={`py-1.5 px-1 border-r border-black/[0.01] dark:border-white/[0.01] cursor-pointer transition-all select-none ${
+                              className={`py-1.5 px-0.5 border-r border-black/[0.01] dark:border-white/[0.01] cursor-pointer transition-all select-none ${
                                 userRes 
                                   ? `${color?.bg} ${color?.text} hover:opacity-90` 
                                   : isSelectedInDrag
@@ -660,25 +769,180 @@ export default function LabPage() {
 
           </div>
 
-          {/* Bottom Section: Left Empty, Right Cleaning Duty */}
+          {/* Bottom Section: Left Orders, Right Cleaning Duty */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 shrink-0">
-            
-            {/* Left Column: Left Empty as requested */}
-            <div className="border-2 border-dashed border-black/[0.06] dark:border-white/[0.06] rounded-[2.5rem] h-[340px] flex items-center justify-center text-on-surface-variant/30 dark:text-gray-600 select-none">
-              <div className="text-center space-y-1">
-                <HelpCircle className="w-8 h-8 mx-auto opacity-40" />
-                <p className="text-xs font-black uppercase tracking-widest">기능 준비 공간</p>
-                <p className="text-[10px] font-medium opacity-60">추가로 배치할 기능이 기획되면 채워집니다.</p>
+
+            {/* Left Column: Item Orders Status */}
+            <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] p-6 shadow-md border border-black/[0.02] dark:border-white/[0.02] min-h-[340px] h-full flex flex-col justify-between overflow-hidden">
+              
+              <div className="flex justify-between items-center pb-2 border-b border-black/[0.02] dark:border-white/[0.02] shrink-0">
+                <h3 className="text-sm font-black text-primary dark:text-white flex items-center gap-2">
+                  <ShoppingCart className="w-4.5 h-4.5 text-blue-500" />
+                  <span>연구실 물품 주문 현황</span>
+                </h3>
+                
+                <button
+                  onClick={() => setShowAddOrderInput(!showAddOrderInput)}
+                  className="w-6 h-6 bg-blue-500 hover:bg-blue-600 text-white rounded-lg flex items-center justify-center font-bold shadow-sm transition-all cursor-pointer"
+                  title="물품 추가"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                </button>
               </div>
+
+              {/* Inline Addition Input Form */}
+              {showAddOrderInput && (
+                <form 
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    handleAddOrder(newItemName);
+                  }}
+                  className="flex gap-1.5 p-2 mt-3 bg-slate-50 dark:bg-slate-900/60 rounded-2xl border border-black/[0.01] dark:border-white/[0.01] shrink-0 animate-fade-in"
+                >
+                  <input
+                    type="text"
+                    value={newItemName}
+                    onChange={(e) => setNewItemName(e.target.value)}
+                    placeholder="주문할 물품명을 입력하세요..."
+                    className="flex-1 bg-white dark:bg-slate-800 border border-black/10 dark:border-white/10 rounded-xl px-2.5 py-1.5 text-[10px] font-bold text-foreground outline-none focus:ring-1 focus:ring-blue-500"
+                    autoFocus
+                  />
+                  <button
+                    type="submit"
+                    className="px-2.5 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-xl text-[10px] font-black cursor-pointer shadow-sm transition-all"
+                  >
+                    추가
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowAddOrderInput(false);
+                      setNewItemName("");
+                    }}
+                    className="px-2.5 py-1.5 bg-slate-300 hover:bg-slate-400 dark:bg-slate-750 dark:hover:bg-slate-600 text-foreground dark:text-gray-200 rounded-xl text-[10px] font-black cursor-pointer transition-all"
+                  >
+                    취소
+                  </button>
+                </form>
+              )}
+
+              {/* Orders List Container */}
+              <div className="flex-1 overflow-y-auto my-3 space-y-2 pr-1 custom-scrollbar min-h-[160px]">
+                {visibleOrders.length === 0 ? (
+                  <div className="h-full flex flex-col items-center justify-center text-on-surface-variant/30 dark:text-gray-600 select-none py-10">
+                    <ShoppingCart className="w-8 h-8 mx-auto opacity-30 mb-2" />
+                    <p className="text-xs font-black uppercase tracking-widest">주문 내역 없음</p>
+                    <p className="text-[9px] font-medium opacity-60 mt-1">우측 상단 + 버튼으로 새 주문을 등록하세요.</p>
+                  </div>
+                ) : (
+                  visibleOrders.map((order) => {
+                    const hasRequested = order.status === "REQUESTED";
+                    const hasOrdered = order.status === "ORDERED";
+                    const hasReceived = order.status === "RECEIVED";
+                    const color = getColorForUser(order.requestedBy);
+
+                    const statusClass = hasRequested
+                      ? "bg-amber-50/30 border-amber-200/40 dark:bg-amber-950/10 dark:border-amber-900/20"
+                      : hasOrdered
+                      ? "bg-blue-50/30 border-blue-200/40 dark:bg-blue-950/10 dark:border-blue-900/20"
+                      : "bg-slate-100/30 border-slate-200/10 dark:bg-slate-900/20 dark:border-slate-800/10 opacity-30";
+
+                    return (
+                      <div 
+                        key={order.id} 
+                        className={`flex items-center justify-between p-2.5 rounded-xl border transition-all group ${statusClass}`}
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <span className={`w-5 h-5 rounded-md flex items-center justify-center font-headline font-black text-[8px] border ${color.badge} shrink-0`}>
+                            {order.requestedBy}
+                          </span>
+                          <div className="flex flex-col min-w-0">
+                            <span className={`text-[10px] font-bold text-foreground dark:text-gray-200 truncate ${
+                              hasReceived ? "line-through text-on-surface-variant/40" : ""
+                            }`}>
+                              {order.itemName}
+                            </span>
+                            <span className="text-[8px] text-on-surface-variant/50 dark:text-gray-400 font-semibold flex items-center gap-1 mt-0.5 select-none">
+                              <span>요청: {order.requestedBy}</span>
+                              {order.orderedBy && (
+                                <>
+                                  <span>•</span>
+                                  <span className="text-amber-600 dark:text-amber-400">주문: {order.orderedBy}</span>
+                                </>
+                              )}
+                              {order.receivedBy && (
+                                <>
+                                  <span>•</span>
+                                  <span className="text-blue-600 dark:text-blue-400">수령: {order.receivedBy}</span>
+                                </>
+                              )}
+                            </span>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          {/* Step 1: Cart (Order) Button */}
+                          <button
+                            type="button"
+                            onClick={() => handleUpdateOrderStatus(order.id, "ORDERED")}
+                            disabled={!hasRequested}
+                            className={`p-1.5 rounded-lg transition-all flex items-center justify-center border ${
+                              hasRequested
+                                ? "bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 text-amber-600 dark:text-amber-300 border-amber-200 dark:border-amber-900/30 cursor-pointer"
+                                : "bg-emerald-50 text-emerald-500 dark:bg-emerald-950/20 dark:text-emerald-400 border-emerald-100 dark:border-emerald-900/20 opacity-50 cursor-not-allowed"
+                            }`}
+                            title={hasRequested ? "물품 주문하기" : "주문 완료"}
+                          >
+                            <ShoppingCart className="w-3.5 h-3.5" />
+                          </button>
+
+                          {/* Step 2: Truck (Receive) Button */}
+                          <button
+                            type="button"
+                            onClick={() => handleUpdateOrderStatus(order.id, "RECEIVED")}
+                            disabled={!hasOrdered}
+                            className={`p-1.5 rounded-lg transition-all flex items-center justify-center border ${
+                              hasOrdered
+                                ? "bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/40 text-blue-600 dark:text-blue-300 border-blue-200 dark:border-blue-900/30 cursor-pointer animate-pulse"
+                                : hasReceived
+                                ? "bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500 border-slate-200 dark:border-slate-700 opacity-50 cursor-not-allowed"
+                                : "bg-slate-100 text-slate-300 dark:bg-slate-800 dark:text-slate-700 opacity-20 cursor-not-allowed"
+                            }`}
+                            title={hasOrdered ? "수령 완료 처리" : hasReceived ? "수령 완료됨" : "수령 준비 대기"}
+                          >
+                            <Truck className="w-3.5 h-3.5" />
+                          </button>
+
+                          {/* Delete (X) Button */}
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteOrder(order.id)}
+                            className="text-on-surface-variant/40 dark:text-gray-500 hover:text-red-500 opacity-0 group-hover:opacity-60 hover:!opacity-100 transition-all p-0.5 shrink-0 cursor-pointer"
+                            title="제거"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              {/* Caption */}
+              <div className="text-[9px] text-on-surface-variant/50 dark:text-gray-500 font-bold flex items-center justify-between shrink-0 pt-2 border-t border-black/5 dark:border-white/5 select-none">
+                <span>※ 수령 완료 물품은 3일 후 자동 제거됩니다.</span>
+              </div>
+
             </div>
 
             {/* Right Column: Cleaning & Waste Duties Table */}
-            <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] p-6 shadow-md border border-black/[0.02] dark:border-white/[0.02] h-[340px] flex flex-col justify-between overflow-hidden">
+            <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] p-6 shadow-md border border-black/[0.02] dark:border-white/[0.02] min-h-[340px] h-full flex flex-col justify-between overflow-hidden">
               
               <div className="flex justify-between items-center pb-2 border-b border-black/[0.02] dark:border-white/[0.02] shrink-0">
                 <h3 className="text-sm font-black text-primary dark:text-white flex items-center gap-2">
                   <Sparkles className="w-4.5 h-4.5 text-amber-500" />
-                  <span>연구실 주간 청소 당번</span>
+                  <span>연구실 주간 청소 {getWeeklyDateRangeString()}</span>
                 </h3>
                 
                 <div className="flex items-center gap-1.5 relative">
@@ -709,7 +973,7 @@ export default function LabPage() {
               </div>
 
               {/* Weekly Duties 3-Column Table with Drag Sorting */}
-              <div className="flex-1 overflow-y-auto my-3 border border-black/[0.03] dark:border-white/[0.03] rounded-2xl custom-scrollbar">
+              <div className="my-3 border border-black/[0.03] dark:border-white/[0.03] rounded-2xl">
                 <table className="w-full text-center border-collapse text-[11px] font-semibold table-fixed">
                   <thead className="sticky top-0 bg-slate-50 dark:bg-slate-700 text-on-surface-variant dark:text-gray-300 border-b border-black/[0.02] dark:border-white/[0.02] z-10 select-none">
                     <tr>
