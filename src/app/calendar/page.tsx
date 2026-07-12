@@ -1,0 +1,802 @@
+"use client";
+
+import React, { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
+import { CalendarEvent } from "@/types";
+import { useAuth } from "@/context/AuthContext";
+import { 
+  startOfMonth, 
+  endOfMonth, 
+  eachDayOfInterval, 
+  format, 
+  addMonths, 
+  subMonths, 
+  isSameDay,
+  startOfWeek,
+  endOfWeek
+} from "date-fns";
+import { ko } from "date-fns/locale";
+import { 
+  ChevronLeft, 
+  ChevronRight, 
+  Plus, 
+  X, 
+  Clock, 
+  FileText,
+  User,
+  Trash2,
+  RefreshCw
+} from "lucide-react";
+
+const FALLBACK_HOLIDAYS: { [key: string]: string } = {
+  // 2025
+  "2025-01-01": "신정",
+  "2025-01-28": "설날 연휴",
+  "2025-01-29": "설날",
+  "2025-01-30": "설날 연휴",
+  "2025-03-03": "대체공휴일(삼일절)",
+  "2025-05-05": "어린이날 / 대체공휴일(부처님오신날)",
+  "2025-06-06": "현충일",
+  "2025-07-17": "제헌절",
+  "2025-08-15": "광복절",
+  "2025-10-03": "개천절",
+  "2025-10-06": "추석 연휴",
+  "2025-10-07": "추석",
+  "2025-10-08": "추석 연휴 / 대체공휴일",
+  "2025-10-09": "한글날",
+  "2025-12-25": "성탄절",
+  // 2026
+  "2026-01-01": "신정",
+  "2026-02-16": "설날 연휴",
+  "2026-02-17": "설날",
+  "2026-02-18": "설날 연휴",
+  "2026-03-02": "대체공휴일(삼일절)",
+  "2026-05-01": "근로자의 날",
+  "2026-05-05": "어린이날",
+  "2026-05-24": "부처님오신날",
+  "2026-05-25": "대체공휴일(부처님오신날)",
+  "2026-06-03": "지방선거일",
+  "2026-06-06": "현충일",
+  "2026-07-17": "제헌절",
+  "2026-08-15": "광복절",
+  "2026-08-17": "대체공휴일(광복절)",
+  "2026-09-24": "추석 연휴",
+  "2026-09-25": "추석",
+  "2026-09-26": "추석 연휴",
+  "2026-09-28": "대체공휴일(추석)",
+  "2026-10-03": "개천절",
+  "2026-10-05": "대체공휴일(개천절)",
+  "2026-10-09": "한글날",
+  "2026-12-25": "성탄절",
+  // 2027
+  "2027-01-01": "신정",
+  "2027-02-06": "설날 연휴",
+  "2027-02-07": "설날",
+  "2027-02-08": "설날 연휴",
+  "2027-02-09": "대체공휴일(설날)",
+  "2027-03-01": "삼일절",
+  "2027-05-03": "근로자의 날(대체)",
+  "2027-05-05": "어린이날",
+  "2027-05-13": "부처님오신날",
+  "2027-06-06": "현충일",
+  "2027-07-17": "제헌절",
+  "2027-08-15": "광복절",
+  "2027-08-16": "대체공휴일(광복절)",
+  "2027-09-14": "추석 연휴",
+  "2027-09-15": "추석",
+  "2027-09-16": "추석 연휴",
+  "2027-10-03": "개천절",
+  "2027-10-04": "대체공휴일(개천절)",
+  "2027-10-11": "대체공휴일(한글날)",
+  "2027-12-25": "성탄절",
+};
+
+const getColorForUser = (userName: string) => {
+  const name = (userName || "UNKNOWN").toUpperCase();
+  const colors = [
+    {
+      bg: "bg-blue-50/80 dark:bg-blue-950/20",
+      border: "border-blue-200/50 dark:border-blue-900/30",
+      text: "text-blue-700 dark:text-blue-300",
+      hoverBg: "hover:bg-blue-100/50 dark:hover:bg-blue-900/10",
+      badge: "bg-blue-50 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900/30 text-blue-700 dark:text-blue-300",
+      dot: "bg-blue-500",
+    },
+    {
+      bg: "bg-emerald-50/80 dark:bg-emerald-950/20",
+      border: "border-emerald-200/50 dark:border-emerald-900/30",
+      text: "text-emerald-700 dark:text-emerald-300",
+      hoverBg: "hover:bg-emerald-100/50 dark:hover:bg-emerald-900/10",
+      badge: "bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-900/30 text-emerald-700 dark:text-emerald-300",
+      dot: "bg-emerald-500",
+    },
+    {
+      bg: "bg-violet-50/80 dark:bg-violet-950/20",
+      border: "border-violet-200/50 dark:border-violet-900/30",
+      text: "text-violet-700 dark:text-violet-300",
+      hoverBg: "hover:bg-violet-100/50 dark:hover:bg-violet-900/10",
+      badge: "bg-violet-50 dark:bg-violet-950/40 border border-violet-100 dark:border-violet-900/30 text-violet-700 dark:text-violet-300",
+      dot: "bg-violet-500",
+    },
+    {
+      bg: "bg-amber-50/80 dark:bg-amber-950/20",
+      border: "border-amber-200/50 dark:border-amber-900/30",
+      text: "text-amber-700 dark:text-amber-300",
+      hoverBg: "hover:bg-amber-100/50 dark:hover:bg-amber-900/10",
+      badge: "bg-amber-50 dark:bg-amber-950/40 border border-amber-100 dark:border-amber-900/30 text-amber-700 dark:text-amber-300",
+      dot: "bg-amber-500",
+    },
+    {
+      bg: "bg-rose-50/80 dark:bg-rose-950/20",
+      border: "border-rose-200/50 dark:border-rose-900/30",
+      text: "text-rose-700 dark:text-rose-300",
+      hoverBg: "hover:bg-rose-100/50 dark:hover:bg-rose-900/10",
+      badge: "bg-rose-50 dark:bg-rose-950/40 border border-rose-100 dark:border-rose-900/30 text-rose-700 dark:text-rose-300",
+      dot: "bg-rose-500",
+    },
+    {
+      bg: "bg-cyan-50/80 dark:bg-cyan-950/20",
+      border: "border-cyan-200/50 dark:border-cyan-900/30",
+      text: "text-cyan-700 dark:text-cyan-300",
+      hoverBg: "hover:bg-cyan-100/50 dark:hover:bg-cyan-900/10",
+      badge: "bg-cyan-50 dark:bg-cyan-950/40 border border-cyan-100 dark:border-cyan-900/30 text-cyan-700 dark:text-cyan-300",
+      dot: "bg-cyan-500",
+    },
+    {
+      bg: "bg-fuchsia-50/80 dark:bg-fuchsia-950/20",
+      border: "border-fuchsia-200/50 dark:border-fuchsia-900/30",
+      text: "text-fuchsia-700 dark:text-fuchsia-300",
+      hoverBg: "hover:bg-fuchsia-100/50 dark:hover:bg-fuchsia-900/10",
+      badge: "bg-fuchsia-50 dark:bg-fuchsia-950/40 border border-fuchsia-100 dark:border-fuchsia-900/30 text-fuchsia-700 dark:text-fuchsia-300",
+      dot: "bg-fuchsia-500",
+    }
+  ];
+
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const index = Math.abs(hash) % colors.length;
+  return colors[index];
+};
+
+const getColorForEvent = (createdBy: string) => {
+  const members = (createdBy || "UNKNOWN").split(",").map(m => m.trim().toUpperCase()).filter(Boolean);
+  if (members.length > 1) {
+    return {
+      bg: "bg-slate-100/90 dark:bg-slate-800/60",
+      border: "border-slate-300/60 dark:border-slate-700/60",
+      text: "text-slate-800 dark:text-slate-200",
+      hoverBg: "hover:bg-slate-200/70 dark:hover:bg-slate-700/40",
+      badge: "bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200",
+      dot: "bg-slate-500",
+    };
+  }
+  return getColorForUser(members[0] || "UNKNOWN");
+};
+
+export default function CalendarPage() {
+  const { user } = useAuth();
+  const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [holidays, setHolidays] = useState<{ [key: string]: string }>({});
+  
+  // Member selection states
+  const [allMembers, setAllMembers] = useState<string[]>(["BJ", "YG", "MJ", "JS", "HS", "HM", "NY", "SH", "TH"]);
+  const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
+
+  // Modal states
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+
+  // Form states
+  const [formTitle, setFormTitle] = useState("");
+  const [formDesc, setFormDesc] = useState("");
+  const [formStartDate, setFormStartDate] = useState("");
+  const [formEndDate, setFormEndDate] = useState("");
+  const [formStartTime, setFormStartTime] = useState("09:00");
+  const [formEndTime, setFormEndTime] = useState("18:00");
+
+  // Drag selection states
+  const [dragStart, setDragStart] = useState<Date | null>(null);
+  const [dragEnd, setDragEnd] = useState<Date | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+
+  // Fetch Calendar Events
+  const fetchEvents = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("calendar_events")
+        .select("*");
+      if (error) throw error;
+      const fetchedEvents = data || [];
+      setEvents(fetchedEvents);
+
+      // Extract unique members from events
+      const creators = fetchedEvents
+        .map((e) => e.created_by)
+        .filter(Boolean)
+        .flatMap((c: string) => c.split(",").map((m: string) => m.trim().toUpperCase()))
+        .filter(Boolean);
+      
+      setAllMembers((prev) => {
+        const merged = Array.from(new Set([...prev, ...creators]));
+        return merged;
+      });
+    } catch (err) {
+      console.error("Error fetching calendar events:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch Holidays dynamically with Fallback
+  useEffect(() => {
+    const year = currentMonth.getFullYear();
+    const fetchHolidays = async () => {
+      try {
+        const res = await fetch(`https://date.nager.at/api/v3/PublicHolidays/${year}/KR`);
+        if (!res.ok) throw new Error("API response error");
+        const data = await res.json();
+        const holidayMap: { [key: string]: string } = {};
+        data.forEach((h: any) => {
+          holidayMap[h.date] = h.localName;
+        });
+        // Merge with fallback data just in case API data is incomplete or has missing dates
+        setHolidays({ ...FALLBACK_HOLIDAYS, ...holidayMap });
+      } catch (err) {
+        console.error("Error fetching public holidays, using fallback data:", err);
+        setHolidays(FALLBACK_HOLIDAYS);
+      }
+    };
+
+    fetchHolidays();
+  }, [currentMonth]);
+
+  useEffect(() => {
+    fetchEvents();
+
+    const fetchTeamMembers = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("allowed_users")
+          .select("username")
+          .order("created_at", { ascending: true });
+        if (error) throw error;
+        if (data) {
+          const list = data.map((d: any) => d.username.toUpperCase());
+          setAllMembers(list);
+        }
+      } catch (err) {
+        console.error("Error fetching team members:", err);
+      }
+    };
+    fetchTeamMembers();
+
+    // Setup Realtime Sync for calendar_events
+    const channel = supabase
+      .channel("calendar-realtime")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "calendar_events" },
+        () => {
+          fetchEvents();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const handleMouseDown = (date: Date) => {
+    setIsDragging(true);
+    setDragStart(date);
+    setDragEnd(date);
+  };
+
+  const handleMouseEnter = (date: Date) => {
+    if (isDragging) {
+      setDragEnd(date);
+    }
+  };
+
+  const handleMouseUp = () => {
+    if (isDragging && dragStart && dragEnd) {
+      setIsDragging(false);
+      
+      const d1 = dragStart < dragEnd ? dragStart : dragEnd;
+      const d2 = dragStart < dragEnd ? dragEnd : dragStart;
+      
+      setSelectedDate(d1);
+      setSelectedEvent(null);
+      setFormTitle("");
+      setFormDesc("");
+      setFormStartDate(format(d1, "yyyy-MM-dd"));
+      setFormEndDate(format(d2, "yyyy-MM-dd"));
+      setFormStartTime("09:00");
+      setFormEndTime("18:00");
+      setSelectedMembers([user?.email?.split("@")[0].toUpperCase() || "UNKNOWN"]);
+      setModalOpen(true);
+      
+      setDragStart(null);
+      setDragEnd(null);
+    }
+  };
+
+  useEffect(() => {
+    const handleGlobalMouseUp = () => {
+      if (isDragging) {
+        handleMouseUp();
+      }
+    };
+    window.addEventListener("mouseup", handleGlobalMouseUp);
+    return () => window.removeEventListener("mouseup", handleGlobalMouseUp);
+  }, [isDragging, dragStart, dragEnd]);
+
+  // Handlers for month nav
+  const handlePrevMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
+  const handleNextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
+
+  // Calendar Day Generation
+  const monthStart = startOfMonth(currentMonth);
+  const monthEnd = endOfMonth(monthStart);
+  const startDate = startOfWeek(monthStart);
+  const endDate = endOfWeek(monthEnd);
+
+  const days = eachDayOfInterval({ start: startDate, end: endDate });
+
+  // Open modal to add event
+  const openAddModal = (date: Date) => {
+    setSelectedDate(date);
+    setSelectedEvent(null);
+    setFormTitle("");
+    setFormDesc("");
+    const dateStr = format(date, "yyyy-MM-dd");
+    setFormStartDate(dateStr);
+    setFormEndDate(dateStr);
+    setFormStartTime("09:00");
+    setFormEndTime("18:00");
+    const defaultUser = user?.email?.split("@")[0].toUpperCase() || "UNKNOWN";
+    setSelectedMembers([defaultUser]);
+    setModalOpen(true);
+  };
+
+  // Open modal to view/edit/delete event
+  const openViewModal = (e: React.MouseEvent, event: CalendarEvent) => {
+    e.stopPropagation(); // Prevent trigger day click
+    setSelectedEvent(event);
+    const startDateObj = new Date(event.start_time);
+    const endDateObj = new Date(event.end_time);
+    setSelectedDate(startDateObj);
+    setFormTitle(event.title);
+    setFormDesc(event.description || "");
+    setFormStartDate(format(startDateObj, "yyyy-MM-dd"));
+    setFormEndDate(format(endDateObj, "yyyy-MM-dd"));
+    setFormStartTime(format(startDateObj, "HH:mm"));
+    setFormEndTime(format(endDateObj, "HH:mm"));
+    const members = (event.created_by || "UNKNOWN")
+      .split(",")
+      .map((m) => m.trim().toUpperCase())
+      .filter(Boolean);
+    setSelectedMembers(members);
+    setModalOpen(true);
+  };
+
+  // Save/Update Event
+  const handleSaveEvent = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+
+    // Build timestamp strings
+    const startStr = `${formStartDate}T${formStartTime}:00`;
+    const endStr = `${formEndDate}T${formEndTime}:00`;
+
+    const payload = {
+      title: formTitle,
+      description: formDesc,
+      start_time: new Date(startStr).toISOString(),
+      end_time: new Date(endStr).toISOString(),
+      created_by: selectedMembers.length > 0 ? selectedMembers.join(", ") : "UNKNOWN",
+    };
+
+    try {
+      if (selectedEvent) {
+        // Update
+        const { error } = await supabase
+          .from("calendar_events")
+          .update(payload)
+          .eq("id", selectedEvent.id);
+        if (error) throw error;
+      } else {
+        // Insert
+        const { error } = await supabase
+          .from("calendar_events")
+          .insert([payload]);
+        if (error) throw error;
+      }
+      setModalOpen(false);
+      fetchEvents();
+    } catch (err) {
+      console.error("Error saving calendar event:", err);
+    }
+  };
+
+  // Delete Event
+  const handleDeleteEvent = async () => {
+    if (!selectedEvent) return;
+    try {
+      const { error } = await supabase
+        .from("calendar_events")
+        .delete()
+        .eq("id", selectedEvent.id);
+      if (error) throw error;
+      setModalOpen(false);
+      fetchEvents();
+    } catch (err) {
+      console.error("Error deleting calendar event:", err);
+    }
+  };
+
+
+  return (
+    <div className="flex-1 p-6 md:p-10 space-y-6 bg-surface dark:bg-slate-900 flex flex-col min-h-0">
+      
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shrink-0">
+        <div>
+          <h2 className="text-3xl font-black font-headline text-primary dark:text-blue-400 tracking-tighter">
+            Team Shared Calendar
+          </h2>
+          <p className="text-xs md:text-sm text-on-surface-variant dark:text-gray-400 font-semibold mt-1">
+            팀원들의 일정을 등록하고 실시간으로 공유하는 단독 캘린더입니다.
+          </p>
+        </div>
+        <div className="flex items-center gap-3 bg-white dark:bg-slate-800 p-2 rounded-2xl border border-black/[0.03] dark:border-white/[0.03]">
+          <button 
+            onClick={handlePrevMonth}
+            className="p-2 hover:bg-surface-container-low dark:hover:bg-slate-700 rounded-xl transition-all cursor-pointer text-on-surface-variant dark:text-gray-400"
+          >
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+          <span className="text-sm font-black text-primary dark:text-white px-2 uppercase tracking-widest">
+            {format(currentMonth, "yyyy. MMMM", { locale: ko })}
+          </span>
+          <button 
+            onClick={handleNextMonth}
+            className="p-2 hover:bg-surface-container-low dark:hover:bg-slate-700 rounded-xl transition-all cursor-pointer text-on-surface-variant dark:text-gray-400"
+          >
+            <ChevronRight className="w-5 h-5" />
+          </button>
+        </div>
+      </div>
+
+
+      {/* Calendar Grid */}
+      <div className="flex-1 bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-md border border-black/[0.02] dark:border-white/[0.02] overflow-hidden flex flex-col min-h-[400px]">
+        {/* Days of Week Header */}
+        <div className="grid grid-cols-7 border-b border-black/[0.02] dark:border-white/[0.02] bg-surface-container-low/50 dark:bg-slate-700/50">
+          {["일", "월", "화", "수", "목", "금", "토"].map((day, idx) => (
+            <div 
+              key={day} 
+              className={`py-4 text-center text-[10px] font-black uppercase tracking-widest ${
+                idx === 0 ? "text-red-500" : idx === 6 ? "text-blue-500" : "text-on-surface-variant dark:text-gray-300"
+              }`}
+            >
+              {day}
+            </div>
+          ))}
+        </div>
+
+        {/* Days Grid */}
+        {loading ? (
+          <div className="flex-1 flex items-center justify-center">
+            <RefreshCw className="w-8 h-8 text-primary dark:text-blue-500 animate-spin" />
+          </div>
+        ) : (
+          <div className="flex-1 grid grid-cols-7 grid-rows-6 divide-x divide-y divide-black/[0.02] dark:divide-white/[0.02] border-t border-black/[0.02] dark:border-white/[0.02]">
+            {days.map((day, dayIdx) => {
+              const dayStr = format(day, "yyyy-MM-dd");
+              const dayEvents = events.filter((e) => {
+                const startStr = format(new Date(e.start_time), "yyyy-MM-dd");
+                const endStr = format(new Date(e.end_time), "yyyy-MM-dd");
+                return dayStr >= startStr && dayStr <= endStr;
+              });
+
+              // Sort events deterministically so they align horizontally in the grid
+              dayEvents.sort((a, b) => {
+                const aDuration = new Date(a.end_time).getTime() - new Date(a.start_time).getTime();
+                const bDuration = new Date(b.end_time).getTime() - new Date(b.start_time).getTime();
+                if (bDuration !== aDuration) {
+                  return bDuration - aDuration; // longer duration first
+                }
+                const aStart = new Date(a.start_time).getTime();
+                const bStart = new Date(b.start_time).getTime();
+                if (aStart !== bStart) {
+                  return aStart - bStart; // earlier start time first
+                }
+                return a.id.localeCompare(b.id);
+              });
+
+              const isCurrentMonth = day.getMonth() === currentMonth.getMonth();
+              const isToday = isSameDay(day, new Date());
+              const holidayName = holidays[dayStr];
+              const isSunday = day.getDay() === 0;
+              const isHoliday = !!holidayName;
+              const isSelectedInDrag = (() => {
+                if (!dragStart || !dragEnd) return false;
+                const start = dragStart < dragEnd ? dragStart : dragEnd;
+                const end = dragStart < dragEnd ? dragEnd : dragStart;
+                const startStr = format(start, "yyyy-MM-dd");
+                const endStr = format(end, "yyyy-MM-dd");
+                return dayStr >= startStr && dayStr <= endStr;
+              })();
+              
+              return (
+                <div
+                  key={day.toString()}
+                  onMouseDown={() => handleMouseDown(day)}
+                  onMouseEnter={() => handleMouseEnter(day)}
+                  className={`pt-2 pb-1.5 flex flex-col space-y-1.5 h-full min-h-[70px] overflow-hidden cursor-pointer select-none transition-all ${
+                    isSelectedInDrag 
+                      ? "bg-blue-100/60 dark:bg-blue-900/30 ring-2 ring-blue-400/60 dark:ring-blue-600/50" 
+                      : "hover:bg-surface-container-lowest/50 dark:hover:bg-slate-700/20"
+                  } ${
+                    isCurrentMonth ? "text-primary dark:text-white" : "text-on-surface-variant/30 dark:text-gray-600"
+                  }`}
+                >
+                  {/* Day Header */}
+                  <div className="flex justify-between items-center px-2">
+                    <span className={`text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full ${
+                      isToday 
+                        ? "bg-primary text-white dark:bg-blue-600" 
+                        : isSunday || isHoliday
+                        ? "text-red-500" 
+                        : day.getDay() === 6 
+                        ? "text-blue-500" 
+                        : ""
+                    }`}>
+                      {format(day, "d")}
+                    </span>
+                    {dayEvents.length > 0 && (
+                      <span className="text-[9px] font-black px-1.5 py-0.5 bg-primary/5 dark:bg-blue-500/10 text-primary dark:text-blue-400 rounded-md">
+                        {dayEvents.length}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Day Events List */}
+                  <div className="flex-1 flex flex-col gap-1 overflow-y-auto custom-scrollbar px-0">
+                    {isHoliday && (
+                      <div className="mx-2 px-2 py-0.5 bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/30 text-[9px] font-black text-red-600 dark:text-red-400 rounded-md truncate select-none flex items-center gap-1 shrink-0">
+                        <span>🎈</span> {holidayName}
+                      </div>
+                    )}
+                    {dayEvents.slice(0, isHoliday ? 2 : 3).map((event) => {
+                      const color = getColorForEvent(event.created_by);
+                      const startStr = format(new Date(event.start_time), "yyyy-MM-dd");
+                      const endStr = format(new Date(event.end_time), "yyyy-MM-dd");
+                      const isStartDay = dayStr === startStr;
+                      const isEndDay = dayStr === endStr;
+                      const isMultiDay = startStr !== endStr;
+
+                      let cellStyle = "mx-2 rounded-lg";
+                      if (isMultiDay) {
+                        if (isStartDay) {
+                          cellStyle = "ml-2 mr-0 rounded-l-lg border-r-0";
+                        } else if (isEndDay) {
+                          cellStyle = "mr-2 ml-0 rounded-r-lg border-l-0";
+                        } else {
+                          cellStyle = "mx-0 rounded-none border-l-0 border-r-0";
+                        }
+                      }
+
+                      return (
+                        <div
+                          key={event.id}
+                          onMouseDown={(e) => e.stopPropagation()}
+                          onClick={(e) => openViewModal(e, event)}
+                          className={`px-2 py-1 ${color.bg} border ${color.border} text-[9px] font-bold ${color.text} ${cellStyle} truncate ${color.hoverBg} transition-colors`}
+                        >
+                          <span className="opacity-75 font-normal mr-0.5">{format(new Date(event.start_time), "HH:mm")}</span>
+                          <span className="font-extrabold mr-1 bg-black/[0.04] dark:bg-white/[0.08] px-1 rounded-sm text-[8px] tracking-tight">{event.created_by}</span>
+                          {event.title}
+                        </div>
+                      );
+                    })}
+                    {dayEvents.length > (isHoliday ? 2 : 3) && (
+                      <div className="text-[8px] font-black text-on-surface-variant/40 dark:text-gray-500 text-center uppercase tracking-wider mx-2">
+                        + {dayEvents.length - (isHoliday ? 2 : 3)} more
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Add / Edit / View Modal */}
+      {modalOpen && selectedDate && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-md z-[200] flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-[480px] rounded-[2.5rem] shadow-2xl p-8 md:p-10 space-y-6">
+            
+            {/* Modal Header */}
+            <div className="flex justify-between items-center">
+              <h3 className="text-2xl font-black text-primary dark:text-white tracking-tighter">
+                {selectedEvent ? "일정 관리" : "새 일정 등록"}
+              </h3>
+              <button 
+                onClick={() => setModalOpen(false)}
+                className="p-1 hover:bg-surface-container-low dark:hover:bg-slate-800 rounded-full"
+              >
+                <X className="w-5 h-5 text-on-surface-variant/40" />
+              </button>
+            </div>
+
+            {/* Selected Date Indicator */}
+            <div className="text-xs font-black uppercase text-on-surface-variant/60 dark:text-gray-400 tracking-widest bg-surface-container-low dark:bg-slate-800/80 px-4 py-2 rounded-xl inline-block">
+              📅 {format(selectedDate, "yyyy년 MM월 dd일", { locale: ko })}
+            </div>
+
+            {/* Event Form */}
+            <form onSubmit={handleSaveEvent} className="space-y-4">
+              {/* Title */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-black uppercase text-on-surface-variant/50 dark:text-gray-400 tracking-wider">일정 제목</label>
+                <input
+                  type="text"
+                  required
+                  value={formTitle}
+                  onChange={(e) => setFormTitle(e.target.value)}
+                  placeholder="예: 전체 회의, 자재 입고 예정일"
+                  className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-800 border border-black/[0.03] dark:border-white/[0.03] rounded-xl outline-none focus:ring-2 focus:ring-primary/20 dark:focus:ring-blue-500/20 text-sm font-medium"
+                />
+              </div>
+
+              {/* Target Member (Color preview & Multi-select) */}
+              <div className="flex flex-col gap-2">
+                <label className="text-[10px] font-black uppercase text-on-surface-variant/50 dark:text-gray-400 tracking-wider flex items-center gap-1">
+                  <User className="w-3 h-3" />
+                  <span>대상 팀원 (중복 선택 가능)</span>
+                </label>
+                
+                {/* Selected/Available Members Grid */}
+                <div className="flex flex-wrap gap-2 p-3 bg-surface-container-low dark:bg-slate-800 rounded-xl border border-black/[0.03] dark:border-white/[0.03]">
+                  {allMembers.map((member) => {
+                    const isSelected = selectedMembers.includes(member);
+                    const color = getColorForUser(member);
+                    return (
+                      <button
+                        key={member}
+                        type="button"
+                        onClick={() => {
+                          if (isSelected) {
+                            if (selectedMembers.length > 1) {
+                              setSelectedMembers(selectedMembers.filter(m => m !== member));
+                            }
+                          } else {
+                            setSelectedMembers([...selectedMembers, member]);
+                          }
+                        }}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border cursor-pointer ${
+                          isSelected 
+                            ? `${color.bg} ${color.border} ${color.text} shadow-sm scale-105` 
+                            : "bg-white dark:bg-slate-900 border-black/5 dark:border-white/5 text-on-surface-variant/60 dark:text-gray-400 opacity-60 hover:opacity-100"
+                        }`}
+                      >
+                        <span className={`w-1.5 h-1.5 rounded-full ${isSelected ? color.dot : "bg-gray-400"}`} />
+                        {member}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Date Range */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-black uppercase text-on-surface-variant/50 dark:text-gray-400 tracking-wider">시작일</label>
+                  <input
+                    type="date"
+                    required
+                    value={formStartDate}
+                    onChange={(e) => setFormStartDate(e.target.value)}
+                    className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-800 border border-black/[0.03] dark:border-white/[0.03] rounded-xl outline-none focus:ring-2 focus:ring-primary/20 text-xs font-semibold text-center"
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-black uppercase text-on-surface-variant/50 dark:text-gray-400 tracking-wider">종료일</label>
+                  <input
+                    type="date"
+                    required
+                    value={formEndDate}
+                    onChange={(e) => setFormEndDate(e.target.value)}
+                    className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-800 border border-black/[0.03] dark:border-white/[0.03] rounded-xl outline-none focus:ring-2 focus:ring-primary/20 text-xs font-semibold text-center"
+                  />
+                </div>
+              </div>
+
+              {/* Time Range */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-black uppercase text-on-surface-variant/50 dark:text-gray-400 tracking-wider flex items-center gap-1">
+                    <Clock className="w-3 h-3" />
+                    <span>시작 시간</span>
+                  </label>
+                  <input
+                    type="time"
+                    required
+                    value={formStartTime}
+                    onChange={(e) => setFormStartTime(e.target.value)}
+                    className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-800 border border-black/[0.03] dark:border-white/[0.03] rounded-xl outline-none focus:ring-2 focus:ring-primary/20 text-sm font-semibold text-center"
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-black uppercase text-on-surface-variant/50 dark:text-gray-400 tracking-wider flex items-center gap-1">
+                    <Clock className="w-3 h-3" />
+                    <span>종료 시간</span>
+                  </label>
+                  <input
+                    type="time"
+                    required
+                    value={formEndTime}
+                    onChange={(e) => setFormEndTime(e.target.value)}
+                    className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-800 border border-black/[0.03] dark:border-white/[0.03] rounded-xl outline-none focus:ring-2 focus:ring-primary/20 text-sm font-semibold text-center"
+                  />
+                </div>
+              </div>
+
+              {/* Description */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-black uppercase text-on-surface-variant/50 dark:text-gray-400 tracking-wider flex items-center gap-1">
+                  <FileText className="w-3 h-3" />
+                  <span>일정 상세 정보</span>
+                </label>
+                <textarea
+                  value={formDesc}
+                  onChange={(e) => setFormDesc(e.target.value)}
+                  placeholder="회의 내용, 전달사항 등을 작성해 주세요."
+                  className="w-full h-24 px-4 py-3 bg-surface-container-low dark:bg-slate-800 border border-black/[0.03] dark:border-white/[0.03] rounded-xl outline-none focus:ring-2 focus:ring-primary/20 text-xs font-semibold resize-none"
+                />
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-4 pt-6">
+                {selectedEvent && (
+                  <button
+                    type="button"
+                    onClick={handleDeleteEvent}
+                    className="p-4 bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 rounded-2xl font-black text-sm hover:shadow transition-all cursor-pointer flex items-center justify-center"
+                    title="일정 삭제"
+                  >
+                    <Trash2 className="w-5 h-5" />
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setModalOpen(false)}
+                  className="flex-1 py-4 border border-black/5 dark:border-white/5 rounded-2xl font-black text-sm text-primary dark:text-gray-300 hover:bg-surface-container-low dark:hover:bg-slate-800 transition-all cursor-pointer"
+                >
+                  닫기
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-4 bg-primary dark:bg-blue-600 text-white rounded-2xl font-black text-sm shadow-md hover:shadow-xl active:scale-95 transition-all cursor-pointer"
+                >
+                  저장
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+    </div>
+  );
+}
