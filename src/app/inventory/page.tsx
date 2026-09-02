@@ -29,7 +29,7 @@ export default function InventoryPage() {
   const { user } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [search, setSearch] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [selectedLocations, setSelectedLocations] = useState<string[] | null>(null);
   const [loading, setLoading] = useState(true);
 
   // Client-only Sort state (Saved per user in localStorage)
@@ -180,7 +180,7 @@ export default function InventoryPage() {
     }
   };
 
-  // 3. Location Categories & Types: Only from actual products
+  // 3. Location Categories: Only from actual products
   const existingLocations = useMemo(() => {
     return Array.from(
       new Set(
@@ -191,10 +191,25 @@ export default function InventoryPage() {
     );
   }, [products]);
 
-  const categoriesList = useMemo(() => ["all", ...existingLocations], [existingLocations]);
+  // Active locations: All locations by default (전체보기), or user-selected subset
+  const activeLocations = useMemo(() => {
+    if (selectedLocations === null) {
+      return existingLocations;
+    }
+    return selectedLocations.filter((loc) => existingLocations.includes(loc));
+  }, [selectedLocations, existingLocations]);
 
-  // Derived active category (auto-fallback to 'all' if selected is not present)
-  const activeCategory = categoriesList.includes(selectedCategory) ? selectedCategory : "all";
+  // Toggle single location selection (다중 선택 및 한 번 더 눌러 취소)
+  const toggleLocation = (loc: string) => {
+    setSelectedLocations((prev) => {
+      const current = prev === null ? [...existingLocations] : prev;
+      if (current.includes(loc)) {
+        return current.filter((l) => l !== loc);
+      } else {
+        return [...current, loc];
+      }
+    });
+  };
 
   // Existing Types: Only types that previously exist in products
   const existingTypes = useMemo(() => {
@@ -208,7 +223,9 @@ export default function InventoryPage() {
   }, [products]);
 
   // 4. Filter, Aggregate & Sort Products:
-  // When 'all' (전체보기) is active, merge items with the same name into 1 row with combined total stock quantity
+  // - If 0 locations selected: empty list
+  // - If 1 location selected: individual items in that location
+  // - If 2+ locations selected: merge same name items across selected locations (합산)
   const filteredProducts = useMemo(() => {
     const searchLower = search.trim().toLowerCase();
 
@@ -235,7 +252,37 @@ export default function InventoryPage() {
       });
     };
 
-    if (activeCategory === "all") {
+    if (activeLocations.length === 0) {
+      return [];
+    }
+
+    // Filter products belonging to any active selected location
+    const matchedProducts = products.filter((p) => {
+      const pCat = (p.category || "").trim();
+      const pName = (p.name || "").trim();
+      const pType = (p.item_type || "").trim();
+
+      const inSelectedLoc = activeLocations.includes(pCat);
+      if (!inSelectedLoc) return false;
+
+      if (searchLower) {
+        return pName.toLowerCase().includes(searchLower) ||
+               pCat.toLowerCase().includes(searchLower) ||
+               pType.toLowerCase().includes(searchLower);
+      }
+      return true;
+    });
+
+    if (activeLocations.length === 1) {
+      // Single Location Selected: show items for that location
+      const list = matchedProducts.map((p) => ({
+        ...p,
+        locations: p.category ? [p.category] : [],
+        locationCount: 1,
+      }));
+      return applySort(list);
+    } else {
+      // Multiple Locations Selected (or All): aggregate items with same name across selected locations
       const map = new Map<string, {
         product: Product;
         totalStock: number;
@@ -243,17 +290,9 @@ export default function InventoryPage() {
         locations: Set<string>;
       }>();
 
-      for (const p of products) {
+      for (const p of matchedProducts) {
         const pName = (p.name || "").trim();
         const pCategory = (p.category || "").trim();
-        const pType = (p.item_type || "").trim();
-
-        if (searchLower) {
-          const matches = pName.toLowerCase().includes(searchLower) ||
-                          pCategory.toLowerCase().includes(searchLower) ||
-                          pType.toLowerCase().includes(searchLower);
-          if (!matches) continue;
-        }
 
         const key = pName.toLowerCase();
         if (!map.has(key)) {
@@ -298,33 +337,8 @@ export default function InventoryPage() {
         });
 
       return applySort(aggregatedList);
-    } else {
-      // Specific Location Tab: show only items in that location
-      const locationList = products
-        .filter((p) => {
-          const pCategory = (p.category || "").trim();
-          const pName = (p.name || "").trim();
-          const pType = (p.item_type || "").trim();
-
-          const matchesCategory = pCategory === activeCategory || pCategory.includes(activeCategory);
-          if (!matchesCategory) return false;
-
-          if (searchLower) {
-            return pName.toLowerCase().includes(searchLower) ||
-                   pCategory.toLowerCase().includes(searchLower) ||
-                   pType.toLowerCase().includes(searchLower);
-          }
-          return true;
-        })
-        .map((p) => ({
-          ...p,
-          locations: p.category ? [p.category] : [],
-          locationCount: 1,
-        }));
-
-      return applySort(locationList);
     }
-  }, [products, activeCategory, search, sortOption]);
+  }, [products, activeLocations, search, sortOption]);
 
   // Fetch activity logs for a specific product and optional location
   const fetchItemLogs = useCallback(async (productName: string, categoryName?: string) => {
@@ -339,14 +353,14 @@ export default function InventoryPage() {
 
       let query = supabase.from("activities").select("*");
 
-      if (cleanCat && activeCategory !== "all") {
+      if (cleanCat && activeLocations.length === 1) {
         // Isolate logs to this specific location AND item name
         query = query
           .ilike("message", `%[${cleanCat}]%[${cleanName}]%`)
           .order("created_at", { ascending: false })
           .limit(15);
       } else {
-        // "all" tab: fetch all location logs for this item name
+        // Multiple or all locations selected: fetch logs for this item name
         query = query
           .or(`message.ilike.%[${cleanName}]%,message.ilike.%${cleanName}%`)
           .order("created_at", { ascending: false })
@@ -366,7 +380,7 @@ export default function InventoryPage() {
     } finally {
       setLoadingLogs(false);
     }
-  }, [activeCategory]);
+  }, [activeLocations]);
 
   // 5. Open Form Modal for Create/Update
   const openItemModal = (product: Product | null = null) => {
@@ -382,7 +396,7 @@ export default function InventoryPage() {
     } else {
       setEditingProduct(null);
       setFormName("");
-      setFormCategory(activeCategory !== "all" ? activeCategory : "");
+      setFormCategory(activeLocations.length === 1 ? activeLocations[0] : "");
       setFormType("");
       setFormStock(1);
       setFormUnit("");
@@ -545,25 +559,28 @@ export default function InventoryPage() {
         </button>
       </div>
 
-      {/* 2nd Row: Dynamic Location Categories Tabs (Left) + Sort Button (Right under + button) */}
+      {/* 2nd Row: Dynamic Location Tabs (Multi-select) + Sort Button (Right under + button) */}
       <div className="flex items-center gap-2.5 sm:gap-3 w-full mb-3.5 sm:mb-5 shrink-0 justify-between">
-        {/* Category Tabs: Takes full available left width, smooth scroll on overflow */}
+        {/* Location Tabs: Multi-select & toggle cancel enabled, smooth scroll if exceeding */}
         <div className="flex-1 min-w-0 flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar scroll-smooth py-1 px-0.5 -mx-0.5 justify-start">
-          {categoriesList.map((c) => (
-            <button
-              key={c}
-              type="button"
-              onClick={() => setSelectedCategory(c)}
-              className={`w-[calc((100%-18px)/4)] sm:w-[calc((100%-32px)/5)] min-w-[64px] sm:min-w-[76px] shrink-0 py-2.5 px-1 sm:px-2 rounded-2xl text-[11px] sm:text-xs font-bold text-center truncate transition-all duration-200 cursor-pointer select-none active:scale-95 ${
-                activeCategory === c
-                  ? "bg-blue-600 text-white border border-blue-600 shadow-md shadow-blue-600/30 font-black"
-                  : "bg-white dark:bg-zinc-900 border border-zinc-200/90 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:border-zinc-300 dark:hover:border-zinc-700 hover:text-zinc-900 dark:hover:text-white shadow-xs"
-              }`}
-              title={c === "all" ? "전체보기" : c}
-            >
-              {c === "all" ? "전체보기" : c}
-            </button>
-          ))}
+          {existingLocations.map((loc) => {
+            const isSelected = activeLocations.includes(loc);
+            return (
+              <button
+                key={loc}
+                type="button"
+                onClick={() => toggleLocation(loc)}
+                className={`w-[calc((100%-18px)/4)] sm:w-[calc((100%-32px)/5)] min-w-[64px] sm:min-w-[76px] shrink-0 py-2.5 px-1 sm:px-2 rounded-2xl text-[11px] sm:text-xs font-bold text-center truncate transition-all duration-200 cursor-pointer select-none active:scale-95 ${
+                  isSelected
+                    ? "bg-blue-600 text-white border border-blue-600 shadow-md shadow-blue-600/30 font-black"
+                    : "bg-white dark:bg-zinc-900 border border-zinc-200/90 dark:border-zinc-800 text-zinc-500 dark:text-zinc-400 hover:border-zinc-300 dark:hover:border-zinc-700 hover:text-zinc-800 dark:hover:text-zinc-200 shadow-xs"
+                }`}
+                title={`${loc} (${isSelected ? "선택됨 - 누르면 취소" : "선택 안 됨 - 누르면 선택"})`}
+              >
+                {loc}
+              </button>
+            );
+          })}
         </div>
 
         {/* Sort Button & Popover Dropdown (Aligned vertically with the + button above) */}
@@ -625,13 +642,21 @@ export default function InventoryPage() {
           <div className="flex-1 flex items-center justify-center p-20">
             <RefreshCw className="w-8 h-8 text-blue-500 animate-spin" />
           </div>
+        ) : activeLocations.length === 0 ? (
+          <div className="flex-1 flex flex-col items-center justify-center p-12 sm:p-20 text-center space-y-2 bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800">
+            <AlertCircle className="w-12 h-12 text-zinc-300 dark:text-zinc-700 mb-1" />
+            <p className="text-sm font-bold text-zinc-600 dark:text-zinc-300">
+              선택된 장소가 없습니다.
+            </p>
+            <p className="text-xs text-zinc-400 dark:text-zinc-500">
+              상단의 장소 버튼을 눌러 확인하려는 위치를 선택해 주세요.
+            </p>
+          </div>
         ) : filteredProducts.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center p-12 sm:p-20 text-center space-y-3 bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800">
             <AlertCircle className="w-12 h-12 text-zinc-300 dark:text-zinc-700" />
             <p className="text-sm font-semibold text-zinc-500 dark:text-zinc-400">
-              {activeCategory === "all" 
-                ? "등록된 품목이 없습니다." 
-                : `'${activeCategory}' 위치에 등록된 품목이 없습니다.`}
+              선택한 장소에 등록된 품목이 없습니다.
             </p>
           </div>
         ) : (
@@ -980,7 +1005,7 @@ export default function InventoryPage() {
                           if (locItemMatch) {
                             const loc = locItemMatch[1];
                             const change = locItemMatch[3];
-                            displayMsg = activeCategory === "all" ? `${loc} ${change}` : change;
+                            displayMsg = activeLocations.length !== 1 ? `${loc} ${change}` : change;
                           } else {
                             const singleMatch = displayMsg.match(/^\[.*?\]\s*(.*)$/);
                             if (singleMatch && singleMatch[1]) {
