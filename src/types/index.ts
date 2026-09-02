@@ -1,12 +1,17 @@
 export interface Product {
   id: string;
   name: string;
+  sku?: string | null;
   category: string;
   item_type?: string | null;
+  stock_quantity?: number;
   stock: number;
+  target_quantity?: number;
   target: number;
   price: number;
+  updated_by?: string | null;
   edit_user?: string | null;
+  updated_at?: string | null;
   edit_date?: string | null;
 }
 

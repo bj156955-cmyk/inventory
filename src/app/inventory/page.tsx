@@ -31,7 +31,6 @@ export default function InventoryPage() {
   const [formCategory, setFormCategory] = useState("");
   const [formType, setFormType] = useState("");
   const [formStock, setFormStock] = useState(1);
-  const [formTarget, setFormTarget] = useState(0);
   const [formPrice, setFormPrice] = useState(0);
 
   // Order modal states
@@ -46,6 +45,23 @@ export default function InventoryPage() {
   useEffect(() => {
     let ignore = false;
 
+    const normalizeProduct = (p: Record<string, unknown>): Product => ({
+      id: String(p.id || ""),
+      name: String(p.name || ""),
+      category: String(p.category || ""),
+      sku: p.sku ? String(p.sku) : null,
+      item_type: p.sku ? String(p.sku) : (p.item_type ? String(p.item_type) : ""),
+      stock_quantity: typeof p.stock_quantity === "number" ? p.stock_quantity : (typeof p.stock === "number" ? p.stock : 0),
+      stock: typeof p.stock_quantity === "number" ? p.stock_quantity : (typeof p.stock === "number" ? p.stock : 0),
+      target_quantity: typeof p.target_quantity === "number" ? p.target_quantity : (typeof p.target === "number" ? p.target : 0),
+      target: typeof p.target_quantity === "number" ? p.target_quantity : (typeof p.target === "number" ? p.target : 0),
+      price: typeof p.price === "number" ? p.price : 0,
+      updated_by: p.updated_by ? String(p.updated_by) : (p.edit_user ? String(p.edit_user) : ""),
+      edit_user: p.updated_by ? String(p.updated_by) : (p.edit_user ? String(p.edit_user) : ""),
+      updated_at: p.updated_at ? String(p.updated_at) : (p.edit_date ? String(p.edit_date) : ""),
+      edit_date: p.updated_at ? String(p.updated_at) : (p.edit_date ? String(p.edit_date) : ""),
+    });
+
     const loadProducts = async () => {
       try {
         const { data, error } = await supabase
@@ -53,7 +69,7 @@ export default function InventoryPage() {
           .select("*")
           .order("name", { ascending: true });
         if (error) throw error;
-        if (!ignore) setProducts(data || []);
+        if (!ignore) setProducts((data || []).map(normalizeProduct));
       } catch (err) {
         console.error("Error fetching products:", err);
       } finally {
@@ -71,10 +87,12 @@ export default function InventoryPage() {
         { event: "*", schema: "public", table: "products" },
         (payload) => {
           if (payload.eventType === "INSERT") {
-            setProducts((prev) => [...prev, payload.new as Product].sort((a, b) => a.name.localeCompare(b.name)));
+            setProducts((prev) => 
+              [...prev, normalizeProduct(payload.new)].sort((a, b) => a.name.localeCompare(b.name))
+            );
           } else if (payload.eventType === "UPDATE") {
             setProducts((prev) =>
-              prev.map((p) => (p.id === payload.new.id ? (payload.new as Product) : p))
+              prev.map((p) => (p.id === payload.new.id ? normalizeProduct(payload.new) : p))
             );
           } else if (payload.eventType === "DELETE") {
             setProducts((prev) => prev.filter((p) => p.id !== payload.old.id));
@@ -155,15 +173,13 @@ export default function InventoryPage() {
       setFormCategory(product.category);
       setFormType(product.item_type || "");
       setFormStock(product.stock);
-      setFormTarget(product.target || product.stock);
       setFormPrice(product.price || 0);
     } else {
       setEditingProduct(null);
       setFormName("");
-      setFormCategory(activeCategory !== "all" ? activeCategory : "연구동");
-      setFormType("소모품");
+      setFormCategory("");
+      setFormType("");
       setFormStock(1);
-      setFormTarget(1);
       setFormPrice(0);
     }
     setItemModalOpen(true);
@@ -174,36 +190,27 @@ export default function InventoryPage() {
     e.preventDefault();
     if (!user) return;
 
-    const payload: Record<string, unknown> = {
+    const userShort = user.email ? user.email.split("@")[0].toUpperCase() : "USER";
+    const payload = {
       name: formName,
       category: formCategory,
-      item_type: formType || null,
-      stock: formStock,
-      target: formTarget || formStock,
+      sku: formType || null,
+      stock_quantity: formStock,
+      target_quantity: formStock,
       price: formPrice || 0,
-      edit_user: user.email?.split("@")[0].toUpperCase(),
-      edit_date: new Date().toISOString()
+      updated_by: userShort,
+      updated_at: new Date().toISOString()
     };
 
     try {
       if (editingProduct) {
         // Update
-        let { error } = await supabase.from("products").update(payload).eq("id", editingProduct.id);
-        if (error && error.message?.includes("item_type")) {
-          delete payload.item_type;
-          const retry = await supabase.from("products").update(payload).eq("id", editingProduct.id);
-          error = retry.error;
-        }
+        const { error } = await supabase.from("products").update(payload).eq("id", editingProduct.id);
         if (error) throw error;
         await logActivity("UPDATE", `${formName} 품목 정보를 수정했습니다.`);
       } else {
         // Insert
-        let { error } = await supabase.from("products").insert([payload]);
-        if (error && error.message?.includes("item_type")) {
-          delete payload.item_type;
-          const retry = await supabase.from("products").insert([payload]);
-          error = retry.error;
-        }
+        const { error } = await supabase.from("products").insert([payload]);
         if (error) throw error;
         await logActivity("CREATE", `${formName} 품목을 새로 추가했습니다.`);
       }
@@ -224,12 +231,13 @@ export default function InventoryPage() {
     }
 
     try {
+      const userShort = user.email ? user.email.split("@")[0].toUpperCase() : "USER";
       const { error } = await supabase
         .from("products")
         .update({
-          stock: newStock,
-          edit_user: user.email?.split("@")[0].toUpperCase(),
-          edit_date: new Date().toISOString()
+          stock_quantity: newStock,
+          updated_by: userShort,
+          updated_at: new Date().toISOString()
         })
         .eq("id", orderingProduct.id);
 
@@ -265,12 +273,13 @@ export default function InventoryPage() {
     if (nextStock < 0) return;
 
     try {
+      const userShort = user.email ? user.email.split("@")[0].toUpperCase() : "USER";
       const { error } = await supabase
         .from("products")
         .update({
-          stock: nextStock,
-          edit_user: user.email?.split("@")[0].toUpperCase(),
-          edit_date: new Date().toISOString()
+          stock_quantity: nextStock,
+          updated_by: userShort,
+          updated_at: new Date().toISOString()
         })
         .eq("id", product.id);
 
@@ -283,9 +292,9 @@ export default function InventoryPage() {
         
       await logActivity(actType, actMsg);
     } catch (err) {
-        console.error("Error adjusting stock:", err);
-      }
-    };
+      console.error("Error adjusting stock:", err);
+    }
+  };
 
   return (
     <div className="flex-1 p-3 sm:p-6 md:p-8 flex flex-col min-h-0 bg-zinc-50 dark:bg-zinc-950">
