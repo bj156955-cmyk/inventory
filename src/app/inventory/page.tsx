@@ -42,22 +42,6 @@ export default function InventoryPage() {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
 
-  // 1. Fetch initial data
-  const fetchData = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("products")
-        .select("*")
-        .order("name", { ascending: true });
-      if (error) throw error;
-      setProducts(data || []);
-    } catch (err) {
-      console.error("Error fetching products:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
     let ignore = false;
 
@@ -123,13 +107,13 @@ export default function InventoryPage() {
     }
   };
 
-  // 3. Category Chips extraction
-  const categories = ["all", ...Array.from(new Set(products.map((p) => p.category).filter(Boolean)))];
+  // 3. 5 Categories: 전체보기, 연구동, 자생동, 박사님 방, 컨테이너
+  const CATEGORIES = ["all", "연구동", "자생동", "박사님 방", "컨테이너"];
 
   // 4. Filter products
   const filteredProducts = products.filter((p) => {
     const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase()) || 
-                          p.category.toLowerCase().includes(search.toLowerCase());
+                          (p.category && p.category.toLowerCase().includes(search.toLowerCase()));
     const matchesCategory = selectedCategory === "all" || p.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
@@ -263,7 +247,7 @@ export default function InventoryPage() {
   return (
     <div className="flex-1 p-3 sm:p-6 md:p-8 space-y-3 sm:space-y-4 flex flex-col min-h-0 bg-zinc-50 dark:bg-zinc-950">
       
-      {/* Top Search Bar & Circular Action Buttons (No Outer Box) */}
+      {/* Top Search Bar & Circular Plus Button */}
       <div className="flex items-center gap-2 sm:gap-3 shrink-0">
         {/* Standalone Search Input */}
         <div className="relative flex-1">
@@ -272,7 +256,7 @@ export default function InventoryPage() {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="품목 이름, 카테고리 검색..."
+            placeholder="품목 이름, 위치 검색..."
             className="w-full pl-10 pr-4 py-2.5 sm:py-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl text-xs sm:text-sm font-semibold outline-none focus:ring-2 focus:ring-blue-500/20 shadow-xs text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 transition-all"
           />
         </div>
@@ -285,45 +269,35 @@ export default function InventoryPage() {
         >
           <Plus className="w-5 h-5" />
         </button>
-
-        {/* Circular Refresh Button */}
-        <button
-          onClick={() => {
-            setLoading(true);
-            fetchData();
-          }}
-          className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white flex items-center justify-center shadow-xs transition-all active:scale-90 cursor-pointer shrink-0"
-          title="새로고침"
-        >
-          <RefreshCw className="w-4 h-4" />
-        </button>
       </div>
 
-      {/* Standalone Categories Chips Bar */}
-      <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 max-w-full shrink-0">
-        {categories.map((c) => (
+      {/* 5 Categories Bar (Equal Width Grid in Single Line) */}
+      <div className="grid grid-cols-5 gap-1 sm:gap-2 w-full shrink-0">
+        {CATEGORIES.map((c) => (
           <button
             key={c}
+            type="button"
             onClick={() => setSelectedCategory(c)}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all duration-200 cursor-pointer ${
+            className={`py-2 px-0.5 sm:px-2 rounded-xl text-[11px] sm:text-xs font-bold text-center truncate transition-all duration-200 cursor-pointer select-none ${
               selectedCategory === c
-                ? "bg-blue-600 text-white shadow-sm shadow-blue-600/30 font-black scale-105"
+                ? "bg-blue-600 text-white shadow-sm shadow-blue-600/30 font-black scale-[1.02]"
                 : "bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white shadow-xs"
             }`}
+            title={c === "all" ? "전체보기" : c}
           >
-            {c === "all" ? "전체 보기" : c}
+            {c === "all" ? "전체보기" : c}
           </button>
         ))}
       </div>
 
-      {/* Product List Section */}
-      <div className="flex-1 bg-white dark:bg-zinc-900 rounded-[2.5rem] shadow-sm border border-zinc-200 dark:border-zinc-800 overflow-hidden flex flex-col">
+      {/* Product List Section (No Outer Box Wrapper) */}
+      <div className="flex-1 flex flex-col min-h-0">
         {loading ? (
           <div className="flex-1 flex items-center justify-center p-20">
             <RefreshCw className="w-8 h-8 text-blue-500 animate-spin" />
           </div>
         ) : filteredProducts.length === 0 ? (
-          <div className="flex-1 flex flex-col items-center justify-center p-20 text-center space-y-3">
+          <div className="flex-1 flex flex-col items-center justify-center p-12 sm:p-20 text-center space-y-3 bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800">
             <AlertCircle className="w-12 h-12 text-zinc-300 dark:text-zinc-700" />
             <p className="text-sm font-semibold text-zinc-500 dark:text-zinc-400">
               일치하는 품목이 없습니다.
@@ -332,7 +306,7 @@ export default function InventoryPage() {
         ) : (
           <>
             {/* Desktop Table View */}
-            <div className="hidden md:block flex-1 overflow-y-auto custom-scrollbar">
+            <div className="hidden md:block flex-1 bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 overflow-hidden shadow-xs overflow-y-auto custom-scrollbar">
               <table className="w-full text-left border-collapse">
                 <thead className="bg-zinc-50 dark:bg-zinc-800/60 sticky top-0 z-10 border-b border-zinc-200 dark:border-zinc-800">
                   <tr>
@@ -455,8 +429,8 @@ export default function InventoryPage() {
               </table>
             </div>
 
-            {/* Mobile List View */}
-            <div className="md:hidden flex-1 overflow-y-auto p-3 sm:p-4 space-y-3 custom-scrollbar">
+            {/* Mobile List View (No Outer Container Box) */}
+            <div className="md:hidden flex-1 overflow-y-auto space-y-3 custom-scrollbar pr-0.5">
               {filteredProducts.map((p) => {
                 const isLow = p.stock > 0 && p.stock <= p.target * 0.3;
                 const isOut = p.stock === 0;
@@ -586,50 +560,66 @@ export default function InventoryPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-black uppercase text-on-surface-variant/50 dark:text-gray-400 tracking-wider">Category</label>
+                  <label className="text-[10px] font-black uppercase text-zinc-500 dark:text-zinc-400 tracking-wider">위치 (Category)</label>
                   <input
                     type="text"
                     required
                     value={formCategory}
                     onChange={(e) => setFormCategory(e.target.value)}
-                    placeholder="예: 목재"
-                    className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-800 border border-black/[0.03] dark:border-white/[0.03] rounded-xl outline-none focus:ring-2 focus:ring-primary/20 dark:focus:ring-blue-500/20 text-sm font-medium"
+                    placeholder="예: 연구동, 자생동, 박사님 방, 컨테이너"
+                    className="w-full px-4 py-3 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/20 text-sm font-medium text-zinc-900 dark:text-white"
                   />
+                  <div className="flex gap-1 pt-1 flex-wrap">
+                    {["연구동", "자생동", "박사님 방", "컨테이너"].map((loc) => (
+                      <button
+                        key={loc}
+                        type="button"
+                        onClick={() => setFormCategory(loc)}
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded-md border transition-all cursor-pointer ${
+                          formCategory === loc
+                            ? "bg-blue-600 text-white border-blue-600"
+                            : "bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700"
+                        }`}
+                      >
+                        {loc}
+                      </button>
+                    ))}
+                  </div>
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-black uppercase text-on-surface-variant/50 dark:text-gray-400 tracking-wider">Unit Price (₩)</label>
+                  <label className="text-[10px] font-black uppercase text-zinc-500 dark:text-zinc-400 tracking-wider">단가 (₩)</label>
                   <input
                     type="number"
                     required
                     value={formPrice}
                     onChange={(e) => setFormPrice(Number(e.target.value))}
                     placeholder="단가 입력"
-                    className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-800 border border-black/[0.03] dark:border-white/[0.03] rounded-xl outline-none focus:ring-2 focus:ring-primary/20 dark:focus:ring-blue-500/20 text-sm font-medium"
+                    className="w-full px-4 py-3 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/20 text-sm font-medium text-zinc-900 dark:text-white"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-black uppercase text-on-surface-variant/50 dark:text-gray-400 tracking-wider">Current Stock</label>
+                  <label className="text-[10px] font-black uppercase text-zinc-500 dark:text-zinc-400 tracking-wider">현재 재고</label>
                   <input
                     type="number"
                     required
                     value={formStock}
                     onChange={(e) => setFormStock(Number(e.target.value))}
-                    className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-800 border border-black/[0.03] dark:border-white/[0.03] rounded-xl outline-none focus:ring-2 focus:ring-primary/20 dark:focus:ring-blue-500/20 text-sm font-medium"
+                    className="w-full px-4 py-3 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/20 text-sm font-medium text-zinc-900 dark:text-white"
                   />
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-black uppercase text-on-surface-variant/50 dark:text-gray-400 tracking-wider">Target Quantity</label>
+                  <label className="text-[10px] font-black uppercase text-zinc-500 dark:text-zinc-400 tracking-wider">목표 재고</label>
                   <input
                     type="number"
                     required
                     value={formTarget}
                     onChange={(e) => setFormTarget(Number(e.target.value))}
-                    className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-800 border border-black/[0.03] dark:border-white/[0.03] rounded-xl outline-none focus:ring-2 focus:ring-primary/20 dark:focus:ring-blue-500/20 text-sm font-medium"
+                    className="w-full px-4 py-3 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/20 text-sm font-medium text-zinc-900 dark:text-white"
                   />
                 </div>
               </div>
@@ -638,13 +628,13 @@ export default function InventoryPage() {
                 <button
                   type="button"
                   onClick={() => setItemModalOpen(false)}
-                  className="flex-1 py-4 border border-zinc-200 dark:border-zinc-800 rounded-2xl font-black text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all cursor-pointer"
+                  className="flex-1 py-4 border border-zinc-200 dark:border-zinc-700 rounded-2xl font-black text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all cursor-pointer"
                 >
                   취소
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-4 bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200 text-white rounded-2xl font-black text-sm shadow-md active:scale-95 transition-all cursor-pointer"
+                  className="flex-1 py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-black text-sm shadow-md shadow-blue-600/30 active:scale-95 transition-all cursor-pointer"
                 >
                   저장
                 </button>
