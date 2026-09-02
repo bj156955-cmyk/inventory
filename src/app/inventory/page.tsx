@@ -10,8 +10,20 @@ import {
   RefreshCw, 
   Trash2, 
   X,
-  AlertCircle
+  AlertCircle,
+  ArrowUpDown,
+  Check
 } from "lucide-react";
+
+export type SortOption = "name_asc" | "name_desc" | "stock_desc" | "stock_asc" | "recent";
+
+const SORT_OPTIONS: { id: SortOption; label: string }[] = [
+  { id: "name_asc", label: "이름 가나다순" },
+  { id: "name_desc", label: "이름 역순" },
+  { id: "stock_desc", label: "재고 많은순" },
+  { id: "stock_asc", label: "재고 적은순 (부족/품절 우선)" },
+  { id: "recent", label: "최근 수정/등록순" },
+];
 
 export default function InventoryPage() {
   const { user } = useAuth();
@@ -19,6 +31,20 @@ export default function InventoryPage() {
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [loading, setLoading] = useState(true);
+
+  // Client-only Sort state (Saved per user in localStorage)
+  const [sortOption, setSortOption] = useState<SortOption>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("inventory_sort_option") as SortOption | null;
+        if (saved && ["name_asc", "name_desc", "stock_desc", "stock_asc", "recent"].includes(saved)) {
+          return saved;
+        }
+      } catch {}
+    }
+    return "name_asc";
+  });
+  const [sortMenuOpen, setSortMenuOpen] = useState(false);
 
   // Modals state
   const [itemModalOpen, setItemModalOpen] = useState(false);
@@ -39,6 +65,14 @@ export default function InventoryPage() {
   // Delete confirm modal states
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
+
+  const handleSelectSort = (opt: SortOption) => {
+    setSortOption(opt);
+    try {
+      localStorage.setItem("inventory_sort_option", opt);
+    } catch {}
+    setSortMenuOpen(false);
+  };
 
   useEffect(() => {
     let ignore = false;
@@ -173,10 +207,33 @@ export default function InventoryPage() {
     );
   }, [products]);
 
-  // 4. Filter & Aggregate Products:
+  // 4. Filter, Aggregate & Sort Products:
   // When 'all' (전체보기) is active, merge items with the same name into 1 row with combined total stock quantity
   const filteredProducts = useMemo(() => {
     const searchLower = search.trim().toLowerCase();
+
+    const applySort = (list: Product[]) => {
+      return [...list].sort((a, b) => {
+        if (sortOption === "name_asc") {
+          return a.name.localeCompare(b.name, "ko");
+        }
+        if (sortOption === "name_desc") {
+          return b.name.localeCompare(a.name, "ko");
+        }
+        if (sortOption === "stock_desc") {
+          return b.stock - a.stock;
+        }
+        if (sortOption === "stock_asc") {
+          return a.stock - b.stock;
+        }
+        if (sortOption === "recent") {
+          const timeA = a.updated_at ? new Date(a.updated_at).getTime() : 0;
+          const timeB = b.updated_at ? new Date(b.updated_at).getTime() : 0;
+          return timeB - timeA;
+        }
+        return 0;
+      });
+    };
 
     if (activeCategory === "all") {
       const map = new Map<string, {
@@ -212,17 +269,20 @@ export default function InventoryPage() {
           existing.totalTarget += p.target;
           if (pCategory) existing.locations.add(pCategory);
 
-          if (p.edit_date && (!existing.product.edit_date || new Date(p.edit_date) > new Date(existing.product.edit_date))) {
-            existing.product.edit_user = p.edit_user;
-            existing.product.edit_date = p.edit_date;
+          if (p.updated_at && (!existing.product.updated_at || new Date(p.updated_at) > new Date(existing.product.updated_at))) {
+            existing.product.updated_by = p.updated_by;
+            existing.product.updated_at = p.updated_at;
           }
           if (!existing.product.item_type && p.item_type) {
             existing.product.item_type = p.item_type;
           }
+          if (!existing.product.unit && p.unit) {
+            existing.product.unit = p.unit;
+          }
         }
       }
 
-      return Array.from(map.values())
+      const aggregatedList = Array.from(map.values())
         .map(({ product, totalStock, totalTarget, locations }) => {
           const locArray = Array.from(locations);
           return {
@@ -235,11 +295,12 @@ export default function InventoryPage() {
             locations: locArray,
             locationCount: locArray.length,
           };
-        })
-        .sort((a, b) => a.name.localeCompare(b.name));
+        });
+
+      return applySort(aggregatedList);
     } else {
       // Specific Location Tab: show only items in that location
-      return products
+      const locationList = products
         .filter((p) => {
           const pCategory = (p.category || "").trim();
           const pName = (p.name || "").trim();
@@ -259,10 +320,11 @@ export default function InventoryPage() {
           ...p,
           locations: p.category ? [p.category] : [],
           locationCount: 1,
-        }))
-        .sort((a, b) => a.name.localeCompare(b.name));
+        }));
+
+      return applySort(locationList);
     }
-  }, [products, activeCategory, search]);
+  }, [products, activeCategory, search, sortOption]);
 
   // Fetch activity logs for a specific product and optional location
   const fetchItemLogs = useCallback(async (productName: string, categoryName?: string) => {
@@ -483,23 +545,78 @@ export default function InventoryPage() {
         </button>
       </div>
 
-      {/* Dynamic Location Categories Tabs (Fixed 5-item ratio, stacked from left, scrollable when >5) */}
-      <div className="flex items-center gap-2 sm:gap-2.5 w-full overflow-x-auto no-scrollbar scroll-smooth py-1 px-0.5 -mx-0.5 mb-4 sm:mb-6 shrink-0 justify-start">
-        {categoriesList.map((c) => (
+      {/* 2nd Row: Dynamic Location Categories Tabs (Left) + Sort Button (Right under + button) */}
+      <div className="flex items-center gap-2.5 sm:gap-3 w-full mb-3.5 sm:mb-5 shrink-0 justify-between">
+        {/* Category Tabs: Takes full available left width, smooth scroll on overflow */}
+        <div className="flex-1 min-w-0 flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar scroll-smooth py-1 px-0.5 -mx-0.5 justify-start">
+          {categoriesList.map((c) => (
+            <button
+              key={c}
+              type="button"
+              onClick={() => setSelectedCategory(c)}
+              className={`w-[calc((100%-18px)/4)] sm:w-[calc((100%-32px)/5)] min-w-[64px] sm:min-w-[76px] shrink-0 py-2.5 px-1 sm:px-2 rounded-2xl text-[11px] sm:text-xs font-bold text-center truncate transition-all duration-200 cursor-pointer select-none active:scale-95 ${
+                activeCategory === c
+                  ? "bg-blue-600 text-white border border-blue-600 shadow-md shadow-blue-600/30 font-black"
+                  : "bg-white dark:bg-zinc-900 border border-zinc-200/90 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:border-zinc-300 dark:hover:border-zinc-700 hover:text-zinc-900 dark:hover:text-white shadow-xs"
+              }`}
+              title={c === "all" ? "전체보기" : c}
+            >
+              {c === "all" ? "전체보기" : c}
+            </button>
+          ))}
+        </div>
+
+        {/* Sort Button & Popover Dropdown (Aligned vertically with the + button above) */}
+        <div className="relative shrink-0">
           <button
-            key={c}
             type="button"
-            onClick={() => setSelectedCategory(c)}
-            className={`w-[calc((100%-32px)/5)] sm:w-[calc((100%-40px)/5)] min-w-[calc((100%-32px)/5)] sm:min-w-[calc((100%-40px)/5)] shrink-0 py-2.5 px-1 sm:px-2 rounded-2xl text-[11px] sm:text-xs font-bold text-center truncate transition-all duration-200 cursor-pointer select-none active:scale-95 ${
-              activeCategory === c
-                ? "bg-blue-600 text-white border border-blue-600 shadow-md shadow-blue-600/30 font-black"
-                : "bg-white dark:bg-zinc-900 border border-zinc-200/90 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:border-zinc-300 dark:hover:border-zinc-700 hover:text-zinc-900 dark:hover:text-white shadow-xs"
+            onClick={() => setSortMenuOpen((prev) => !prev)}
+            className={`w-10 h-10 sm:w-11 sm:h-11 rounded-2xl flex items-center justify-center border transition-all cursor-pointer select-none active:scale-95 shadow-xs ${
+              sortMenuOpen
+                ? "bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-600/30"
+                : "bg-white dark:bg-zinc-900 border-zinc-200/90 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300 hover:border-zinc-300 dark:hover:border-zinc-700 hover:text-zinc-900 dark:hover:text-white"
             }`}
-            title={c === "all" ? "전체보기" : c}
+            title={`정렬: ${SORT_OPTIONS.find((o) => o.id === sortOption)?.label || "정렬"}`}
           >
-            {c === "all" ? "전체보기" : c}
+            <ArrowUpDown className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
           </button>
-        ))}
+
+          {/* Sort Popover Menu */}
+          {sortMenuOpen && (
+            <>
+              {/* Invisible Backdrop */}
+              <div 
+                className="fixed inset-0 z-40" 
+                onClick={() => setSortMenuOpen(false)} 
+              />
+              <div className="absolute right-0 top-full mt-2 w-52 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-xl p-1.5 z-50 animate-fadeIn space-y-0.5">
+                <div className="px-3 py-1.5 border-b border-zinc-100 dark:border-zinc-800/80 mb-1">
+                  <p className="text-[10px] font-black uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+                    정렬 기준
+                  </p>
+                </div>
+                {SORT_OPTIONS.map((opt) => {
+                  const isSelected = sortOption === opt.id;
+                  return (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => handleSelectSort(opt.id)}
+                      className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition-all text-left cursor-pointer ${
+                        isSelected
+                          ? "bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-extrabold"
+                          : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-white"
+                      }`}
+                    >
+                      <span>{opt.label}</span>
+                      {isSelected && <Check className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />}
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Product List Section (No Outer Box Wrapper) */}
