@@ -1,25 +1,25 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
 import { Notice } from "@/types";
 import { useAuth } from "@/context/AuthContext";
 import { 
   Plus, 
   X, 
-  Trash2, 
-  Edit, 
   RefreshCw, 
   FileText, 
   User, 
   Calendar,
-  AlertCircle
+  AlertCircle,
+  Search
 } from "lucide-react";
 
 export default function NoticesPage() {
   const { user } = useAuth();
   const [notices, setNotices] = useState<Notice[]>([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
 
   // Modal states
   const [modalOpen, setModalOpen] = useState(false);
@@ -162,27 +162,40 @@ export default function NoticesPage() {
     }
   };
 
+  const filteredNotices = useMemo(() => {
+    if (!search.trim()) return notices;
+    const q = search.toLowerCase();
+    return notices.filter((n) => 
+      n.title.toLowerCase().includes(q) ||
+      n.content.toLowerCase().includes(q) ||
+      n.created_by.toLowerCase().includes(q)
+    );
+  }, [notices, search]);
+
   return (
     <div className="flex-1 p-3 sm:p-6 md:p-8 space-y-3 sm:space-y-4 bg-zinc-50 dark:bg-zinc-950 flex flex-col min-h-0">
       
-      {/* Slim Actions Bar */}
-      <div className="flex justify-end items-center gap-2 shrink-0 bg-white dark:bg-zinc-900 p-2.5 sm:p-3 rounded-2xl sm:rounded-3xl shadow-sm border border-zinc-200 dark:border-zinc-800">
+      {/* Top Search Bar & Circular Plus Button */}
+      <div className="flex items-center gap-2.5 sm:gap-3 shrink-0 mb-1">
+        {/* Standalone Search Input */}
+        <div className="relative flex-1">
+          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 dark:text-zinc-500" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="공지사항 검색..."
+            className="w-full pl-10 pr-4 py-2.5 sm:py-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl text-xs sm:text-sm font-semibold outline-none focus:ring-2 focus:ring-blue-500/20 shadow-xs text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 transition-all"
+          />
+        </div>
+
+        {/* Circular Plus Button */}
         <button
           onClick={() => openFormModal(null)}
-          className="flex items-center gap-1.5 px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold text-xs shadow-sm shadow-blue-600/30 transition-all active:scale-95 cursor-pointer"
+          className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center shadow-md shadow-blue-600/30 transition-all active:scale-90 cursor-pointer shrink-0"
+          title="새 공지 작성"
         >
-          <Plus className="w-4 h-4" />
-          <span>공지 작성</span>
-        </button>
-        <button
-          onClick={() => {
-            setLoading(true);
-            fetchNotices();
-          }}
-          className="p-2 bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white rounded-xl transition-all cursor-pointer active:scale-95 shrink-0"
-          title="새로고침"
-        >
-          <RefreshCw className="w-4 h-4" />
+          <Plus className="w-5 h-5" />
         </button>
       </div>
 
@@ -192,16 +205,16 @@ export default function NoticesPage() {
           <div className="h-64 flex items-center justify-center">
             <RefreshCw className="w-8 h-8 text-blue-500 animate-spin" />
           </div>
-        ) : notices.length === 0 ? (
+        ) : filteredNotices.length === 0 ? (
           <div className="h-64 flex flex-col items-center justify-center text-center space-y-3 bg-white dark:bg-zinc-900 rounded-[2rem] sm:rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800">
             <AlertCircle className="w-12 h-12 text-zinc-300 dark:text-zinc-700" />
             <p className="text-sm font-semibold text-zinc-500 dark:text-zinc-400">
-              등록된 공지사항이 없습니다.
+              {search.trim() ? "검색 결과와 일치하는 공지사항이 없습니다." : "등록된 공지사항이 없습니다."}
             </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-            {notices.map((notice) => (
+            {filteredNotices.map((notice) => (
               <div
                 key={notice.id}
                 onClick={() => openViewModal(notice)}
@@ -218,33 +231,15 @@ export default function NoticesPage() {
                   </p>
                 </div>
 
-                <div className="flex justify-between items-center pt-3 border-t border-zinc-100 dark:border-zinc-800 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">
-                  <div className="flex items-center gap-3">
-                    <span className="flex items-center gap-1">
-                      <User className="w-3 h-3" />
-                      {notice.created_by}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Calendar className="w-3 h-3" />
-                      {new Date(notice.created_at).toLocaleDateString()}
-                    </span>
-                  </div>
-                  <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
-                    <button
-                      onClick={() => openFormModal(notice)}
-                      className="p-1 hover:text-blue-400 rounded"
-                      title="수정"
-                    >
-                      <Edit className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => handleDeleteNotice(notice.id)}
-                      className="p-1 hover:text-rose-400 rounded"
-                      title="삭제"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
+                <div className="flex items-center gap-3 pt-3 border-t border-zinc-100 dark:border-zinc-800 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">
+                  <span className="flex items-center gap-1">
+                    <User className="w-3 h-3" />
+                    {notice.created_by}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Calendar className="w-3 h-3" />
+                    {new Date(notice.created_at).toLocaleDateString()}
+                  </span>
                 </div>
               </div>
             ))}
