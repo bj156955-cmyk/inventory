@@ -486,7 +486,7 @@ export default function CalendarPage() {
 
 
   return (
-    <div className="flex-1 p-3 sm:p-5 md:p-6 flex flex-col min-h-0 lg:h-[100dvh] lg:max-h-[100dvh] lg:min-h-[640px] gap-3 bg-zinc-50 dark:bg-zinc-950">
+    <div className="flex-1 p-2 sm:p-4 md:p-5 flex flex-col min-h-0 h-[calc(100dvh-50px-5rem)] md:h-[100dvh] max-h-[calc(100dvh-50px-5rem)] md:max-h-[100dvh] gap-2 sm:gap-2.5 bg-zinc-50 dark:bg-zinc-950 overflow-hidden">
       
       {/* Top Navigation & Action Bar */}
       <div className="flex items-center justify-between gap-2.5 shrink-0">
@@ -516,7 +516,7 @@ export default function CalendarPage() {
           <button
             type="button"
             onClick={handleGoToday}
-            className="px-3 py-2 bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 border border-zinc-200/90 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 rounded-2xl text-xs font-bold transition-all shadow-xs active:scale-95 cursor-pointer"
+            className="px-3 py-1.5 sm:py-2 bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 border border-zinc-200/90 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 rounded-2xl text-xs font-bold transition-all shadow-xs active:scale-95 cursor-pointer"
             title="오늘로 이동"
           >
             오늘
@@ -535,13 +535,13 @@ export default function CalendarPage() {
       </div>
 
       {/* Main Content: Full Calendar Grid Card */}
-      <div className="flex-1 bg-white dark:bg-zinc-900 rounded-3xl shadow-xs border border-zinc-200/90 dark:border-zinc-800 overflow-hidden flex flex-col min-h-[500px] sm:min-h-[600px] lg:min-h-0">
+      <div className="flex-1 bg-white dark:bg-zinc-900 rounded-2xl sm:rounded-3xl shadow-xs border border-zinc-200/90 dark:border-zinc-800 overflow-hidden flex flex-col min-h-0">
         {/* Days of Week Header */}
         <div className="grid grid-cols-7 border-b border-zinc-200/80 dark:border-zinc-800/80 bg-zinc-50/70 dark:bg-zinc-800/40 shrink-0">
           {["일", "월", "화", "수", "목", "금", "토"].map((day, idx) => (
             <div 
               key={day} 
-              className={`py-2.5 sm:py-3.5 text-center text-xs sm:text-sm font-bold tracking-wider ${
+              className={`py-2 sm:py-2.5 md:py-3 text-center text-xs sm:text-sm font-bold tracking-wider ${
                 idx === 0 
                   ? "text-rose-500 dark:text-rose-400" 
                   : idx === 6 
@@ -612,7 +612,7 @@ export default function CalendarPage() {
                     onMouseDown={() => handleMouseDown(day)}
                     onMouseEnter={() => handleMouseEnter(day)}
                     onClick={() => handleDayClick(day)}
-                    className={`pt-1.5 pb-1 flex flex-col space-y-1 h-full min-h-[56px] sm:min-h-[72px] lg:min-h-0 overflow-hidden cursor-pointer select-none transition-colors ${
+                    className={`p-1 sm:p-1.5 md:p-2 flex flex-col space-y-0.5 sm:space-y-1 h-full min-h-0 overflow-hidden cursor-pointer select-none transition-colors ${
                       isSelectedInDrag 
                         ? "bg-blue-500/10 ring-2 ring-inset ring-blue-500/40" 
                         : isActive
@@ -663,7 +663,7 @@ export default function CalendarPage() {
                           {holidayName}
                         </div>
                       )}
-                      {dayEvents.slice(0, 4).map((event) => {
+                      {dayEvents.slice(0, 3).map((event) => {
                         const color = getColorForEvent(event.created_by);
                         const startStr = format(new Date(event.start_time), "yyyy-MM-dd");
                         const endStr = format(new Date(event.end_time), "yyyy-MM-dd");
@@ -696,9 +696,9 @@ export default function CalendarPage() {
                           </div>
                         );
                       })}
-                      {dayEvents.length > 4 && (
+                      {dayEvents.length > 3 && (
                         <div className="text-[8.5px] font-black text-zinc-400 dark:text-zinc-500 text-center uppercase tracking-wider mx-1">
-                          + {dayEvents.length - 4}건 더보기
+                          + {dayEvents.length - 3}건 더보기
                         </div>
                       )}
                     </div>
