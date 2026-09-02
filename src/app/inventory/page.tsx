@@ -301,44 +301,24 @@ export default function InventoryPage() {
         </button>
       </div>
 
-      {/* Dynamic Location Categories Tabs (Adaptive: <=5 fit single line, >5 scrollable slide) */}
-      {categoriesList.length <= 5 ? (
-        <div className="flex items-center gap-1.5 sm:gap-2.5 w-full mb-4 sm:mb-6 shrink-0">
-          {categoriesList.map((c) => (
-            <button
-              key={c}
-              type="button"
-              onClick={() => setSelectedCategory(c)}
-              className={`flex-1 min-w-0 py-2.5 px-1 sm:px-2 rounded-2xl text-[11px] sm:text-xs font-bold text-center truncate transition-all duration-200 cursor-pointer select-none active:scale-95 ${
-                activeCategory === c
-                  ? "bg-blue-600 text-white shadow-sm shadow-blue-600/30 font-black scale-[1.02]"
-                  : "bg-white dark:bg-zinc-900 border border-zinc-200/90 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:border-zinc-300 dark:hover:border-zinc-700 hover:text-zinc-900 dark:hover:text-white shadow-xs"
-              }`}
-              title={c === "all" ? "전체보기" : c}
-            >
-              {c === "all" ? "전체보기" : c}
-            </button>
-          ))}
-        </div>
-      ) : (
-        <div className="flex items-center gap-2 sm:gap-2.5 w-full overflow-x-auto no-scrollbar scroll-smooth py-0.5 mb-4 sm:mb-6 shrink-0">
-          {categoriesList.map((c) => (
-            <button
-              key={c}
-              type="button"
-              onClick={() => setSelectedCategory(c)}
-              className={`min-w-fit px-3.5 sm:px-4 py-2.5 rounded-2xl text-xs font-bold text-center whitespace-nowrap transition-all duration-200 cursor-pointer select-none active:scale-95 shrink-0 ${
-                activeCategory === c
-                  ? "bg-blue-600 text-white shadow-sm shadow-blue-600/30 font-black scale-[1.02]"
-                  : "bg-white dark:bg-zinc-900 border border-zinc-200/90 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:border-zinc-300 dark:hover:border-zinc-700 hover:text-zinc-900 dark:hover:text-white shadow-xs"
-              }`}
-              title={c === "all" ? "전체보기" : c}
-            >
-              {c === "all" ? "전체보기" : c}
-            </button>
-          ))}
-        </div>
-      )}
+      {/* Dynamic Location Categories Tabs (Fixed 5-item ratio, stacked from left, scrollable when >5) */}
+      <div className="flex items-center gap-2 sm:gap-2.5 w-full overflow-x-auto no-scrollbar scroll-smooth py-0.5 mb-4 sm:mb-6 shrink-0 justify-start">
+        {categoriesList.map((c) => (
+          <button
+            key={c}
+            type="button"
+            onClick={() => setSelectedCategory(c)}
+            className={`w-[calc((100%-32px)/5)] sm:w-[calc((100%-40px)/5)] min-w-[calc((100%-32px)/5)] sm:min-w-[calc((100%-40px)/5)] shrink-0 py-2.5 px-1 sm:px-2 rounded-2xl text-[11px] sm:text-xs font-bold text-center truncate transition-all duration-200 cursor-pointer select-none active:scale-95 ${
+              activeCategory === c
+                ? "bg-blue-600 text-white shadow-sm shadow-blue-600/30 font-black scale-[1.02]"
+                : "bg-white dark:bg-zinc-900 border border-zinc-200/90 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:border-zinc-300 dark:hover:border-zinc-700 hover:text-zinc-900 dark:hover:text-white shadow-xs"
+            }`}
+            title={c === "all" ? "전체보기" : c}
+          >
+            {c === "all" ? "전체보기" : c}
+          </button>
+        ))}
+      </div>
 
       {/* Product List Section (No Outer Box Wrapper) */}
       <div className="flex-1 flex flex-col min-h-0">
