@@ -326,42 +326,26 @@ export default function InventoryPage() {
 
     try {
       if (editingProduct) {
-        // Detailed change tracking: what changed
-        const changes: string[] = [];
         const oldName = (editingProduct.name || "").trim();
         const newName = formName.trim();
         const oldCat = (editingProduct.category || "").trim();
         const newCat = formCategory.trim();
-        const oldType = (editingProduct.item_type || "").trim();
-        const newType = formType.trim();
         const oldStock = editingProduct.stock;
         const newStock = formStock;
         const delta = newStock - oldStock;
-
-        // Stock quantity change log
-        if (delta !== 0) {
-          const sign = delta > 0 ? `+${delta}` : `${delta}`;
-          if (activeCategory === "all") {
-            const locName = newCat || oldCat || "연구동";
-            changes.push(`${locName} 재고 ${sign}`);
-          } else {
-            changes.push(`재고 ${sign}`);
-          }
-        }
-
-        // Other field changes
-        if (oldName !== newName) changes.push(`이름 (${oldName} → ${newName})`);
-        if (oldCat !== newCat) changes.push(`위치 (${oldCat || "미정"} → ${newCat})`);
-        if (oldType !== newType) changes.push(`유형 (${oldType || "미정"} → ${newType || "없음"})`);
-
-        const changeDesc = changes.length > 0 ? changes.join(", ") : "정보 확인/저장";
-        const logMsg = `[${newName}] ${changeDesc}`;
 
         // Update DB
         const { error } = await supabase.from("products").update(payload).eq("id", editingProduct.id);
         if (error) throw error;
         
-        await logActivity("UPDATE", logMsg);
+        // Log ONLY when stock quantity changes
+        if (delta !== 0) {
+          const sign = delta > 0 ? `+${delta}` : `${delta}`;
+          const changeText = activeCategory === "all" 
+            ? `${newCat || oldCat || "연구동"} 재고 ${sign}` 
+            : `재고 ${sign}`;
+          await logActivity("UPDATE", `[${newName || oldName}] ${changeText}`);
+        }
       } else {
         // Insert
         let { error } = await supabase.from("products").insert([payload]);
@@ -381,10 +365,10 @@ export default function InventoryPage() {
           }
           throw error;
         }
-        await logActivity(
-          "CREATE", 
-          `[${formName.trim()}] 신규 등록 (위치: ${formCategory.trim()}, 수량: ${formStock}개${formType.trim() ? `, 유형: ${formType.trim()}` : ""})`
-        );
+        const changeText = activeCategory === "all" 
+          ? `${formCategory.trim() || "연구동"} 재고 +${formStock}` 
+          : `재고 +${formStock}`;
+        await logActivity("CREATE", `[${formName.trim()}] ${changeText}`);
       }
       setItemModalOpen(false);
     } catch (err: unknown) {
@@ -784,48 +768,51 @@ export default function InventoryPage() {
                   <div className="space-y-1">
                     {loadingLogs ? (
                       <p className="text-xs text-zinc-400 dark:text-zinc-500 py-0.5">이력을 불러오는 중...</p>
-                    ) : itemLogs.length > 0 ? (
-                      itemLogs.slice(0, 3).map((log) => {
-                        let displayMsg = log.message;
-                        const match = displayMsg.match(/^\[.*?\]\s*(.*)$/);
-                        if (match && match[1]) {
-                          displayMsg = match[1];
-                        }
-
-                        // Convert older "수량 (5개 → 6개)" format to clean delta
-                        const qtyMatch = displayMsg.match(/수량\s*\((\d+)개?\s*→\s*(\d+)개?\)/);
-                        if (qtyMatch) {
-                          const oldQty = parseInt(qtyMatch[1], 10);
-                          const newQty = parseInt(qtyMatch[2], 10);
-                          const diff = newQty - oldQty;
-                          displayMsg = displayMsg.replace(/수량\s*\(\d+개?\s*→\s*\d+개?\)/, `재고 ${diff > 0 ? `+${diff}` : diff}`);
-                        }
-
-                        const formattedDate = (() => {
-                          try {
-                            const d = new Date(log.created_at);
-                            return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-                          } catch {
-                            return log.created_at;
+                    ) : itemLogs.filter((log) => log.message.includes("재고") || log.message.includes("수량")).length > 0 ? (
+                      itemLogs
+                        .filter((log) => log.message.includes("재고") || log.message.includes("수량"))
+                        .slice(0, 3)
+                        .map((log) => {
+                          let displayMsg = log.message;
+                          const match = displayMsg.match(/^\[.*?\]\s*(.*)$/);
+                          if (match && match[1]) {
+                            displayMsg = match[1];
                           }
-                        })();
 
-                        return (
-                          <div key={log.id} className="text-xs text-zinc-500 dark:text-zinc-400 leading-snug">
-                            <div className="flex items-baseline justify-between gap-2">
-                              <span className="text-zinc-600 dark:text-zinc-300 font-medium truncate">
-                                {displayMsg}
-                              </span>
-                              <span className="text-[10px] text-zinc-400 dark:text-zinc-500 shrink-0 tabular-nums">
-                                {log.user_email || "USER"} • {formattedDate}
-                              </span>
+                          // Convert older "수량 (5개 → 6개)" format to clean delta
+                          const qtyMatch = displayMsg.match(/수량\s*\((\d+)개?\s*→\s*(\d+)개?\)/);
+                          if (qtyMatch) {
+                            const oldQty = parseInt(qtyMatch[1], 10);
+                            const newQty = parseInt(qtyMatch[2], 10);
+                            const diff = newQty - oldQty;
+                            displayMsg = displayMsg.replace(/수량\s*\(\d+개?\s*→\s*\d+개?\)/, `재고 ${diff > 0 ? `+${diff}` : diff}`);
+                          }
+
+                          const formattedDate = (() => {
+                            try {
+                              const d = new Date(log.created_at);
+                              return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+                            } catch {
+                              return log.created_at;
+                            }
+                          })();
+
+                          return (
+                            <div key={log.id} className="text-xs text-zinc-500 dark:text-zinc-400 leading-snug">
+                              <div className="flex items-baseline justify-between gap-2">
+                                <span className="text-zinc-600 dark:text-zinc-300 font-medium truncate">
+                                  {displayMsg}
+                                </span>
+                                <span className="text-[10px] text-zinc-400 dark:text-zinc-500 shrink-0 tabular-nums">
+                                  {log.user_email || "USER"} • {formattedDate}
+                                </span>
+                              </div>
                             </div>
-                          </div>
-                        );
-                      })
+                          );
+                        })
                     ) : (
                       <p className="text-xs text-zinc-400 dark:text-zinc-500 py-0.5">
-                        기록된 수정 이력이 없습니다.
+                        기록된 재고 변경 이력이 없습니다.
                       </p>
                     )}
                   </div>
