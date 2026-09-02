@@ -1,20 +1,20 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f8f9fa;
-  --foreground: #09090b;
+  --background: #0d0e12;
+  --foreground: #f4f4f6;
   
-  --primary: #18181b;
-  --primary-container: #27272a;
-  --surface: #f4f4f5;
-  --surface-container-lowest: #ffffff;
-  --surface-container-low: #f4f4f5;
-  --surface-container-high: #e4e4e7;
-  --surface-container-highest: #d4d4d8;
-  --on-surface-variant: #71717a;
-  --error: #ef4444;
-  --error-container: #fee2e2;
-  --tertiary: #3f3f46;
+  --primary: #3b82f6;
+  --primary-container: #1e293b;
+  --surface: #13141a;
+  --surface-container-lowest: #090a0f;
+  --surface-container-low: #181920;
+  --surface-container-high: #232530;
+  --surface-container-highest: #2e3140;
+  --on-surface-variant: #9496a1;
+  --error: #f87171;
+  --error-container: #450a0a;
+  --tertiary: #6366f1;
 }
 
 @theme inline {
@@ -34,15 +34,15 @@
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #09090b;
-    --foreground: #fafafa;
+    --foreground: #f4f4f5;
     
-    --primary: #ffffff;
-    --primary-container: #27272a;
-    --surface: #121215;
+    --primary: #3b82f6;
+    --primary-container: #1e293b;
+    --surface: #111216;
     --surface-container-lowest: #000000;
     --surface-container-low: #18181b;
-    --surface-container-high: #27272a;
-    --surface-container-highest: #3f3f46;
+    --surface-container-high: #222329;
+    --surface-container-highest: #2d2e37;
     --on-surface-variant: #a1a1aa;
     --error: #f87171;
     --error-container: #450a0a;

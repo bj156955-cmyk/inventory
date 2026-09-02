@@ -68,8 +68,8 @@ export default function LoginPage() {
         
         {/* Header Branding */}
         <div className="text-center space-y-3 sm:space-y-4">
-          <div className="w-16 h-16 sm:w-20 sm:h-20 bg-zinc-900 dark:bg-zinc-100 rounded-[1.5rem] sm:rounded-[2rem] flex items-center justify-center mx-auto shadow-xl hover:rotate-6 transition-all duration-300">
-            <Package className="text-white dark:text-zinc-950 w-8 h-8 sm:w-10 sm:h-10" />
+          <div className="w-16 h-16 sm:w-20 sm:h-20 bg-blue-600 rounded-[1.5rem] sm:rounded-[2rem] flex items-center justify-center mx-auto shadow-xl shadow-blue-600/30 hover:rotate-6 transition-all duration-300">
+            <Package className="text-white w-8 h-8 sm:w-10 sm:h-10" />
           </div>
           <div>
             <h2 className="text-2xl sm:text-3xl font-black font-headline tracking-tighter text-zinc-900 dark:text-white">
@@ -91,7 +91,7 @@ export default function LoginPage() {
               value={userId}
               onChange={(e) => setUserId(e.target.value)}
               placeholder="USER ID"
-              className="w-full pl-11 sm:pl-12 pr-4 py-3.5 sm:py-4 bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white rounded-2xl outline-none focus:ring-2 focus:ring-zinc-900/10 dark:focus:ring-white/10 text-xs sm:text-sm font-bold tracking-wider uppercase placeholder:text-zinc-400 transition-all border border-zinc-200 dark:border-zinc-700"
+              className="w-full pl-11 sm:pl-12 pr-4 py-3.5 sm:py-4 bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white rounded-2xl outline-none focus:ring-2 focus:ring-blue-500/20 text-xs sm:text-sm font-bold tracking-wider uppercase placeholder:text-zinc-400 transition-all border border-zinc-200 dark:border-zinc-700"
             />
           </div>
 
@@ -103,18 +103,18 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="PASSWORD"
-              className="w-full pl-11 sm:pl-12 pr-4 py-3.5 sm:py-4 bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white rounded-2xl outline-none focus:ring-2 focus:ring-zinc-900/10 dark:focus:ring-white/10 text-xs sm:text-sm font-bold tracking-wider placeholder:text-zinc-400 transition-all border border-zinc-200 dark:border-zinc-700"
+              className="w-full pl-11 sm:pl-12 pr-4 py-3.5 sm:py-4 bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white rounded-2xl outline-none focus:ring-2 focus:ring-blue-500/20 text-xs sm:text-sm font-bold tracking-wider placeholder:text-zinc-400 transition-all border border-zinc-200 dark:border-zinc-700"
             />
           </div>
 
           {errorMsg && (
-            <div className="p-3.5 sm:p-4 bg-zinc-100 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 rounded-2xl text-[11px] sm:text-xs font-bold tracking-tight">
+            <div className="p-3.5 sm:p-4 bg-rose-500/10 border border-rose-500/30 text-rose-400 rounded-2xl text-[11px] sm:text-xs font-bold tracking-tight">
               ⚠️ {errorMsg}
             </div>
           )}
 
           {successMsg && (
-            <div className="p-3.5 sm:p-4 bg-zinc-100 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 rounded-2xl text-[11px] sm:text-xs font-bold tracking-tight">
+            <div className="p-3.5 sm:p-4 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded-2xl text-[11px] sm:text-xs font-bold tracking-tight">
               ✅ {successMsg}
             </div>
           )}
@@ -122,7 +122,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200 text-white py-3.5 sm:py-4 rounded-2xl font-headline font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg transition-all duration-200 active:scale-[0.98] disabled:opacity-50 cursor-pointer"
+            className="w-full bg-blue-600 hover:bg-blue-500 text-white py-3.5 sm:py-4 rounded-2xl font-headline font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg shadow-blue-600/30 transition-all duration-200 active:scale-[0.98] disabled:opacity-50 cursor-pointer"
           >
             <span>{loading ? "처리 중..." : isSignUp ? "계정 등록 신청" : "Atelier 입장"}</span>
             {!loading && <ArrowRight className="w-4 h-4" />}
@@ -138,7 +138,7 @@ export default function LoginPage() {
               setErrorMsg("");
               setSuccessMsg("");
             }}
-            className="text-xs font-black text-zinc-400 hover:text-zinc-900 dark:text-zinc-500 dark:hover:text-white transition-colors uppercase tracking-wider cursor-pointer"
+            className="text-xs font-black text-zinc-400 hover:text-blue-400 dark:text-zinc-500 dark:hover:text-blue-400 transition-colors uppercase tracking-wider cursor-pointer"
           >
             {isSignUp ? "기존 계정으로 로그인" : "초대받은 분 가입하기"}
           </button>

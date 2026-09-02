@@ -19,16 +19,46 @@ import {
   Truck
 } from "lucide-react";
 
-// Color mapping for member badges (Monochrome Tech Minimal)
-const getColorForUser = (_userName?: string) => {
-  return {
-    bg: "bg-zinc-100 dark:bg-zinc-800",
-    border: "border-zinc-200 dark:border-zinc-700",
-    text: "text-zinc-900 dark:text-white",
-    hoverBg: "hover:bg-zinc-200/70 dark:hover:bg-zinc-700",
-    badge: "bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100",
-    dot: "bg-zinc-900 dark:bg-white",
-  };
+// Color mapping for member badges (Dark Pastel Accents)
+const getColorForUser = (userName?: string) => {
+  const name = (userName || "UNKNOWN").toUpperCase();
+  const colors = [
+    {
+      badge: "bg-blue-500/15 border border-blue-500/30 text-blue-400",
+      dot: "bg-blue-400",
+    },
+    {
+      badge: "bg-emerald-500/15 border border-emerald-500/30 text-emerald-400",
+      dot: "bg-emerald-400",
+    },
+    {
+      badge: "bg-purple-500/15 border border-purple-500/30 text-purple-400",
+      dot: "bg-purple-400",
+    },
+    {
+      badge: "bg-amber-500/15 border border-amber-500/30 text-amber-400",
+      dot: "bg-amber-400",
+    },
+    {
+      badge: "bg-rose-500/15 border border-rose-500/30 text-rose-400",
+      dot: "bg-rose-400",
+    },
+    {
+      badge: "bg-cyan-500/15 border border-cyan-500/30 text-cyan-400",
+      dot: "bg-cyan-400",
+    },
+    {
+      badge: "bg-fuchsia-500/15 border border-fuchsia-500/30 text-fuchsia-400",
+      dot: "bg-fuchsia-400",
+    }
+  ];
+
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const index = Math.abs(hash) % colors.length;
+  return colors[index];
 };
 
 export default function LabPage() {
@@ -398,10 +428,10 @@ export default function LabPage() {
   };
 
   return (
-    <div className="flex-1 p-3 sm:p-6 md:p-8 space-y-3 sm:space-y-4 flex flex-col min-h-0 bg-surface dark:bg-slate-900">
+    <div className="flex-1 p-3 sm:p-6 md:p-8 space-y-3 sm:space-y-4 flex flex-col min-h-0 bg-zinc-50 dark:bg-zinc-950">
       {loading ? (
         <div className="flex-1 flex items-center justify-center min-h-[300px]">
-          <RefreshCw className="w-8 h-8 text-zinc-400 animate-spin" />
+          <RefreshCw className="w-8 h-8 text-blue-500 animate-spin" />
         </div>
       ) : (
         <div className="flex-1 flex flex-col space-y-4 min-h-0">
@@ -412,7 +442,7 @@ export default function LabPage() {
               onClick={() => setActiveMobileTab("orders")}
               className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer active:scale-95 ${
                 activeMobileTab === "orders"
-                  ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 shadow-md font-black scale-[1.02]"
+                  ? "bg-blue-600 text-white shadow-sm shadow-blue-600/30 font-black scale-[1.02]"
                   : "text-zinc-500 dark:text-zinc-400 hover:bg-zinc-200/50 dark:hover:bg-zinc-700/50"
               }`}
             >
@@ -424,7 +454,7 @@ export default function LabPage() {
               onClick={() => setActiveMobileTab("cleaning")}
               className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer active:scale-95 ${
                 activeMobileTab === "cleaning"
-                  ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 shadow-md font-black scale-[1.02]"
+                  ? "bg-blue-600 text-white shadow-sm shadow-blue-600/30 font-black scale-[1.02]"
                   : "text-zinc-500 dark:text-zinc-400 hover:bg-zinc-200/50 dark:hover:bg-zinc-700/50"
               }`}
             >
@@ -443,13 +473,13 @@ export default function LabPage() {
               
               <div className="flex justify-between items-center pb-3 border-b border-zinc-100 dark:border-zinc-800 shrink-0">
                 <h3 className="text-base sm:text-lg font-black text-zinc-900 dark:text-white flex items-center gap-2">
-                  <ShoppingCart className="w-5 h-5 text-zinc-900 dark:text-white" />
+                  <ShoppingCart className="w-5 h-5 text-blue-500" />
                   <span>연구실 물품 주문 현황 ({visibleOrders.length}건)</span>
                 </h3>
               
               <button
                 onClick={() => setShowAddOrderInput(!showAddOrderInput)}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200 text-white rounded-xl font-bold text-xs shadow-sm transition-all cursor-pointer active:scale-95"
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold text-xs shadow-sm shadow-blue-600/30 transition-all cursor-pointer active:scale-95"
                 title="물품 추가"
               >
                 <Plus className="w-4 h-4" />
@@ -514,7 +544,7 @@ export default function LabPage() {
                         hasReceived 
                           ? "bg-zinc-100/50 dark:bg-zinc-800/30 border-zinc-200/50 dark:border-zinc-800/50 opacity-60" 
                           : hasOrdered 
-                          ? "bg-zinc-100 dark:bg-zinc-800/80 border-zinc-300 dark:border-zinc-700 shadow-sm" 
+                          ? "bg-sky-500/5 border-sky-500/30 shadow-sm" 
                           : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800"
                       }`}
                     >
@@ -533,13 +563,13 @@ export default function LabPage() {
                             {order.orderedBy && (
                               <>
                                 <span>•</span>
-                                <span className="text-zinc-800 dark:text-zinc-200 font-bold">주문: {order.orderedBy}</span>
+                                <span className="text-sky-400 font-bold">주문: {order.orderedBy}</span>
                               </>
                             )}
                             {order.receivedBy && (
                               <>
                                 <span>•</span>
-                                <span className="text-zinc-900 dark:text-white font-bold">수령: {order.receivedBy}</span>
+                                <span className="text-emerald-400 font-bold">수령: {order.receivedBy}</span>
                               </>
                             )}
                           </span>
@@ -554,7 +584,7 @@ export default function LabPage() {
                           disabled={!hasRequested}
                           className={`px-2.5 py-1.5 rounded-xl transition-all flex items-center gap-1 border text-xs font-bold ${
                             hasRequested
-                              ? "bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200 border-transparent cursor-pointer shadow-sm active:scale-95"
+                              ? "bg-amber-500/20 text-amber-300 border-amber-500/40 hover:bg-amber-500/30 cursor-pointer shadow-sm active:scale-95"
                               : "bg-zinc-100 text-zinc-400 dark:bg-zinc-800 dark:text-zinc-500 border-zinc-200 dark:border-zinc-700 opacity-60 cursor-not-allowed"
                           }`}
                           title={hasRequested ? "물품 주문 완료 처리" : "주문 완료"}
@@ -570,9 +600,9 @@ export default function LabPage() {
                           disabled={!hasOrdered}
                           className={`px-2.5 py-1.5 rounded-xl transition-all flex items-center gap-1 border text-xs font-bold ${
                             hasOrdered
-                              ? "bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200 border-transparent cursor-pointer shadow-sm active:scale-95"
+                              ? "bg-sky-500/20 text-sky-300 border-sky-500/40 hover:bg-sky-500/30 cursor-pointer shadow-sm active:scale-95"
                               : hasReceived
-                              ? "bg-zinc-100 text-zinc-400 dark:bg-zinc-800 dark:text-zinc-500 border-zinc-200 dark:border-zinc-700 opacity-60 cursor-not-allowed"
+                              ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40 opacity-80 cursor-not-allowed"
                               : "bg-zinc-100 text-zinc-300 dark:bg-zinc-800 dark:text-zinc-600 border-zinc-200 dark:border-zinc-800 opacity-30 cursor-not-allowed"
                           }`}
                           title={hasOrdered ? "수령 완료 처리" : hasReceived ? "수령 완료됨" : "수령 준비 대기"}
@@ -585,7 +615,7 @@ export default function LabPage() {
                         <button
                           type="button"
                           onClick={() => handleDeleteOrder(order.id)}
-                          className="text-zinc-400 hover:text-zinc-900 dark:text-zinc-500 dark:hover:text-white p-1 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all shrink-0 cursor-pointer"
+                          className="text-zinc-400 hover:text-rose-400 dark:text-zinc-500 dark:hover:text-rose-400 p-1 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all shrink-0 cursor-pointer"
                           title="삭제"
                         >
                           <X className="w-4 h-4" />
@@ -611,7 +641,7 @@ export default function LabPage() {
             
             <div className="flex justify-between items-center pb-3 border-b border-zinc-100 dark:border-zinc-800 shrink-0">
               <h3 className="text-base sm:text-lg font-black text-zinc-900 dark:text-white flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-zinc-900 dark:text-white" />
+                <Sparkles className="w-5 h-5 text-emerald-400" />
                 <span>주간 청소 당번 {getWeeklyDateRangeString()}</span>
               </h3>
               
@@ -634,7 +664,7 @@ export default function LabPage() {
                 )}
                 <button
                   onClick={() => setShowAddSelect(!showAddSelect)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200 text-white rounded-xl font-bold text-xs shadow-sm transition-all cursor-pointer active:scale-95"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold text-xs shadow-sm shadow-blue-600/30 transition-all cursor-pointer active:scale-95"
                   title="멤버 추가"
                 >
                   <Plus className="w-4 h-4" />
@@ -695,7 +725,7 @@ export default function LabPage() {
                             <button
                               type="button"
                               onClick={() => handleRemoveUser(rotatedIdx)}
-                              className="text-zinc-400 hover:text-zinc-900 dark:text-zinc-500 dark:hover:text-white opacity-0 group-hover:opacity-100 transition-all p-1 shrink-0 cursor-pointer"
+                              className="text-zinc-400 hover:text-rose-400 dark:text-zinc-500 dark:hover:text-rose-400 opacity-0 group-hover:opacity-100 transition-all p-1 shrink-0 cursor-pointer"
                               title="제거"
                             >
                               <X className="w-3.5 h-3.5" />
@@ -705,7 +735,7 @@ export default function LabPage() {
                         <td 
                           className={`py-2.5 border-r border-zinc-200 dark:border-zinc-800 px-1 cursor-pointer select-none transition-all ${
                             row.cleaning 
-                              ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 font-black" 
+                              ? "bg-emerald-500/20 text-emerald-400 font-black" 
                               : "hover:bg-zinc-100 dark:hover:bg-zinc-800/30 text-transparent"
                           }`}
                           onClick={() => handleToggleDuty(rotatedIdx, "cleaning")}
@@ -715,7 +745,7 @@ export default function LabPage() {
                         <td 
                           className={`py-2.5 px-1 cursor-pointer select-none transition-all ${
                             row.waste 
-                              ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 font-black" 
+                              ? "bg-blue-500/20 text-blue-400 font-black" 
                               : "hover:bg-zinc-100 dark:hover:bg-zinc-800/30 text-transparent"
                           }`}
                           onClick={() => handleToggleDuty(rotatedIdx, "waste")}

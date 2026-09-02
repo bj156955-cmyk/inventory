@@ -92,26 +92,77 @@ const FALLBACK_HOLIDAYS: { [key: string]: string } = {
   "2027-12-25": "성탄절",
 };
 
-const getColorForUser = (_userName?: string) => {
-  return {
-    bg: "bg-zinc-100 dark:bg-zinc-800",
-    border: "border-zinc-200 dark:border-zinc-700",
-    text: "text-zinc-900 dark:text-zinc-100",
-    hoverBg: "hover:bg-zinc-200/70 dark:hover:bg-zinc-700/70",
-    badge: "bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100",
-    dot: "bg-zinc-900 dark:bg-white",
-  };
+const getColorForUser = (userName?: string) => {
+  const name = (userName || "UNKNOWN").toUpperCase();
+  const colors = [
+    {
+      bg: "bg-blue-500/15",
+      border: "border-blue-500/30",
+      text: "text-blue-400",
+      hoverBg: "hover:bg-blue-500/25",
+      badge: "bg-blue-500/15 border border-blue-500/30 text-blue-400",
+      dot: "bg-blue-400",
+    },
+    {
+      bg: "bg-emerald-500/15",
+      border: "border-emerald-500/30",
+      text: "text-emerald-400",
+      hoverBg: "hover:bg-emerald-500/25",
+      badge: "bg-emerald-500/15 border border-emerald-500/30 text-emerald-400",
+      dot: "bg-emerald-400",
+    },
+    {
+      bg: "bg-purple-500/15",
+      border: "border-purple-500/30",
+      text: "text-purple-400",
+      hoverBg: "hover:bg-purple-500/25",
+      badge: "bg-purple-500/15 border border-purple-500/30 text-purple-400",
+      dot: "bg-purple-400",
+    },
+    {
+      bg: "bg-amber-500/15",
+      border: "border-amber-500/30",
+      text: "text-amber-400",
+      hoverBg: "hover:bg-amber-500/25",
+      badge: "bg-amber-500/15 border border-amber-500/30 text-amber-400",
+      dot: "bg-amber-400",
+    },
+    {
+      bg: "bg-rose-500/15",
+      border: "border-rose-500/30",
+      text: "text-rose-400",
+      hoverBg: "hover:bg-rose-500/25",
+      badge: "bg-rose-500/15 border border-rose-500/30 text-rose-400",
+      dot: "bg-rose-400",
+    },
+    {
+      bg: "bg-cyan-500/15",
+      border: "border-cyan-500/30",
+      text: "text-cyan-400",
+      hoverBg: "hover:bg-cyan-500/25",
+      badge: "bg-cyan-500/15 border border-cyan-500/30 text-cyan-400",
+      dot: "bg-cyan-400",
+    },
+    {
+      bg: "bg-fuchsia-500/15",
+      border: "border-fuchsia-500/30",
+      text: "text-fuchsia-400",
+      hoverBg: "hover:bg-fuchsia-500/25",
+      badge: "bg-fuchsia-500/15 border border-fuchsia-500/30 text-fuchsia-400",
+      dot: "bg-fuchsia-400",
+    }
+  ];
+
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const index = Math.abs(hash) % colors.length;
+  return colors[index];
 };
 
-const getColorForEvent = (_createdBy?: string) => {
-  return {
-    bg: "bg-zinc-100 dark:bg-zinc-800",
-    border: "border-zinc-200 dark:border-zinc-700",
-    text: "text-zinc-900 dark:text-zinc-100",
-    hoverBg: "hover:bg-zinc-200/70 dark:hover:bg-zinc-700/70",
-    badge: "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100",
-    dot: "bg-zinc-900 dark:bg-white",
-  };
+const getColorForEvent = (createdBy?: string) => {
+  return getColorForUser(createdBy);
 };
 
 export default function CalendarPage() {
@@ -477,7 +528,7 @@ export default function CalendarPage() {
               <div 
                 key={day} 
                 className={`py-2.5 sm:py-4 text-center text-[10px] sm:text-xs font-black uppercase tracking-widest ${
-                  idx === 0 ? "text-zinc-500 dark:text-zinc-400" : idx === 6 ? "text-zinc-600 dark:text-zinc-300" : "text-zinc-700 dark:text-zinc-200"
+                  idx === 0 ? "text-rose-400" : idx === 6 ? "text-sky-400" : "text-zinc-700 dark:text-zinc-200"
                 }`}
               >
                 {day}
@@ -488,7 +539,7 @@ export default function CalendarPage() {
           {/* Days Grid */}
           {loading ? (
             <div className="flex-1 flex items-center justify-center">
-              <RefreshCw className="w-8 h-8 text-zinc-400 animate-spin" />
+              <RefreshCw className="w-8 h-8 text-blue-500 animate-spin" />
             </div>
           ) : (
             <div className="flex-1 grid grid-cols-7 grid-rows-6 divide-x divide-y divide-zinc-200/60 dark:divide-zinc-800/60 border-t border-zinc-200/60 dark:border-zinc-800/60">
@@ -519,6 +570,8 @@ export default function CalendarPage() {
                 const isToday = isSameDay(day, new Date());
                 const holidayName = holidays[dayStr];
                 const isHoliday = !!holidayName;
+                const isSunday = day.getDay() === 0;
+                const isSaturday = day.getDay() === 6;
                 const isSelectedInDrag = (() => {
                   if (!dragStart || !dragEnd) return false;
                   const start = dragStart < dragEnd ? dragStart : dragEnd;
@@ -538,21 +591,29 @@ export default function CalendarPage() {
                     onClick={() => handleDayClick(day)}
                     className={`pt-2 pb-1.5 flex flex-col space-y-1.5 h-full min-h-[70px] overflow-hidden cursor-pointer select-none transition-all ${
                       isSelectedInDrag 
-                        ? "bg-zinc-200/70 dark:bg-zinc-800 ring-2 ring-zinc-400 dark:ring-zinc-600" 
+                        ? "bg-blue-500/10 ring-2 ring-blue-500/40" 
                         : isActive
-                        ? "bg-zinc-100 dark:bg-zinc-800 ring-2 ring-zinc-900 dark:ring-white"
+                        ? "bg-blue-500/5 ring-2 ring-blue-500"
                         : "hover:bg-zinc-50 dark:hover:bg-zinc-800/40"
                     } ${
-                      isCurrentMonth ? "text-zinc-900 dark:text-white" : "text-zinc-400 dark:text-zinc-600"
+                      isCurrentMonth 
+                        ? isHoliday || isSunday
+                          ? "text-rose-400"
+                          : isSaturday
+                          ? "text-sky-400"
+                          : "text-zinc-900 dark:text-white" 
+                        : "text-zinc-400 dark:text-zinc-600 opacity-40"
                     }`}
                   >
                     {/* Day Header */}
                     <div className="flex justify-between items-center px-2">
                       <span className={`text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full ${
                         isToday 
-                          ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-950 font-black" 
-                          : isHoliday
-                          ? "text-zinc-900 dark:text-white font-extrabold" 
+                          ? "bg-blue-600 text-white font-black shadow-sm shadow-blue-600/40 ring-2 ring-blue-400" 
+                          : isHoliday || isSunday
+                          ? "text-rose-400 font-extrabold" 
+                          : isSaturday
+                          ? "text-sky-400 font-extrabold"
                           : ""
                       }`}>
                         {format(day, "d")}
@@ -652,7 +713,7 @@ export default function CalendarPage() {
                 setSelectedMembers([defaultUser]);
                 setModalOpen(true);
               }}
-              className="p-1.5 bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200 text-white rounded-lg flex items-center justify-center font-bold shadow-sm transition-all cursor-pointer active:scale-95"
+              className="p-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg flex items-center justify-center font-bold shadow-sm shadow-blue-600/30 transition-all cursor-pointer active:scale-95"
               title="새 일정 추가"
             >
               <Plus className="w-3.5 h-3.5" />
@@ -870,7 +931,7 @@ export default function CalendarPage() {
                   <button
                     type="button"
                     onClick={handleDeleteEvent}
-                    className="p-4 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white rounded-2xl font-black text-sm hover:shadow transition-all cursor-pointer flex items-center justify-center border border-zinc-200 dark:border-zinc-700"
+                    className="p-4 bg-zinc-100 dark:bg-zinc-800 text-zinc-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-2xl font-black text-sm hover:shadow transition-all cursor-pointer flex items-center justify-center border border-zinc-200 dark:border-zinc-700"
                     title="일정 삭제"
                   >
                     <Trash2 className="w-5 h-5" />
@@ -885,7 +946,7 @@ export default function CalendarPage() {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-4 bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200 text-white rounded-2xl font-black text-sm shadow-md active:scale-95 transition-all cursor-pointer"
+                  className="flex-1 py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-black text-sm shadow-md shadow-blue-600/30 active:scale-95 transition-all cursor-pointer"
                 >
                   저장
                 </button>

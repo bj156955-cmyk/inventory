@@ -14,16 +14,46 @@ import {
   CircleDot
 } from "lucide-react";
 
-// Color mapping function (Monochrome Tech Minimal)
-const getColorForUser = (_userName?: string) => {
-  return {
-    bg: "bg-zinc-100 dark:bg-zinc-800",
-    border: "border-zinc-200 dark:border-zinc-700",
-    text: "text-zinc-900 dark:text-white",
-    hoverBg: "hover:bg-zinc-200/70 dark:hover:bg-zinc-700",
-    badge: "bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100",
-    dot: "bg-zinc-900 dark:bg-white",
-  };
+// Color mapping function (Dark Pastel Accents)
+const getColorForUser = (userName?: string) => {
+  const name = (userName || "UNKNOWN").toUpperCase();
+  const colors = [
+    {
+      badge: "bg-blue-500/15 border border-blue-500/30 text-blue-400",
+      dot: "bg-blue-400",
+    },
+    {
+      badge: "bg-emerald-500/15 border border-emerald-500/30 text-emerald-400",
+      dot: "bg-emerald-400",
+    },
+    {
+      badge: "bg-purple-500/15 border border-purple-500/30 text-purple-400",
+      dot: "bg-purple-400",
+    },
+    {
+      badge: "bg-amber-500/15 border border-amber-500/30 text-amber-400",
+      dot: "bg-amber-400",
+    },
+    {
+      badge: "bg-rose-500/15 border border-rose-500/30 text-rose-400",
+      dot: "bg-rose-400",
+    },
+    {
+      badge: "bg-cyan-500/15 border border-cyan-500/30 text-cyan-400",
+      dot: "bg-cyan-400",
+    },
+    {
+      badge: "bg-fuchsia-500/15 border border-fuchsia-500/30 text-fuchsia-400",
+      dot: "bg-fuchsia-400",
+    }
+  ];
+
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const index = Math.abs(hash) % colors.length;
+  return colors[index];
 };
 
 const DEFAULT_MEMBERS = ["BJ", "YG", "MJ", "JS", "HS", "HM", "NY", "SH", "TH"];
@@ -201,7 +231,7 @@ export default function MembersPage() {
         <div className="lg:col-span-2 flex flex-col min-h-0 bg-white dark:bg-zinc-900 rounded-[2rem] sm:rounded-[2.5rem] p-5 sm:p-6 shadow-sm border border-zinc-200 dark:border-zinc-800 overflow-hidden">
           <div className="flex justify-between items-center pb-3 sm:pb-4 border-b border-zinc-100 dark:border-zinc-800">
             <h3 className="text-base sm:text-lg font-black text-zinc-900 dark:text-white flex items-center gap-2">
-              <Users className="w-5 h-5 text-zinc-900 dark:text-white" />
+              <Users className="w-5 h-5 text-blue-500" />
               <span>등록된 팀원 리스트 ({members.length}명)</span>
             </h3>
             <button
@@ -218,7 +248,7 @@ export default function MembersPage() {
 
           {loading ? (
             <div className="flex-1 flex items-center justify-center min-h-[250px]">
-              <RefreshCw className="w-8 h-8 text-zinc-400 animate-spin" />
+              <RefreshCw className="w-8 h-8 text-blue-500 animate-spin" />
             </div>
           ) : (
             <div className="flex-1 overflow-y-auto pr-1 mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 content-start custom-scrollbar">
@@ -243,8 +273,8 @@ export default function MembersPage() {
                         <div className="flex items-center gap-2">
                           <span className="font-bold text-sm text-zinc-900 dark:text-white truncate">{member}</span>
                           {isOnline ? (
-                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-zinc-200 dark:bg-zinc-700 text-[9px] font-black text-zinc-900 dark:text-zinc-100 rounded-md select-none shrink-0">
-                              <span className="w-1.5 h-1.5 rounded-full bg-zinc-900 dark:bg-white animate-pulse" />
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-emerald-500/15 border border-emerald-500/30 text-[9px] font-black text-emerald-400 rounded-md select-none shrink-0">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                               <span>ON</span>
                             </span>
                           ) : (
@@ -256,8 +286,8 @@ export default function MembersPage() {
                         <div className="flex items-center gap-1 text-[10px] font-medium text-zinc-400 dark:text-zinc-500 truncate">
                           {isOnline ? (
                             <>
-                              <Clock className="w-2.5 h-2.5 shrink-0" />
-                              <span className="truncate">{onlineTime} 접속</span>
+                              <Clock className="w-2.5 h-2.5 shrink-0 text-emerald-400" />
+                              <span className="truncate text-emerald-400/90">{onlineTime} 접속</span>
                             </>
                           ) : (
                             <span>오프라인</span>
@@ -270,7 +300,7 @@ export default function MembersPage() {
                     {member !== "ADMIN" && (
                       <button 
                         onClick={() => handleDeleteMember(member)}
-                        className="p-1.5 sm:p-2 text-zinc-400 hover:text-zinc-900 dark:hover:text-white rounded-xl hover:bg-zinc-200 dark:hover:bg-zinc-700 opacity-0 group-hover:opacity-100 transition-all cursor-pointer shrink-0"
+                        className="p-1.5 sm:p-2 text-zinc-400 hover:text-rose-400 dark:hover:text-rose-400 rounded-xl hover:bg-zinc-200 dark:hover:bg-zinc-700 opacity-0 group-hover:opacity-100 transition-all cursor-pointer shrink-0"
                         title="팀원 삭제"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -287,7 +317,7 @@ export default function MembersPage() {
         <div className="bg-white dark:bg-zinc-900 rounded-[2.5rem] p-6 shadow-sm border border-zinc-200 dark:border-zinc-800 space-y-6 shrink-0 flex flex-col">
           <div className="pb-4 border-b border-zinc-100 dark:border-zinc-800">
             <h3 className="text-lg font-black text-zinc-900 dark:text-white flex items-center gap-2">
-              <UserPlus className="w-5 h-5 text-zinc-900 dark:text-white" />
+              <UserPlus className="w-5 h-5 text-blue-500" />
               <span>새 팀원 등록</span>
             </h3>
           </div>
@@ -303,7 +333,7 @@ export default function MembersPage() {
                 value={newMemberName}
                 onChange={(e) => setNewMemberName(e.target.value)}
                 placeholder="예: HONG, LJM (영문/이니셜 권장)"
-                className="w-full px-4 py-3 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl outline-none focus:ring-2 focus:ring-zinc-900/10 dark:focus:ring-white/10 text-sm font-semibold text-zinc-900 dark:text-white"
+                className="w-full px-4 py-3 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/20 text-sm font-semibold text-zinc-900 dark:text-white"
               />
             </div>
 
@@ -321,7 +351,7 @@ export default function MembersPage() {
 
             <button
               type="submit"
-              className="w-full py-4 bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200 text-white rounded-2xl font-black text-sm shadow-md active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-2"
+              className="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-black text-sm shadow-md shadow-blue-600/30 active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-2"
             >
               <CheckCircle2 className="w-4 h-4" />
               <span>명단에 등록</span>
@@ -333,8 +363,8 @@ export default function MembersPage() {
             
             {/* Online Members List */}
             <div className="space-y-3 flex-1 overflow-y-auto custom-scrollbar">
-              <h4 className="text-xs font-black text-zinc-900 dark:text-white flex items-center gap-1.5 pb-2 border-b border-zinc-200/60 dark:border-zinc-700/60">
-                <span className="w-2 h-2 rounded-full bg-zinc-900 dark:bg-white animate-pulse" />
+              <h4 className="text-xs font-black text-emerald-400 flex items-center gap-1.5 pb-2 border-b border-zinc-200/60 dark:border-zinc-700/60">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                 <span>현재 접속 중 ({Object.keys(onlineMembers).length}명)</span>
               </h4>
               
@@ -358,7 +388,7 @@ export default function MembersPage() {
                           </div>
                           <span className="text-xs font-bold text-zinc-900 dark:text-white">{onlineUser}</span>
                         </div>
-                        <span className="text-[9px] font-black text-zinc-400 dark:text-zinc-500">
+                        <span className="text-[9px] font-black text-emerald-400">
                           {time} 접속
                         </span>
                       </div>
@@ -371,7 +401,7 @@ export default function MembersPage() {
             {/* Guide Info (At the bottom) */}
             <div className="space-y-1 pt-3 border-t border-zinc-200/60 dark:border-zinc-700/60 shrink-0">
               <h4 className="text-[10px] font-black text-zinc-500 dark:text-zinc-400 flex items-center gap-1">
-                <CircleDot className="w-3 h-3 text-zinc-900 dark:text-white" />
+                <CircleDot className="w-3 h-3 text-blue-400" />
                 <span>실시간 접속 표시 정보</span>
               </h4>
               <p className="text-[9px] leading-relaxed text-zinc-400 dark:text-zinc-500 font-semibold">

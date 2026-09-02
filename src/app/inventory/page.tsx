@@ -256,48 +256,49 @@ export default function InventoryPage() {
         
       await logActivity(actType, actMsg);
     } catch (err) {
-      console.error("Error adjusting stock:", err);
-    }
-  };
+        console.error("Error adjusting stock:", err);
+      }
+    };
 
   return (
     <div className="flex-1 p-3 sm:p-6 md:p-8 space-y-3 sm:space-y-4 flex flex-col min-h-0 bg-zinc-50 dark:bg-zinc-950">
       
-      {/* Top Filter, Search & Actions Bar */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5 sm:gap-3 shrink-0 bg-white dark:bg-zinc-900 p-3 sm:p-3.5 rounded-2xl sm:rounded-3xl shadow-sm border border-zinc-200 dark:border-zinc-800">
-        {/* Category Chips with Horizontal Scroll */}
+      {/* Search & Categories Slim Bar */}
+      <div className="flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center justify-between shrink-0 bg-white dark:bg-zinc-900 p-2.5 sm:p-3 rounded-2xl sm:rounded-3xl shadow-sm border border-zinc-200 dark:border-zinc-800">
+        
+        {/* Categories Chips */}
         <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 max-w-full">
-          {categories.map((cat) => (
+          {categories.map((c) => (
             <button
-              key={cat}
-              onClick={() => setSelectedCategory(cat)}
-              className={`px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 active:scale-95 ${
-                selectedCategory === cat
-                  ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-950 shadow-sm"
-                  : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+              key={c}
+              onClick={() => setSelectedCategory(c)}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all duration-200 cursor-pointer ${
+                selectedCategory === c
+                  ? "bg-blue-600 text-white shadow-sm shadow-blue-600/30 font-black scale-105"
+                  : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700 hover:text-zinc-900 dark:hover:text-white"
               }`}
             >
-              {cat === "all" ? "전체 보기" : cat}
+              {c === "all" ? "전체 보기" : c}
             </button>
           ))}
         </div>
 
-        {/* Right Controls: Search + New Item + Refresh */}
+        {/* Search & Actions */}
         <div className="flex items-center gap-2 shrink-0">
-          <div className="relative flex-1 md:w-64">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 dark:text-zinc-500 w-4 h-4" />
+          <div className="relative flex-1 sm:w-56">
+            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
             <input
               type="text"
-              placeholder="품목 검색..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700/60 rounded-xl text-xs font-medium outline-none focus:ring-2 focus:ring-zinc-900/10 dark:focus:ring-white/10 text-zinc-900 dark:text-white transition-all"
+              placeholder="품목 검색..."
+              className="w-full pl-8 pr-3 py-1.5 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-blue-500/20 text-zinc-900 dark:text-white"
             />
           </div>
 
           <button
             onClick={() => openItemModal(null)}
-            className="flex items-center justify-center gap-1.5 px-3.5 py-2 bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200 text-white rounded-xl font-bold text-xs shadow-sm transition-all active:scale-95 cursor-pointer shrink-0"
+            className="flex items-center justify-center gap-1.5 px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold text-xs shadow-sm shadow-blue-600/30 transition-all active:scale-95 cursor-pointer shrink-0"
             title="새 품목 등록"
           >
             <Plus className="w-4 h-4" />
@@ -321,7 +322,7 @@ export default function InventoryPage() {
       <div className="flex-1 bg-white dark:bg-zinc-900 rounded-[2.5rem] shadow-sm border border-zinc-200 dark:border-zinc-800 overflow-hidden flex flex-col">
         {loading ? (
           <div className="flex-1 flex items-center justify-center p-20">
-            <RefreshCw className="w-8 h-8 text-zinc-400 animate-spin" />
+            <RefreshCw className="w-8 h-8 text-blue-500 animate-spin" />
           </div>
         ) : filteredProducts.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center p-20 text-center space-y-3">
@@ -353,7 +354,22 @@ export default function InventoryPage() {
                       <tr key={p.id} className="hover:bg-zinc-50/60 dark:hover:bg-zinc-800/30 transition-all">
                         <td className="px-8 py-5">
                           <div>
-                            <div className="font-bold text-sm text-zinc-900 dark:text-white">{p.name}</div>
+                            <div className="font-bold text-sm text-zinc-900 dark:text-white flex items-center gap-2">
+                              <span>{p.name}</span>
+                              {isOut ? (
+                                <span className="px-2 py-0.5 bg-rose-500/15 border border-rose-500/30 text-rose-400 text-[9px] font-black rounded-md">
+                                  품절
+                                </span>
+                              ) : isLow ? (
+                                <span className="px-2 py-0.5 bg-amber-500/15 border border-amber-500/30 text-amber-400 text-[9px] font-black rounded-md">
+                                  부족
+                                </span>
+                              ) : (
+                                <span className="px-2 py-0.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[9px] font-black rounded-md">
+                                  정상
+                                </span>
+                              )}
+                            </div>
                             {p.edit_user && (
                               <div className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mt-1">
                                 {p.edit_user} • {p.edit_date ? new Date(p.edit_date).toLocaleDateString() : ""}
@@ -369,7 +385,11 @@ export default function InventoryPage() {
                         <td className="px-8 py-5">
                           <div className="flex flex-col items-center">
                             <span className={`text-base font-black tabular-nums ${
-                              isOut ? "text-zinc-400 line-through" : isLow ? "text-zinc-600 dark:text-zinc-300 font-black" : "text-zinc-900 dark:text-white"
+                              isOut 
+                                ? "text-rose-400 line-through" 
+                                : isLow 
+                                ? "text-amber-400 font-black" 
+                                : "text-emerald-400 dark:text-emerald-400"
                             }`}>
                               {p.stock}
                             </span>
@@ -404,7 +424,7 @@ export default function InventoryPage() {
                                 setOrderQty(1);
                                 setOrderModalOpen(true);
                               }}
-                              className="w-8 h-8 rounded-lg bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-950 flex items-center justify-center font-bold hover:shadow-sm active:scale-95 transition-all cursor-pointer"
+                              className="w-8 h-8 rounded-lg bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center font-bold hover:shadow-sm active:scale-95 transition-all cursor-pointer shadow-sm shadow-blue-600/30"
                               title="일괄 출고"
                             >
                               <ShoppingCart className="w-3.5 h-3.5" />
@@ -415,7 +435,7 @@ export default function InventoryPage() {
                           <div className="flex justify-end gap-1">
                             <button
                               onClick={() => openItemModal(p)}
-                              className="p-2 text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors cursor-pointer"
+                              className="p-2 text-zinc-400 hover:text-blue-400 transition-colors cursor-pointer"
                             >
                               <Edit className="w-4 h-4" />
                             </button>
@@ -424,7 +444,7 @@ export default function InventoryPage() {
                                 setDeletingProduct(p);
                                 setDeleteModalOpen(true);
                               }}
-                              className="p-2 text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors cursor-pointer"
+                              className="p-2 text-zinc-400 hover:text-rose-400 transition-colors cursor-pointer"
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>
@@ -449,14 +469,18 @@ export default function InventoryPage() {
                         <div className="flex items-center gap-1.5">
                           <h4 className="font-extrabold text-sm sm:text-base text-zinc-900 dark:text-white truncate">{p.name}</h4>
                           {isOut ? (
-                            <span className="px-1.5 py-0.5 bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 text-[9px] font-black rounded-md shrink-0">
+                            <span className="px-1.5 py-0.5 bg-rose-500/15 border border-rose-500/30 text-rose-400 text-[9px] font-black rounded-md shrink-0">
                               품절
                             </span>
                           ) : isLow ? (
-                            <span className="px-1.5 py-0.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-[9px] font-black rounded-md shrink-0 border border-zinc-200 dark:border-zinc-700">
+                            <span className="px-1.5 py-0.5 bg-amber-500/15 border border-amber-500/30 text-amber-400 text-[9px] font-black rounded-md shrink-0">
                               부족
                             </span>
-                          ) : null}
+                          ) : (
+                            <span className="px-1.5 py-0.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[9px] font-black rounded-md shrink-0">
+                              정상
+                            </span>
+                          )}
                         </div>
                         <div className="flex flex-wrap gap-1.5 items-center mt-1">
                           <span className="text-[10px] bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 font-bold px-2 py-0.5 rounded-md border border-zinc-200/60 dark:border-zinc-700/60">
@@ -470,7 +494,7 @@ export default function InventoryPage() {
                       <div className="flex gap-1 shrink-0">
                         <button
                           onClick={() => openItemModal(p)}
-                          className="p-2 text-zinc-400 hover:text-zinc-900 dark:hover:text-white rounded-lg active:scale-95 cursor-pointer"
+                          className="p-2 text-zinc-400 hover:text-blue-400 rounded-lg active:scale-95 cursor-pointer"
                           title="수정"
                         >
                           <Edit className="w-4 h-4" />
@@ -480,7 +504,7 @@ export default function InventoryPage() {
                             setDeletingProduct(p);
                             setDeleteModalOpen(true);
                           }}
-                          className="p-2 text-zinc-400 hover:text-zinc-900 dark:hover:text-white rounded-lg active:scale-95 cursor-pointer"
+                          className="p-2 text-zinc-400 hover:text-rose-400 rounded-lg active:scale-95 cursor-pointer"
                           title="삭제"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -492,7 +516,7 @@ export default function InventoryPage() {
                       <div className="flex flex-col">
                         <span className="text-[9px] font-black uppercase text-zinc-400 dark:text-zinc-500 tracking-wider">현재 재고</span>
                         <span className={`text-xl font-black tracking-tight ${
-                          isOut ? "text-zinc-400 line-through" : isLow ? "text-zinc-600 dark:text-zinc-300 font-black" : "text-zinc-900 dark:text-white"
+                          isOut ? "text-rose-400 line-through" : isLow ? "text-amber-400 font-black" : "text-emerald-400"
                         }`}>
                           {p.stock} <span className="text-xs font-semibold text-zinc-400 dark:text-zinc-500">/ {p.target}개</span>
                         </span>
@@ -520,7 +544,7 @@ export default function InventoryPage() {
                             setOrderQty(1);
                             setOrderModalOpen(true);
                           }}
-                          className="p-2 rounded-xl bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950 shadow-sm active:scale-90 transition-transform cursor-pointer"
+                          className="p-2 rounded-xl bg-blue-600 text-white hover:bg-blue-500 shadow-sm shadow-blue-600/30 active:scale-90 transition-transform cursor-pointer"
                           title="일괄 출고"
                         >
                           <ShoppingCart className="w-4 h-4" />

@@ -12,6 +12,25 @@ import {
 } from "lucide-react";
 
 // Same color mapping function to maintain UI consistency
+const getColorForUser = (userName?: string) => {
+  const name = (userName || "UNKNOWN").toUpperCase();
+  const colors = [
+    { text: "text-blue-400", dot: "bg-blue-400" },
+    { text: "text-emerald-400", dot: "bg-emerald-400" },
+    { text: "text-purple-400", dot: "bg-purple-400" },
+    { text: "text-amber-400", dot: "bg-amber-400" },
+    { text: "text-rose-400", dot: "bg-rose-400" },
+    { text: "text-cyan-400", dot: "bg-cyan-400" },
+    { text: "text-fuchsia-400", dot: "bg-fuchsia-400" }
+  ];
+
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const index = Math.abs(hash) % colors.length;
+  return colors[index];
+};
 
 export default function ChatPage() {
   const { user } = useAuth();
@@ -93,7 +112,7 @@ export default function ChatPage() {
       created_at: new Date().toISOString()
     };
 
-    // Optimistic UI update (optional, but let's trust Supabase realtime which is fast)
+    // Optimistic UI update
     setNewMessage("");
 
     try {
@@ -110,7 +129,7 @@ export default function ChatPage() {
       <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 custom-scrollbar bg-zinc-50/50 dark:bg-zinc-950/50">
         {loading ? (
           <div className="h-full flex items-center justify-center">
-            <RefreshCw className="w-8 h-8 text-zinc-400 animate-spin" />
+            <RefreshCw className="w-8 h-8 text-blue-500 animate-spin" />
           </div>
         ) : messages.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-center space-y-2 p-6">
@@ -122,21 +141,24 @@ export default function ChatPage() {
         ) : (
           messages.map((msg) => {
             const isMe = msg.user_id === user?.id;
+            const senderColor = getColorForUser(msg.user_name);
             return (
               <div 
                 key={msg.id} 
                 className={`max-w-[85%] sm:max-w-[70%] ${isMe ? "ml-auto text-right" : "mr-auto"}`}
               >
                 <div className="space-y-1">
-                  {/* Sender Name */}
-                  <span className={`text-[10px] font-black text-zinc-500 dark:text-zinc-400 uppercase tracking-widest px-1 block mb-0.5 ${isMe ? "text-right" : "text-left"}`}>
+                  {/* Sender Name with Color */}
+                  <span className={`text-[10px] font-black uppercase tracking-widest px-1 block mb-0.5 ${
+                    isMe ? "text-right text-zinc-400" : `text-left ${senderColor.text}`
+                  }`}>
                     {msg.user_name}
                   </span>
                   
                   {/* Bubble content */}
                   <div className={`p-3.5 sm:p-4 rounded-[1.3rem] sm:rounded-[1.5rem] shadow-sm text-xs sm:text-sm font-medium leading-relaxed text-left w-fit ${
                     isMe 
-                      ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-950 rounded-tr-none ml-auto" 
+                      ? "bg-blue-600 text-white rounded-tr-none ml-auto shadow-blue-600/20" 
                       : "bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 rounded-tl-none"
                   }`}>
                     {msg.message}
@@ -165,12 +187,12 @@ export default function ChatPage() {
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
             placeholder="메시지를 입력하세요 (Shift + Enter 줄바꿈)..."
-            className="flex-1 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-medium outline-none focus:ring-2 focus:ring-zinc-900/10 dark:focus:ring-white/10 text-zinc-900 dark:text-white transition-all"
+            className="flex-1 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500/20 text-zinc-900 dark:text-white transition-all"
           />
           <button
             type="submit"
             disabled={!newMessage.trim()}
-            className="px-4 sm:px-6 py-2.5 sm:py-3 bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200 text-white rounded-2xl font-bold text-xs sm:text-sm flex items-center gap-1.5 shadow-sm disabled:opacity-40 disabled:pointer-events-none transition-all active:scale-95 cursor-pointer shrink-0"
+            className="px-4 sm:px-6 py-2.5 sm:py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-bold text-xs sm:text-sm flex items-center gap-1.5 shadow-sm shadow-blue-600/30 disabled:opacity-40 disabled:pointer-events-none transition-all active:scale-95 cursor-pointer shrink-0"
           >
             <Send className="w-4 h-4" />
             <span className="hidden sm:inline">전송</span>

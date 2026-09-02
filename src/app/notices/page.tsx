@@ -169,7 +169,7 @@ export default function NoticesPage() {
       <div className="flex justify-end items-center gap-2 shrink-0 bg-white dark:bg-zinc-900 p-2.5 sm:p-3 rounded-2xl sm:rounded-3xl shadow-sm border border-zinc-200 dark:border-zinc-800">
         <button
           onClick={() => openFormModal(null)}
-          className="flex items-center gap-1.5 px-3.5 py-2 bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200 text-white rounded-xl font-bold text-xs shadow-sm transition-all active:scale-95 cursor-pointer"
+          className="flex items-center gap-1.5 px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold text-xs shadow-sm shadow-blue-600/30 transition-all active:scale-95 cursor-pointer"
         >
           <Plus className="w-4 h-4" />
           <span>공지 작성</span>
@@ -190,7 +190,7 @@ export default function NoticesPage() {
       <div className="flex-1 overflow-y-auto pr-1 sm:pr-2 custom-scrollbar">
         {loading ? (
           <div className="h-64 flex items-center justify-center">
-            <RefreshCw className="w-8 h-8 text-zinc-400 animate-spin" />
+            <RefreshCw className="w-8 h-8 text-blue-500 animate-spin" />
           </div>
         ) : notices.length === 0 ? (
           <div className="h-64 flex flex-col items-center justify-center text-center space-y-3 bg-white dark:bg-zinc-900 rounded-[2rem] sm:rounded-[2.5rem] border border-zinc-200 dark:border-zinc-800">
@@ -232,14 +232,14 @@ export default function NoticesPage() {
                   <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
                     <button
                       onClick={() => openFormModal(notice)}
-                      className="p-1 hover:text-zinc-900 dark:hover:text-white rounded"
+                      className="p-1 hover:text-blue-400 rounded"
                       title="수정"
                     >
                       <Edit className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => handleDeleteNotice(notice.id)}
-                      className="p-1 hover:text-zinc-900 dark:hover:text-white rounded"
+                      className="p-1 hover:text-rose-400 rounded"
                       title="삭제"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -302,7 +302,7 @@ export default function NoticesPage() {
                   </button>
                   <button
                     onClick={() => handleDeleteNotice(viewingNotice.id)}
-                    className="py-4 px-6 bg-zinc-100 dark:bg-zinc-800 text-zinc-700 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-white rounded-2xl font-black text-sm hover:shadow transition-all cursor-pointer border border-zinc-200 dark:border-zinc-700"
+                    className="py-4 px-6 bg-zinc-100 dark:bg-zinc-800 text-zinc-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-2xl font-black text-sm hover:shadow transition-all cursor-pointer border border-zinc-200 dark:border-zinc-700"
                   >
                     삭제
                   </button>
@@ -319,7 +319,7 @@ export default function NoticesPage() {
                     value={formTitle}
                     onChange={(e) => setFormTitle(e.target.value)}
                     placeholder="공지 제목을 입력해 주세요."
-                    className="w-full px-4 py-3 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl outline-none focus:ring-2 focus:ring-zinc-900/10 dark:focus:ring-white/10 text-sm font-semibold text-zinc-900 dark:text-white"
+                    className="w-full px-4 py-3 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/20 text-sm font-semibold text-zinc-900 dark:text-white"
                   />
                 </div>
 
@@ -333,7 +333,7 @@ export default function NoticesPage() {
                     value={formContent}
                     onChange={(e) => setFormContent(e.target.value)}
                     placeholder="상세 공지 내용을 작성해 주세요."
-                    className="w-full h-48 px-4 py-3 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl outline-none focus:ring-2 focus:ring-zinc-900/10 dark:focus:ring-white/10 text-sm font-semibold resize-none text-zinc-900 dark:text-white"
+                    className="w-full h-48 px-4 py-3 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/20 text-sm font-semibold resize-none text-zinc-900 dark:text-white"
                   />
                 </div>
 
@@ -348,7 +348,7 @@ export default function NoticesPage() {
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 py-4 bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200 text-white rounded-2xl font-black text-sm shadow-md active:scale-95 transition-all cursor-pointer"
+                    className="flex-1 py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-black text-sm shadow-md shadow-blue-600/30 active:scale-95 transition-all cursor-pointer"
                   >
                     게시하기
                   </button>
