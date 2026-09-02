@@ -45,22 +45,32 @@ export default function InventoryPage() {
   useEffect(() => {
     let ignore = false;
 
-    const normalizeProduct = (p: Record<string, unknown>): Product => ({
-      id: String(p.id || ""),
-      name: String(p.name || ""),
-      category: String(p.category || ""),
-      sku: p.sku ? String(p.sku) : null,
-      item_type: p.sku ? String(p.sku) : (p.item_type ? String(p.item_type) : ""),
-      stock_quantity: typeof p.stock_quantity === "number" ? p.stock_quantity : (typeof p.stock === "number" ? p.stock : 0),
-      stock: typeof p.stock_quantity === "number" ? p.stock_quantity : (typeof p.stock === "number" ? p.stock : 0),
-      target_quantity: typeof p.target_quantity === "number" ? p.target_quantity : (typeof p.target === "number" ? p.target : 0),
-      target: typeof p.target_quantity === "number" ? p.target_quantity : (typeof p.target === "number" ? p.target : 0),
-      price: typeof p.price === "number" ? p.price : 0,
-      updated_by: p.updated_by ? String(p.updated_by) : (p.edit_user ? String(p.edit_user) : ""),
-      edit_user: p.updated_by ? String(p.updated_by) : (p.edit_user ? String(p.edit_user) : ""),
-      updated_at: p.updated_at ? String(p.updated_at) : (p.edit_date ? String(p.edit_date) : ""),
-      edit_date: p.updated_at ? String(p.updated_at) : (p.edit_date ? String(p.edit_date) : ""),
-    });
+    const normalizeProduct = (p: Record<string, unknown>): Product => {
+      const rawSku = p.sku ? String(p.sku) : "";
+      const parsedType = rawSku 
+        ? (rawSku.includes("_") ? rawSku.split("_")[0] : rawSku) 
+        : (p.item_type ? String(p.item_type) : "");
+
+      const stockNum = typeof p.stock_quantity === "number" ? p.stock_quantity : (typeof p.stock === "number" ? p.stock : 0);
+      const targetNum = typeof p.target_quantity === "number" ? p.target_quantity : (typeof p.target === "number" ? p.target : 0);
+
+      return {
+        id: String(p.id || ""),
+        name: String(p.name || ""),
+        category: String(p.category || ""),
+        sku: p.sku ? String(p.sku) : null,
+        item_type: parsedType,
+        stock_quantity: stockNum,
+        stock: stockNum,
+        target_quantity: targetNum,
+        target: targetNum,
+        price: typeof p.price === "number" ? p.price : 0,
+        updated_by: p.updated_by ? String(p.updated_by) : (p.edit_user ? String(p.edit_user) : ""),
+        edit_user: p.updated_by ? String(p.updated_by) : (p.edit_user ? String(p.edit_user) : ""),
+        updated_at: p.updated_at ? String(p.updated_at) : (p.edit_date ? String(p.edit_date) : ""),
+        edit_date: p.updated_at ? String(p.updated_at) : (p.edit_date ? String(p.edit_date) : ""),
+      };
+    };
 
     const loadProducts = async () => {
       try {
@@ -188,13 +198,18 @@ export default function InventoryPage() {
   // 6. Save Product (Insert or Update)
   const saveProduct = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    if (!user) {
+      alert("로그인이 필요합니다.");
+      return;
+    }
 
     const userShort = user.email ? user.email.split("@")[0].toUpperCase() : "USER";
+    const skuVal = formType ? `${formType}_${Date.now().toString(36)}` : null;
+
     const payload = {
-      name: formName,
-      category: formCategory,
-      sku: formType || null,
+      name: formName.trim(),
+      category: formCategory.trim(),
+      sku: skuVal,
       stock_quantity: formStock,
       target_quantity: formStock,
       price: formPrice || 0,
@@ -210,14 +225,30 @@ export default function InventoryPage() {
         await logActivity("UPDATE", `${formName} 품목 정보를 수정했습니다.`);
       } else {
         // Insert
-        const { error } = await supabase.from("products").insert([payload]);
-        if (error) throw error;
+        let { error } = await supabase.from("products").insert([payload]);
+        if (error && error.message?.includes("sku")) {
+          // If SKU constraint error, retry with null
+          payload.sku = null;
+          const retry = await supabase.from("products").insert([payload]);
+          error = retry.error;
+        }
+        if (error) {
+          const lowerMsg = error.message?.toLowerCase() || "";
+          if (error.code === "23505" || lowerMsg.includes("duplicate key") || lowerMsg.includes("unique")) {
+            if (lowerMsg.includes("name") || lowerMsg.includes("products_name_key")) {
+              alert(`이미 '${formName}' 이름의 품목이 등록되어 있습니다.\n\n동일한 품목을 다른 장소에 별도로 등록하시려면 품목명에 장소를 함께 기재해 주세요.\n(예: ${formName} (${formCategory}))`);
+              return;
+            }
+          }
+          throw error;
+        }
         await logActivity("CREATE", `${formName} 품목을 새로 추가했습니다.`);
       }
       setItemModalOpen(false);
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("Error saving product:", err);
-      alert("품목 저장 중 오류가 발생했습니다.");
+      const errMsg = err instanceof Error ? err.message : (typeof err === "object" && err !== null && "message" in err ? String((err as { message: unknown }).message) : "알 수 없는 오류가 발생했습니다.");
+      alert(`품목 저장 오류: ${errMsg}`);
     }
   };
 
