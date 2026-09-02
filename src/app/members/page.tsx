@@ -250,31 +250,8 @@ export default function MembersPage() {
   };
 
   return (
-    <div className="flex-1 p-4 sm:p-6 md:p-10 space-y-4 sm:space-y-6 bg-surface dark:bg-slate-900 flex flex-col min-h-0">
+    <div className="flex-1 p-3 sm:p-6 md:p-8 space-y-3 sm:space-y-4 bg-surface dark:bg-slate-900 flex flex-col min-h-0">
       
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 shrink-0">
-        <div>
-          <h2 className="text-2xl sm:text-3xl font-black font-headline text-primary dark:text-blue-400 tracking-tighter">
-            Team Workspace Directory
-          </h2>
-          <p className="text-xs sm:text-sm text-on-surface-variant dark:text-gray-400 font-semibold mt-1">
-            등록된 팀원 목록을 확인하고 실시간 네트워크 접속 현황을 모니터링합니다.
-          </p>
-        </div>
-        
-        <button
-          onClick={() => {
-            setLoading(true);
-            fetchRegisteredMembers();
-          }}
-          className="p-2.5 sm:p-3 bg-white dark:bg-slate-800 text-on-surface-variant dark:text-gray-400 rounded-2xl hover:text-primary dark:hover:text-white border border-black/[0.03] dark:border-white/[0.03] shadow-sm hover:shadow transition-all cursor-pointer active:scale-95 shrink-0"
-          title="새로고침"
-        >
-          <RefreshCw className="w-4 h-4 sm:w-5 sm:h-5" />
-        </button>
-      </div>
-
       {/* Main Grid */}
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-5 sm:gap-6 min-h-0">
         
@@ -285,6 +262,16 @@ export default function MembersPage() {
               <Users className="w-5 h-5 text-primary" />
               <span>등록된 팀원 리스트 ({members.length}명)</span>
             </h3>
+            <button
+              onClick={() => {
+                setLoading(true);
+                fetchRegisteredMembers();
+              }}
+              className="p-2 hover:bg-surface-container-low dark:hover:bg-slate-700 text-on-surface-variant dark:text-gray-400 rounded-xl transition-all cursor-pointer active:scale-95 shrink-0"
+              title="새로고침"
+            >
+              <RefreshCw className="w-4 h-4" />
+            </button>
           </div>
 
           {loading ? (

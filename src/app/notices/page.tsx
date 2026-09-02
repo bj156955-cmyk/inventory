@@ -163,37 +163,27 @@ export default function NoticesPage() {
   };
 
   return (
-    <div className="flex-1 p-4 sm:p-6 md:p-10 space-y-4 sm:space-y-6 bg-surface dark:bg-slate-900 flex flex-col min-h-0">
+    <div className="flex-1 p-3 sm:p-6 md:p-8 space-y-3 sm:space-y-4 bg-surface dark:bg-slate-900 flex flex-col min-h-0">
       
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 shrink-0">
-        <div>
-          <h2 className="text-2xl sm:text-3xl font-black font-headline text-primary dark:text-blue-400 tracking-tighter">
-            Atelier Announcement
-          </h2>
-          <p className="text-xs sm:text-sm text-on-surface-variant dark:text-gray-400 font-semibold mt-1">
-            팀원들에게 공유할 공지사항과 중요 변경사항을 공지합니다.
-          </p>
-        </div>
-        <div className="flex gap-2 sm:gap-3 w-full sm:w-auto justify-end">
-          <button
-            onClick={() => openFormModal(null)}
-            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 bg-primary dark:bg-blue-600 text-white rounded-2xl font-bold text-xs sm:text-sm shadow-md hover:shadow-lg transition-all duration-200 active:scale-95 cursor-pointer"
-          >
-            <Plus className="w-4 h-4" />
-            <span>공지 작성</span>
-          </button>
-          <button
-            onClick={() => {
-              setLoading(true);
-              fetchNotices();
-            }}
-            className="p-2.5 sm:p-3 bg-surface-container-low dark:bg-slate-800 text-on-surface-variant dark:text-gray-400 rounded-2xl hover:text-primary dark:hover:text-white transition-all cursor-pointer active:scale-95 shadow-sm shrink-0"
-            title="새로고침"
-          >
-            <RefreshCw className="w-4 h-4 sm:w-5 sm:h-5" />
-          </button>
-        </div>
+      {/* Slim Actions Bar */}
+      <div className="flex justify-end items-center gap-2 shrink-0 bg-white dark:bg-slate-800/80 p-2.5 sm:p-3 rounded-2xl sm:rounded-3xl shadow-sm border border-black/[0.03] dark:border-white/[0.03]">
+        <button
+          onClick={() => openFormModal(null)}
+          className="flex items-center gap-1.5 px-3.5 py-2 bg-primary dark:bg-blue-600 text-white rounded-xl font-bold text-xs shadow-sm transition-all active:scale-95 cursor-pointer"
+        >
+          <Plus className="w-4 h-4" />
+          <span>공지 작성</span>
+        </button>
+        <button
+          onClick={() => {
+            setLoading(true);
+            fetchNotices();
+          }}
+          className="p-2 bg-surface-container-low dark:bg-slate-700/60 text-on-surface-variant/60 dark:text-gray-400 hover:text-primary dark:hover:text-white rounded-xl transition-all cursor-pointer active:scale-95 shrink-0"
+          title="새로고침"
+        >
+          <RefreshCw className="w-4 h-4" />
+        </button>
       </div>
 
       {/* Notices Board */}

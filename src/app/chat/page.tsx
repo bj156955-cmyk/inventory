@@ -6,7 +6,6 @@ import { ChatMessage } from "@/types";
 import { useAuth } from "@/context/AuthContext";
 import { 
   Send, 
-  MessageSquare, 
   Clock, 
   RefreshCw, 
   AlertCircle 
@@ -20,27 +19,6 @@ export default function ChatPage() {
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(true);
   const chatEndRef = useRef<HTMLDivElement>(null);
-
-  // 1. Fetch initial messages (Limit to past 30 days to optimize DB space)
-  const fetchMessages = async () => {
-    try {
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-      const { data, error } = await supabase
-        .from("chat_messages")
-        .select("*")
-        .gte("created_at", thirtyDaysAgo.toISOString())
-        .order("created_at", { ascending: true });
-
-      if (error) throw error;
-      setMessages(data || []);
-    } catch (err) {
-      console.error("Error fetching chat messages:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   useEffect(() => {
     let ignore = false;
@@ -128,30 +106,6 @@ export default function ChatPage() {
 
   return (
     <div className="flex-1 bg-surface dark:bg-slate-900 flex flex-col h-[100dvh] min-h-0">
-      
-      {/* Header */}
-      <header className="px-4 sm:px-6 py-3.5 sm:py-4 border-b border-black/[0.04] dark:border-white/[0.04] bg-white dark:bg-slate-800 flex justify-between items-center shrink-0 shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 sm:w-10 sm:h-10 bg-primary/5 dark:bg-blue-500/10 rounded-xl flex items-center justify-center text-primary dark:text-blue-400 shrink-0">
-            <MessageSquare className="w-5 h-5" />
-          </div>
-          <div>
-            <h2 className="text-sm sm:text-base font-black text-primary dark:text-white tracking-tight">Atelier Live Chat</h2>
-            <p className="text-[9px] sm:text-[10px] text-on-surface-variant/60 dark:text-gray-400 font-bold uppercase tracking-wider">팀원 실시간 소통 채널</p>
-          </div>
-        </div>
-        <button
-          onClick={() => {
-            setLoading(true);
-            fetchMessages();
-          }}
-          className="p-2 sm:p-2.5 hover:bg-surface-container-low dark:hover:bg-slate-700 rounded-xl text-on-surface-variant/50 hover:text-primary dark:hover:text-white transition-all cursor-pointer active:scale-95"
-          title="새로고침"
-        >
-          <RefreshCw className="w-4 h-4" />
-        </button>
-      </header>
-
       {/* Message Area */}
       <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 custom-scrollbar bg-surface-container-low/20">
         {loading ? (

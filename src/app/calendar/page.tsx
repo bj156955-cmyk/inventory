@@ -467,47 +467,62 @@ export default function CalendarPage() {
 
 
   return (
-    <div className="flex-1 p-4 sm:p-6 md:p-10 space-y-4 sm:space-y-6 bg-surface dark:bg-slate-900 flex flex-col min-h-0">
+    <div className="flex-1 p-3 sm:p-6 md:p-8 space-y-3 sm:space-y-4 bg-surface dark:bg-slate-900 flex flex-col min-h-0">
       
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 shrink-0">
-        <div>
-          <h2 className="text-2xl sm:text-3xl font-black font-headline text-primary dark:text-blue-400 tracking-tighter">
-            Team Shared Calendar
-          </h2>
-          <p className="text-xs sm:text-sm text-on-surface-variant dark:text-gray-400 font-semibold mt-1">
-            팀원들의 일정을 등록하고 실시간으로 공유하는 단독 캘린더입니다.
-          </p>
+      {/* Slim Top Month & Actions Bar */}
+      <div className="flex items-center justify-between gap-2 shrink-0 bg-white dark:bg-slate-800/80 p-2.5 sm:p-3 rounded-2xl sm:rounded-3xl shadow-sm border border-black/[0.03] dark:border-white/[0.03]">
+        <div className="flex items-center gap-1 sm:gap-2">
+          <button 
+            onClick={handlePrevMonth}
+            className="p-1.5 sm:p-2 hover:bg-surface-container-low dark:hover:bg-slate-700 rounded-xl transition-all cursor-pointer text-on-surface-variant dark:text-gray-400 active:scale-95"
+            title="이전 달"
+          >
+            <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+          </button>
+          <span className="text-xs sm:text-base font-black text-primary dark:text-white px-2 uppercase tracking-wider">
+            {format(currentMonth, "yyyy. MMMM", { locale: ko })}
+          </span>
+          <button 
+            onClick={handleNextMonth}
+            className="p-1.5 sm:p-2 hover:bg-surface-container-low dark:hover:bg-slate-700 rounded-xl transition-all cursor-pointer text-on-surface-variant dark:text-gray-400 active:scale-95"
+            title="다음 달"
+          >
+            <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
+          </button>
         </div>
-        <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-3 w-full sm:w-auto">
-          <div className="flex items-center gap-1.5 sm:gap-3 bg-white dark:bg-slate-800 p-1.5 sm:p-2 rounded-2xl border border-black/[0.03] dark:border-white/[0.03] shadow-sm">
-            <button 
-              onClick={handlePrevMonth}
-              className="p-1.5 sm:p-2 hover:bg-surface-container-low dark:hover:bg-slate-700 rounded-xl transition-all cursor-pointer text-on-surface-variant dark:text-gray-400 active:scale-95"
-              title="이전 달"
-            >
-              <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
-            </button>
-            <span className="text-xs sm:text-sm font-black text-primary dark:text-white px-2 uppercase tracking-wider">
-              {format(currentMonth, "yyyy. MMMM", { locale: ko })}
-            </span>
-            <button 
-              onClick={handleNextMonth}
-              className="p-1.5 sm:p-2 hover:bg-surface-container-low dark:hover:bg-slate-700 rounded-xl transition-all cursor-pointer text-on-surface-variant dark:text-gray-400 active:scale-95"
-              title="다음 달"
-            >
-              <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
-            </button>
-          </div>
+
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={() => {
+              const today = new Date();
+              const todayStr = format(today, "yyyy-MM-dd");
+              setSelectedDate(today);
+              setSelectedEvent(null);
+              setFormTitle("");
+              setFormDesc("");
+              setFormStartDate(todayStr);
+              setFormEndDate(todayStr);
+              setFormStartTime("09:00");
+              setFormEndTime("18:00");
+              const defaultUser = user?.email?.split("@")[0].toUpperCase() || "UNKNOWN";
+              setSelectedMembers([defaultUser]);
+              setModalOpen(true);
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 bg-primary dark:bg-blue-600 text-white rounded-xl font-bold text-xs shadow-sm active:scale-95 transition-all cursor-pointer"
+            title="새 일정 등록"
+          >
+            <Plus className="w-4 h-4" />
+            <span className="hidden sm:inline">새 일정</span>
+          </button>
           <button
             onClick={() => {
               setLoading(true);
               fetchEvents();
             }}
-            className="p-2.5 sm:p-3 bg-surface-container-low dark:bg-slate-800 text-on-surface-variant dark:text-gray-400 rounded-2xl hover:text-primary dark:hover:text-white transition-all cursor-pointer shadow-sm active:scale-95 shrink-0"
+            className="p-1.5 sm:p-2 bg-surface-container-low dark:bg-slate-700/60 text-on-surface-variant/60 dark:text-gray-400 hover:text-primary dark:hover:text-white rounded-xl transition-all cursor-pointer active:scale-95 shrink-0"
             title="새로고침"
           >
-            <RefreshCw className="w-4 h-4 sm:w-5 sm:h-5" />
+            <RefreshCw className="w-4 h-4" />
           </button>
         </div>
       </div>

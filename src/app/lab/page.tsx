@@ -10,7 +10,6 @@ import {
   AllowedUser 
 } from "@/types";
 import { 
-  FlaskConical, 
   RefreshCw,
   Sparkles,
   Plus,
@@ -457,33 +456,7 @@ export default function LabPage() {
   };
 
   return (
-    <div className="flex-1 p-4 sm:p-6 md:p-10 space-y-6 sm:space-y-8 flex flex-col min-h-0 bg-surface dark:bg-slate-900">
-      
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-3 sm:gap-4 shrink-0">
-        <div>
-          <h2 className="text-2xl sm:text-3xl font-black font-headline text-primary dark:text-blue-400 tracking-tighter flex items-center gap-2">
-            <FlaskConical className="w-7 h-7 text-primary dark:text-blue-400" />
-            <span>Atelier Lab Workspace</span>
-          </h2>
-          <p className="text-xs sm:text-sm text-on-surface-variant dark:text-gray-400 font-semibold mt-1">
-            연구 물품 주문 현황과 주간 청소 당번을 실시간으로 관리합니다.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => {
-              setLoading(true);
-              window.location.reload();
-            }}
-            className="p-2.5 sm:p-3 bg-surface-container-low dark:bg-slate-800 text-on-surface-variant dark:text-gray-400 rounded-2xl hover:text-primary dark:hover:text-white transition-all cursor-pointer shadow-sm active:scale-95 shrink-0"
-            title="새로고침"
-          >
-            <RefreshCw className="w-4 h-4 sm:w-5 sm:h-5" />
-          </button>
-        </div>
-      </div>
-
+    <div className="flex-1 p-3 sm:p-6 md:p-8 space-y-3 sm:space-y-4 flex flex-col min-h-0 bg-surface dark:bg-slate-900">
       {loading ? (
         <div className="flex-1 flex items-center justify-center min-h-[300px]">
           <RefreshCw className="w-8 h-8 text-primary dark:text-blue-500 animate-spin" />
