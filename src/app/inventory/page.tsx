@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
 import { Product } from "@/types";
 import { useAuth } from "@/context/AuthContext";
@@ -107,15 +107,34 @@ export default function InventoryPage() {
     }
   };
 
-  // 3. Dynamic Location Categories (Default 4 locations + any custom locations from products)
-  const DEFAULT_LOCATIONS = ["연구동", "자생동", "박사님 방", "컨테이너"];
-  const dynamicLocations = Array.from(
-    new Set([
-      ...DEFAULT_LOCATIONS,
-      ...products.map((p) => (p.category || "").trim()).filter(Boolean),
-    ])
-  );
-  const categoriesList = ["all", ...dynamicLocations];
+  // 3. Location Categories: Only locations with actual products + 'all' (전체보기)
+  const existingLocations = useMemo(() => {
+    return Array.from(
+      new Set(
+        products
+          .map((p) => (p.category || "").trim())
+          .filter(Boolean)
+      )
+    );
+  }, [products]);
+
+  const categoriesList = useMemo(() => ["all", ...existingLocations], [existingLocations]);
+
+  // Derived active category (auto-fallback to 'all' if selected is not present)
+  const activeCategory = categoriesList.includes(selectedCategory) ? selectedCategory : "all";
+
+  // Suggested locations for modal quick selection
+  const modalSuggestedLocations = useMemo(() => {
+    return Array.from(
+      new Set([
+        "연구동",
+        "자생동",
+        "박사님 방",
+        "컨테이너",
+        ...existingLocations
+      ])
+    );
+  }, [existingLocations]);
 
   // 4. Filter products by search & location category
   const filteredProducts = products.filter((p) => {
@@ -123,9 +142,9 @@ export default function InventoryPage() {
     const searchLower = search.toLowerCase();
     const matchesSearch = p.name.toLowerCase().includes(searchLower) || 
                           pCategory.toLowerCase().includes(searchLower);
-    const matchesCategory = selectedCategory === "all" || 
-                            pCategory === selectedCategory || 
-                            pCategory.includes(selectedCategory);
+    const matchesCategory = activeCategory === "all" || 
+                            pCategory === activeCategory || 
+                            pCategory.includes(activeCategory);
     return matchesSearch && matchesCategory;
   });
 
@@ -282,24 +301,44 @@ export default function InventoryPage() {
         </button>
       </div>
 
-      {/* Dynamic Location Categories Tabs (Equal Proportions & Generous Spacing) */}
-      <div className="flex items-center gap-2 sm:gap-2.5 w-full overflow-x-auto no-scrollbar py-0.5 mb-4 sm:mb-6 shrink-0">
-        {categoriesList.map((c) => (
-          <button
-            key={c}
-            type="button"
-            onClick={() => setSelectedCategory(c)}
-            className={`flex-1 min-w-[70px] sm:min-w-[80px] py-2.5 px-2 rounded-2xl text-[11px] sm:text-xs font-bold text-center whitespace-nowrap transition-all duration-200 cursor-pointer select-none active:scale-95 shrink-0 sm:shrink ${
-              selectedCategory === c
-                ? "bg-blue-600 text-white shadow-sm shadow-blue-600/30 font-black scale-[1.02]"
-                : "bg-white dark:bg-zinc-900 border border-zinc-200/90 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:border-zinc-300 dark:hover:border-zinc-700 hover:text-zinc-900 dark:hover:text-white shadow-xs"
-            }`}
-            title={c === "all" ? "전체보기" : c}
-          >
-            {c === "all" ? "전체보기" : c}
-          </button>
-        ))}
-      </div>
+      {/* Dynamic Location Categories Tabs (Adaptive: <=5 fit single line, >5 scrollable slide) */}
+      {categoriesList.length <= 5 ? (
+        <div className="flex items-center gap-1.5 sm:gap-2.5 w-full mb-4 sm:mb-6 shrink-0">
+          {categoriesList.map((c) => (
+            <button
+              key={c}
+              type="button"
+              onClick={() => setSelectedCategory(c)}
+              className={`flex-1 min-w-0 py-2.5 px-1 sm:px-2 rounded-2xl text-[11px] sm:text-xs font-bold text-center truncate transition-all duration-200 cursor-pointer select-none active:scale-95 ${
+                activeCategory === c
+                  ? "bg-blue-600 text-white shadow-sm shadow-blue-600/30 font-black scale-[1.02]"
+                  : "bg-white dark:bg-zinc-900 border border-zinc-200/90 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:border-zinc-300 dark:hover:border-zinc-700 hover:text-zinc-900 dark:hover:text-white shadow-xs"
+              }`}
+              title={c === "all" ? "전체보기" : c}
+            >
+              {c === "all" ? "전체보기" : c}
+            </button>
+          ))}
+        </div>
+      ) : (
+        <div className="flex items-center gap-2 sm:gap-2.5 w-full overflow-x-auto no-scrollbar scroll-smooth py-0.5 mb-4 sm:mb-6 shrink-0">
+          {categoriesList.map((c) => (
+            <button
+              key={c}
+              type="button"
+              onClick={() => setSelectedCategory(c)}
+              className={`min-w-fit px-3.5 sm:px-4 py-2.5 rounded-2xl text-xs font-bold text-center whitespace-nowrap transition-all duration-200 cursor-pointer select-none active:scale-95 shrink-0 ${
+                activeCategory === c
+                  ? "bg-blue-600 text-white shadow-sm shadow-blue-600/30 font-black scale-[1.02]"
+                  : "bg-white dark:bg-zinc-900 border border-zinc-200/90 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:border-zinc-300 dark:hover:border-zinc-700 hover:text-zinc-900 dark:hover:text-white shadow-xs"
+              }`}
+              title={c === "all" ? "전체보기" : c}
+            >
+              {c === "all" ? "전체보기" : c}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Product List Section (No Outer Box Wrapper) */}
       <div className="flex-1 flex flex-col min-h-0">
@@ -311,9 +350,9 @@ export default function InventoryPage() {
           <div className="flex-1 flex flex-col items-center justify-center p-12 sm:p-20 text-center space-y-3 bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800">
             <AlertCircle className="w-12 h-12 text-zinc-300 dark:text-zinc-700" />
             <p className="text-sm font-semibold text-zinc-500 dark:text-zinc-400">
-              {selectedCategory === "all" 
+              {activeCategory === "all" 
                 ? "등록된 품목이 없습니다." 
-                : `'${selectedCategory}' 위치에 등록된 품목이 없습니다.`}
+                : `'${activeCategory}' 위치에 등록된 품목이 없습니다.`}
             </p>
           </div>
         ) : (
@@ -585,7 +624,7 @@ export default function InventoryPage() {
                     className="w-full px-4 py-3 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/20 text-sm font-medium text-zinc-900 dark:text-white"
                   />
                   <div className="flex gap-1 pt-1 flex-wrap">
-                    {dynamicLocations.map((loc) => (
+                    {modalSuggestedLocations.map((loc) => (
                       <button
                         key={loc}
                         type="button"
