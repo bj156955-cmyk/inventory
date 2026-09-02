@@ -5,7 +5,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { 
-  LayoutDashboard, 
   Package, 
   Calendar, 
   Megaphone, 
@@ -28,31 +27,35 @@ export default function Sidebar() {
 
   // 5 Core Mobile Tabs
   const primaryTabs = [
-    { name: "Dashboard", shortName: "홈", href: "/", icon: LayoutDashboard },
     { name: "Inventory", shortName: "재고", href: "/inventory", icon: Package },
     { name: "Lab Space", shortName: "연구실", href: "/lab", icon: FlaskConical },
     { name: "Calendar", shortName: "일정", href: "/calendar", icon: Calendar },
+    { name: "Chat", shortName: "채팅", href: "/chat", icon: MessageSquare },
   ];
 
   // Secondary Features inside More Bottom Sheet
-  const moreItems = [
-    { name: "실시간 채팅", description: "팀원 간 실시간 메시지 교환", href: "/chat", icon: MessageSquare, badge: "Live" },
+  const moreItems: Array<{
+    name: string;
+    description: string;
+    href: string;
+    icon: React.ComponentType<{ className?: string }>;
+    badge?: string;
+  }> = [
     { name: "공지사항", description: "연구실 주요 공지 및 안내", href: "/notices", icon: Megaphone },
     { name: "팀원 디렉토리", description: "등록된 팀원 및 접속 현황", href: "/members", icon: Users },
   ];
 
   // All desktop items
   const allDesktopItems = [
-    { name: "Dashboard", shortName: "홈", href: "/", icon: LayoutDashboard },
-    { name: "Lab Space", shortName: "연구실", href: "/lab", icon: FlaskConical },
     { name: "Inventory", shortName: "재고", href: "/inventory", icon: Package },
+    { name: "Lab Space", shortName: "연구실", href: "/lab", icon: FlaskConical },
     { name: "Calendar", shortName: "일정", href: "/calendar", icon: Calendar },
-    { name: "Notices", shortName: "공지", href: "/notices", icon: Megaphone },
     { name: "Chat", shortName: "채팅", href: "/chat", icon: MessageSquare },
+    { name: "Notices", shortName: "공지", href: "/notices", icon: Megaphone },
     { name: "Members", shortName: "팀원", href: "/members", icon: Users },
   ];
 
-  const isMoreActive = ["/chat", "/notices", "/members"].includes(pathname);
+  const isMoreActive = ["/notices", "/members"].includes(pathname);
 
   return (
     <>
@@ -61,7 +64,7 @@ export default function Sidebar() {
         <div className="flex flex-col items-center space-y-10 w-full">
           {/* Logo */}
           <Link 
-            href="/" 
+            href="/inventory" 
             className="w-12 h-12 bg-primary rounded-2xl flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 transition-all duration-300"
             title="Atelier Home"
           >

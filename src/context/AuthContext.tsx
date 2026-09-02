@@ -50,7 +50,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setLoading(false);
         
         if (session && pathname === "/login") {
-          router.replace("/");
+          router.replace("/inventory");
         } else if (!session && pathname !== "/login") {
           router.replace("/login");
         }

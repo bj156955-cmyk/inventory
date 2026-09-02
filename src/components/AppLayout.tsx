@@ -14,7 +14,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const getPageTitle = () => {
     switch (pathname) {
       case "/":
-        return "대시보드";
       case "/inventory":
         return "재고 관리";
       case "/lab":
@@ -55,7 +54,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <div className="flex flex-col md:flex-row min-h-[100dvh] w-full bg-surface dark:bg-slate-950">
       {/* Mobile Top App Bar */}
       <header className="md:hidden sticky top-0 left-0 w-full bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border-b border-black/[0.05] dark:border-white/[0.05] px-4 py-2.5 pt-[max(0.6rem,env(safe-area-inset-top))] flex items-center justify-between z-40 shadow-sm select-none">
-        <Link href="/" className="flex items-center gap-2 active:scale-95 transition-transform">
+        <Link href="/inventory" className="flex items-center gap-2 active:scale-95 transition-transform">
           <div className="w-7 h-7 bg-primary rounded-xl flex items-center justify-center shadow-sm">
             <Package className="w-4 h-4 text-white" />
           </div>
