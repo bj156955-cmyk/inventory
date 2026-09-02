@@ -173,10 +173,10 @@ export default function NoticesPage() {
   }, [notices, search]);
 
   return (
-    <div className="flex-1 p-3 sm:p-6 md:p-8 space-y-3 sm:space-y-4 bg-zinc-50 dark:bg-zinc-950 flex flex-col min-h-0">
+    <div className="flex-1 p-3 sm:p-6 md:p-8 bg-zinc-50 dark:bg-zinc-950 flex flex-col min-h-0">
       
       {/* Top Search Bar & Circular Plus Button */}
-      <div className="flex items-center gap-2.5 sm:gap-3 shrink-0 mb-1">
+      <div className="flex items-center gap-2.5 sm:gap-3 shrink-0 mb-4 sm:mb-6">
         {/* Standalone Search Input */}
         <div className="relative flex-1">
           <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 dark:text-zinc-500" />
