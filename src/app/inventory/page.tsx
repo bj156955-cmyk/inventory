@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useMemo, useCallback } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
 import { Product, Activity } from "@/types";
 import { useAuth } from "@/context/AuthContext";
@@ -9,10 +9,10 @@ import {
   Search, 
   RefreshCw, 
   Trash2, 
-  X,
-  AlertCircle,
-  ArrowUpDown,
-  Check
+  X, 
+  AlertCircle, 
+  ArrowUpDown, 
+  Check 
 } from "lucide-react";
 
 export type SortOption = "recent" | "oldest" | "name_asc" | "name_desc";
@@ -23,6 +23,403 @@ const SORT_OPTIONS: { id: SortOption; label: string }[] = [
   { id: "name_asc", label: "이름순" },
   { id: "name_desc", label: "이름 역순" },
 ];
+
+interface ItemModalProps {
+  editingProduct: Product | null;
+  defaultLocation: string;
+  existingLocations: string[];
+  existingTypes: string[];
+  activeLocationsCount: number;
+  onClose: () => void;
+  onDeleteRequest: (prod: Product) => void;
+  onSave: (data: {
+    name: string;
+    category: string;
+    type: string;
+    stock: number;
+    unit: string;
+    price: number;
+  }) => Promise<void>;
+}
+
+function ItemModal({
+  editingProduct,
+  defaultLocation,
+  existingLocations,
+  existingTypes,
+  activeLocationsCount,
+  onClose,
+  onDeleteRequest,
+  onSave,
+}: ItemModalProps) {
+  const [formName, setFormName] = useState(() => editingProduct?.name || "");
+  const [formCategory, setFormCategory] = useState(() => editingProduct?.category || defaultLocation || "");
+  const [formType, setFormType] = useState(() => editingProduct?.item_type || "");
+  const [formStock, setFormStock] = useState(() => (editingProduct ? editingProduct.stock : 1));
+  const [formUnit, setFormUnit] = useState(() => editingProduct?.unit || "");
+  const formPrice = editingProduct?.price || 0;
+
+  const [itemLogs, setItemLogs] = useState<Activity[]>([]);
+  const [loadingLogs, setLoadingLogs] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  // Fetch modification logs if editing an existing product
+  useEffect(() => {
+    if (!editingProduct) return;
+
+    let ignore = false;
+    const fetchLogs = async () => {
+      setLoadingLogs(true);
+      try {
+        const cleanName = (editingProduct.name || "").trim();
+        const cleanCat = (editingProduct.category || "").trim();
+        const cleanType = (editingProduct.item_type || "").trim();
+
+        let query = supabase.from("activities").select("*");
+
+        if (cleanCat && activeLocationsCount === 1) {
+          if (cleanType) {
+            query = query.or(`message.ilike.%[${cleanCat}]%[${cleanType}]%[${cleanName}]%,message.ilike.%[${cleanCat}]%[${cleanName}]%`);
+          } else {
+            query = query.ilike("message", `%[${cleanCat}]%[${cleanName}]%`);
+          }
+        } else {
+          query = query.or(`message.ilike.%[${cleanName}]%,message.ilike.%${cleanName}%`);
+        }
+
+        const { data, error } = await query
+          .order("created_at", { ascending: false })
+          .limit(15);
+
+        if (!ignore) {
+          if (!error && data) {
+            setItemLogs(data as Activity[]);
+          } else {
+            setItemLogs([]);
+          }
+        }
+      } catch (err) {
+        if (!ignore) {
+          console.error("Error fetching logs in ItemModal:", err);
+          setItemLogs([]);
+        }
+      } finally {
+        if (!ignore) {
+          setLoadingLogs(false);
+        }
+      }
+    };
+
+    fetchLogs();
+
+    return () => {
+      ignore = true;
+    };
+  }, [editingProduct, activeLocationsCount]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (saving) return;
+    setSaving(true);
+    try {
+      await onSave({
+        name: formName,
+        category: formCategory,
+        type: formType,
+        stock: formStock,
+        unit: formUnit,
+        price: formPrice,
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[200] flex items-center justify-center p-4 animate-fadeIn">
+      <div className="bg-white dark:bg-zinc-900 w-full max-w-[460px] rounded-[2rem] shadow-2xl p-6 sm:p-7 space-y-4 border border-zinc-200 dark:border-zinc-800">
+        {/* Modal Header */}
+        <div className="flex justify-between items-center pb-2 border-b border-zinc-100 dark:border-zinc-800/80">
+          <div>
+            <h3 className="text-xl sm:text-2xl font-black text-zinc-900 dark:text-white tracking-tight font-headline">
+              Item
+            </h3>
+            <p className="text-xs font-semibold text-zinc-400 dark:text-zinc-500 mt-0.5">
+              {editingProduct ? "품목 정보 수정" : "새로운 품목 등록"}
+            </p>
+          </div>
+          <button 
+            type="button"
+            onClick={onClose}
+            className="p-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-400 hover:text-zinc-700 dark:hover:text-white rounded-full transition-colors cursor-pointer"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        
+        {/* Form Fields: Name, Location & Type (2-Col Grid), Quantity & Unit */}
+        <form onSubmit={handleSubmit} className="space-y-3.5">
+          {/* 1. Name */}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[11px] font-black uppercase text-zinc-500 dark:text-zinc-400 tracking-wider">
+              이름 <span className="text-rose-500">*</span>
+            </label>
+            <input
+              type="text"
+              required
+              value={formName}
+              onChange={(e) => setFormName(e.target.value)}
+              className="w-full px-3.5 py-2.5 bg-zinc-100 dark:bg-zinc-800/90 border border-zinc-200 dark:border-zinc-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/20 text-sm font-semibold text-zinc-900 dark:text-white transition-all"
+            />
+          </div>
+
+          {/* 2 & 3. Location & Type - 2-Column Grid */}
+          <div className="grid grid-cols-2 gap-3">
+            {/* Location */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[11px] font-black uppercase text-zinc-500 dark:text-zinc-400 tracking-wider">
+                위치 <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="text"
+                required
+                value={formCategory}
+                onChange={(e) => setFormCategory(e.target.value)}
+                className="w-full px-3.5 py-2.5 bg-zinc-100 dark:bg-zinc-800/90 border border-zinc-200 dark:border-zinc-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/20 text-sm font-semibold text-zinc-900 dark:text-white transition-all"
+              />
+              {existingLocations.length > 0 && (
+                <div className="flex gap-1 pt-0.5 flex-wrap">
+                  {existingLocations.map((loc) => (
+                    <button
+                      key={loc}
+                      type="button"
+                      onClick={() => setFormCategory(loc)}
+                      className={`text-[9px] font-bold px-2 py-0.5 rounded-md border transition-all cursor-pointer select-none active:scale-95 ${
+                        formCategory === loc
+                          ? "bg-blue-600 text-white border-blue-600 font-black shadow-xs"
+                          : "bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400 border-zinc-200/80 dark:border-zinc-700/80"
+                      }`}
+                    >
+                      {loc}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Type */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[11px] font-black uppercase text-zinc-500 dark:text-zinc-400 tracking-wider">
+                유형
+              </label>
+              <input
+                type="text"
+                value={formType}
+                onChange={(e) => setFormType(e.target.value)}
+                className="w-full px-3.5 py-2.5 bg-zinc-100 dark:bg-zinc-800/90 border border-zinc-200 dark:border-zinc-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/20 text-sm font-semibold text-zinc-900 dark:text-white transition-all"
+              />
+              {existingTypes.length > 0 && (
+                <div className="flex gap-1 pt-0.5 flex-wrap">
+                  {existingTypes.map((t) => (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => setFormType(t)}
+                      className={`text-[9px] font-bold px-2 py-0.5 rounded-md border transition-all cursor-pointer select-none active:scale-95 ${
+                        formType === t
+                          ? "bg-blue-600 text-white border-blue-600 font-black shadow-xs"
+                          : "bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400 border-zinc-200/80 dark:border-zinc-700/80"
+                      }`}
+                    >
+                      {t}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* 4. Quantity & Unit */}
+          <div className="grid grid-cols-12 gap-2.5">
+            {/* Quantity */}
+            <div className="col-span-8 flex flex-col gap-1.5">
+              <label className="text-[11px] font-black uppercase text-zinc-500 dark:text-zinc-400 tracking-wider">
+                수량 <span className="text-rose-500">*</span>
+              </label>
+              <div className="flex items-center gap-1.5 w-full">
+                <button
+                  type="button"
+                  onClick={() => setFormStock((prev) => Math.max(0, prev - 1))}
+                  className="w-10 h-10 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 font-black text-base border border-zinc-200 dark:border-zinc-700 active:scale-95 transition-all flex items-center justify-center cursor-pointer shrink-0"
+                  title="-1"
+                >
+                  -
+                </button>
+                <input
+                  type="number"
+                  required
+                  min={0}
+                  value={formStock}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setFormStock(val === "" ? 0 : Math.max(0, parseInt(val, 10) || 0));
+                  }}
+                  className="flex-1 min-w-0 w-full py-2 px-2 bg-zinc-100 dark:bg-zinc-800/90 border border-zinc-200 dark:border-zinc-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/20 text-center font-black text-sm sm:text-base text-zinc-900 dark:text-white tabular-nums"
+                />
+                <button
+                  type="button"
+                  onClick={() => setFormStock((prev) => prev + 1)}
+                  className="w-10 h-10 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 font-black text-base border border-zinc-200 dark:border-zinc-700 active:scale-95 transition-all flex items-center justify-center cursor-pointer shrink-0"
+                  title="+1"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+
+            {/* Unit */}
+            <div className="col-span-4 flex flex-col gap-1.5">
+              <label className="text-[11px] font-black uppercase text-zinc-500 dark:text-zinc-400 tracking-wider">
+                단위
+              </label>
+              <input
+                type="text"
+                value={formUnit}
+                onChange={(e) => setFormUnit(e.target.value)}
+                className="w-full py-2 px-3 bg-zinc-100 dark:bg-zinc-800/90 border border-zinc-200 dark:border-zinc-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/20 text-center font-bold text-sm text-zinc-900 dark:text-white transition-all h-10"
+              />
+            </div>
+          </div>
+
+          {/* 5. Item Modification History / Change Logs (최신 3건) */}
+          {editingProduct && (
+            <div className="pt-2.5 border-t border-zinc-100 dark:border-zinc-800/80 space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500">
+                  수정 이력 (최근 3건)
+                </span>
+                {editingProduct.updated_at && (
+                  <span className="text-[10px] text-zinc-400 dark:text-zinc-500">
+                    최근: {new Date(editingProduct.updated_at).toLocaleDateString()}
+                  </span>
+                )}
+              </div>
+
+              <div className="space-y-1">
+                {loadingLogs ? (
+                  <p className="text-xs text-zinc-400 dark:text-zinc-500 py-0.5">이력을 불러오는 중...</p>
+                ) : itemLogs.filter((log) => log.message.includes("재고") || log.message.includes("수량")).length > 0 ? (
+                  itemLogs
+                    .filter((log) => log.message.includes("재고") || log.message.includes("수량"))
+                    .slice(0, 3)
+                    .map((log) => {
+                      let displayMsg = log.message;
+
+                      // Format: [장소] [유형] [품목] 재고 +N or [장소] [품목] 재고 +N
+                      const threeMatch = displayMsg.match(/^\[(.*?)\]\s*\[(.*?)\]\s*\[(.*?)\]\s*(.*)$/);
+                      const twoMatch = displayMsg.match(/^\[(.*?)\]\s*\[(.*?)\]\s*(.*)$/);
+
+                      if (threeMatch) {
+                        const loc = threeMatch[1];
+                        const change = threeMatch[4];
+                        displayMsg = activeLocationsCount !== 1 ? `${loc} ${change}` : change;
+                      } else if (twoMatch) {
+                        const loc = twoMatch[1];
+                        const change = twoMatch[3];
+                        displayMsg = activeLocationsCount !== 1 ? `${loc} ${change}` : change;
+                      } else {
+                        const singleMatch = displayMsg.match(/^\[.*?\]\s*(.*)$/);
+                        if (singleMatch && singleMatch[1]) {
+                          displayMsg = singleMatch[1];
+                        }
+                      }
+
+                      // Convert older format to clean delta
+                      const qtyMatch = displayMsg.match(/수량\s*\((\d+)개?\s*→\s*(\d+)개?\)/);
+                      if (qtyMatch) {
+                        const oldQty = parseInt(qtyMatch[1], 10);
+                        const newQty = parseInt(qtyMatch[2], 10);
+                        const diff = newQty - oldQty;
+                        displayMsg = displayMsg.replace(/수량\s*\(\d+개?\s*→\s*\d+개?\)/, `재고 ${diff > 0 ? `+${diff}` : diff}`);
+                      }
+
+                      const formattedDate = (() => {
+                        try {
+                          const d = new Date(log.created_at);
+                          return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+                        } catch {
+                          return log.created_at;
+                        }
+                      })();
+
+                      return (
+                        <div key={log.id} className="text-xs text-zinc-500 dark:text-zinc-400 leading-snug">
+                          <div className="flex items-baseline justify-between gap-2">
+                            <span className="text-zinc-600 dark:text-zinc-300 font-medium truncate">
+                              {displayMsg}
+                            </span>
+                            <span className="text-[10px] text-zinc-400 dark:text-zinc-500 shrink-0 tabular-nums">
+                              {log.user_email || "USER"} • {formattedDate}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })
+                ) : (
+                  <p className="text-xs text-zinc-400 dark:text-zinc-500 py-0.5">수정 이력이 없습니다.</p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Action Buttons */}
+          {editingProduct ? (
+            <div className="flex gap-2.5 pt-3 border-t border-zinc-100 dark:border-zinc-800">
+              <button
+                type="button"
+                onClick={() => onDeleteRequest(editingProduct)}
+                className="px-4 py-2.5 border border-rose-200 dark:border-rose-900/50 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer"
+              >
+                삭제
+              </button>
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex-1 py-2.5 border border-zinc-200 dark:border-zinc-700 rounded-xl font-bold text-xs sm:text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all cursor-pointer"
+              >
+                취소
+              </button>
+              <button
+                type="submit"
+                disabled={saving}
+                className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold text-xs sm:text-sm shadow-md shadow-blue-600/30 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
+              >
+                {saving ? "저장 중..." : "저장"}
+              </button>
+            </div>
+          ) : (
+            <div className="flex gap-2.5 pt-3 border-t border-zinc-100 dark:border-zinc-800">
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex-1 py-2.5 border border-zinc-200 dark:border-zinc-700 rounded-xl font-bold text-xs sm:text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all cursor-pointer"
+              >
+                취소
+              </button>
+              <button
+                type="submit"
+                disabled={saving}
+                className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold text-xs sm:text-sm shadow-md shadow-blue-600/30 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
+              >
+                {saving ? "등록 중..." : "등록"}
+              </button>
+            </div>
+          )}
+        </form>
+      </div>
+    </div>
+  );
+}
 
 export default function InventoryPage() {
   const { user } = useAuth();
@@ -48,18 +445,6 @@ export default function InventoryPage() {
   // Modals state
   const [itemModalOpen, setItemModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  
-  // Product Form states (Name, Location, Type, Quantity, Unit)
-  const [formName, setFormName] = useState("");
-  const [formCategory, setFormCategory] = useState("");
-  const [formType, setFormType] = useState("");
-  const [formStock, setFormStock] = useState(1);
-  const [formUnit, setFormUnit] = useState("");
-  const [formPrice, setFormPrice] = useState(0);
-
-  // Item modification logs state
-  const [itemLogs, setItemLogs] = useState<Activity[]>([]);
-  const [loadingLogs, setLoadingLogs] = useState(false);
 
   // Delete confirm modal states
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -348,92 +733,38 @@ export default function InventoryPage() {
     }
   }, [products, activeLocations, search, sortOption]);
 
-  // Fetch activity logs for a specific product and optional location
-  const fetchItemLogs = useCallback(async (productName: string, categoryName?: string) => {
-    if (!productName) {
-      setItemLogs([]);
-      return;
-    }
-    setLoadingLogs(true);
-    try {
-      const cleanName = productName.trim();
-      const cleanCat = categoryName?.trim();
-
-      let query = supabase.from("activities").select("*");
-
-      if (cleanCat && activeLocations.length === 1) {
-        // Isolate logs to this specific location AND item name
-        query = query
-          .ilike("message", `%[${cleanCat}]%[${cleanName}]%`)
-          .order("created_at", { ascending: false })
-          .limit(15);
-      } else {
-        // Multiple or all locations selected: fetch logs for this item name
-        query = query
-          .or(`message.ilike.%[${cleanName}]%,message.ilike.%${cleanName}%`)
-          .order("created_at", { ascending: false })
-          .limit(15);
-      }
-
-      const { data, error } = await query;
-
-      if (!error && data) {
-        setItemLogs(data as Activity[]);
-      } else {
-        setItemLogs([]);
-      }
-    } catch (err) {
-      console.error("Error fetching item logs:", err);
-      setItemLogs([]);
-    } finally {
-      setLoadingLogs(false);
-    }
-  }, [activeLocations]);
-
   // 5. Open Form Modal for Create/Update
   const openItemModal = (product: Product | null = null) => {
-    if (product) {
-      setEditingProduct(product);
-      setFormName(product.name);
-      setFormCategory(product.category);
-      setFormType(product.item_type || "");
-      setFormStock(product.stock);
-      setFormUnit(product.unit || "");
-      setFormPrice(product.price || 0);
-      fetchItemLogs(product.name, product.category);
-    } else {
-      setEditingProduct(null);
-      setFormName("");
-      setFormCategory(activeLocations.length === 1 ? activeLocations[0] : "");
-      setFormType("");
-      setFormStock(1);
-      setFormUnit("");
-      setFormPrice(0);
-      setItemLogs([]);
-    }
+    setEditingProduct(product);
     setItemModalOpen(true);
   };
 
   // 6. Save Product (Insert, Update, or Merge duplicate in same location)
-  const saveProduct = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSaveProduct = async (formData: {
+    name: string;
+    category: string;
+    type: string;
+    stock: number;
+    unit: string;
+    price: number;
+  }) => {
     if (!user) {
       alert("로그인이 필요합니다.");
       return;
     }
 
     const userShort = user.email ? user.email.split("@")[0].toUpperCase() : "USER";
-    const typeVal = formType.trim();
-    const unitVal = formUnit.trim();
+    const typeVal = formData.type.trim();
+    const unitVal = formData.unit.trim();
     const skuVal = `${typeVal}:::${unitVal}:::${Date.now().toString(36)}`;
 
     const payload: Record<string, unknown> = {
-      name: formName.trim(),
-      category: formCategory.trim(),
+      name: formData.name.trim(),
+      category: formData.category.trim(),
       sku: skuVal,
-      stock_quantity: formStock,
-      target_quantity: formStock,
-      price: formPrice || 0,
+      stock_quantity: formData.stock,
+      target_quantity: formData.stock,
+      price: formData.price || 0,
       updated_by: userShort,
       updated_at: new Date().toISOString()
     };
@@ -441,30 +772,33 @@ export default function InventoryPage() {
     try {
       if (editingProduct) {
         const oldName = (editingProduct.name || "").trim();
-        const newName = formName.trim();
+        const newName = formData.name.trim();
         const oldCat = (editingProduct.category || "").trim();
-        const newCat = formCategory.trim();
+        const newCat = formData.category.trim();
+        const oldType = (editingProduct.item_type || "").trim();
+        const newType = typeVal;
         const oldStock = editingProduct.stock;
-        const newStock = formStock;
+        const newStock = formData.stock;
         const delta = newStock - oldStock;
 
         // Update DB
         const { error } = await supabase.from("products").update(payload).eq("id", editingProduct.id);
         if (error) throw error;
         
-        // Log ONLY when stock quantity changes - tagged with [장소] [품목명]
+        // Log ONLY when stock quantity changes - tagged with [장소] [유형] [품목명]
         if (delta !== 0) {
           const sign = delta > 0 ? `+${delta}` : `${delta}`;
           const currentCat = newCat || oldCat || "기타";
-          await logActivity("UPDATE", `[${currentCat}] [${newName || oldName}] 재고 ${sign}`);
+          const currentType = newType || oldType || "기타";
+          await logActivity("UPDATE", `[${currentCat}] [${currentType}] [${newName || oldName}] 재고 ${sign}`);
         }
       } else {
         // Auto-merge if product with same name + location + type already exists
         const { data: existingRows } = await supabase
           .from("products")
           .select("*")
-          .eq("name", formName.trim())
-          .eq("category", formCategory.trim());
+          .eq("name", formData.name.trim())
+          .eq("category", formData.category.trim());
 
         const matched = existingRows?.find((r) => {
           const rSku = r.sku ? String(r.sku) : "";
@@ -481,7 +815,7 @@ export default function InventoryPage() {
 
         if (matched) {
           // Merge: Add stock to existing product instead of creating duplicate box
-          const newTotalStock = (matched.stock_quantity || 0) + formStock;
+          const newTotalStock = (matched.stock_quantity || 0) + formData.stock;
           const { error } = await supabase
             .from("products")
             .update({
@@ -495,7 +829,8 @@ export default function InventoryPage() {
 
           if (error) throw error;
 
-          await logActivity("UPDATE", `[${formCategory.trim()}] [${formName.trim()}] 재고 +${formStock}`);
+          const currentType = typeVal || "기타";
+          await logActivity("UPDATE", `[${formData.category.trim()}] [${currentType}] [${formData.name.trim()}] 재고 +${formData.stock}`);
         } else {
           // Insert new item
           let { error } = await supabase.from("products").insert([payload]);
@@ -508,13 +843,14 @@ export default function InventoryPage() {
             const lowerMsg = error.message?.toLowerCase() || "";
             if (error.code === "23505" || lowerMsg.includes("duplicate key") || lowerMsg.includes("unique")) {
               if (lowerMsg.includes("name") || lowerMsg.includes("products_name_key")) {
-                alert(`이미 '${formName}' 이름의 품목이 등록되어 있습니다.\n\n동일한 품목을 다른 장소에 별도로 등록하시려면 품목명에 장소를 함께 기재해 주세요.\n(예: ${formName} (${formCategory}))`);
+                alert(`이미 '${formData.name}' 이름의 품목이 등록되어 있습니다.\n\n동일한 품목을 다른 장소에 별도로 등록하시려면 품목명에 장소를 함께 기재해 주세요.\n(예: ${formData.name} (${formData.category}))`);
                 return;
               }
             }
             throw error;
           }
-          await logActivity("CREATE", `[${formCategory.trim()}] [${formName.trim()}] 재고 +${formStock}`);
+          const currentType = typeVal || "기타";
+          await logActivity("CREATE", `[${formData.category.trim()}] [${currentType}] [${formData.name.trim()}] 재고 +${formData.stock}`);
         }
       }
       setItemModalOpen(false);
@@ -525,12 +861,25 @@ export default function InventoryPage() {
     }
   };
 
-  // 7. Delete Product
+  // 7. Delete Product (Also clean up activity logs for this exact product so recreating starts fresh)
   const handleDelete = async () => {
     if (!deletingProduct) return;
     try {
+      const cleanName = (deletingProduct.name || "").trim();
+      const cleanCat = (deletingProduct.category || "").trim();
+
+      // 1. Delete product row
       const { error } = await supabase.from("products").delete().eq("id", deletingProduct.id);
       if (error) throw error;
+
+      // 2. Clear all activity logs for this exact item box in this location so recreating starts fresh
+      if (cleanCat && cleanName) {
+        await supabase
+          .from("activities")
+          .delete()
+          .ilike("message", `%[${cleanCat}]%[${cleanName}]%`);
+      }
+
       await logActivity("DELETE", `${deletingProduct.name} 품목을 삭제했습니다.`);
       setDeleteModalOpen(false);
     } catch (err) {
@@ -827,286 +1176,23 @@ export default function InventoryPage() {
         )}
       </div>
 
-      {/* 1. Item Form Modal (NEW/EDIT - Balanced Wide 2-Col Layout with No Scroll) */}
+      {/* 1. Isolated Item Form Modal (Zero lag, zero input dropping, instant IME typing) */}
       {itemModalOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[200] flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-white dark:bg-zinc-900 w-full max-w-[460px] rounded-[2rem] shadow-2xl p-6 sm:p-7 space-y-4 border border-zinc-200 dark:border-zinc-800">
-            {/* Modal Header */}
-            <div className="flex justify-between items-center pb-2 border-b border-zinc-100 dark:border-zinc-800/80">
-              <div>
-                <h3 className="text-xl sm:text-2xl font-black text-zinc-900 dark:text-white tracking-tight font-headline">
-                  Item
-                </h3>
-                <p className="text-xs font-semibold text-zinc-400 dark:text-zinc-500 mt-0.5">
-                  {editingProduct ? "품목 정보 수정" : "새로운 품목 등록"}
-                </p>
-              </div>
-              <button 
-                type="button"
-                onClick={() => setItemModalOpen(false)}
-                className="p-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-400 hover:text-zinc-700 dark:hover:text-white rounded-full transition-colors cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            
-            {/* Form Fields: Name, Location & Type (2-Col Grid), Quantity & Unit */}
-            <form onSubmit={saveProduct} className="space-y-3.5">
-              
-              {/* 1. Name (이름) */}
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[11px] font-black uppercase text-zinc-500 dark:text-zinc-400 tracking-wider">
-                  이름 <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={formName}
-                  onChange={(e) => setFormName(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-zinc-100 dark:bg-zinc-800/90 border border-zinc-200 dark:border-zinc-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/20 text-sm font-semibold text-zinc-900 dark:text-white transition-all"
-                />
-              </div>
-
-              {/* 2 & 3. Location (위치) & Type (유형) - 2-Column Grid */}
-              <div className="grid grid-cols-2 gap-3">
-                {/* Location */}
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[11px] font-black uppercase text-zinc-500 dark:text-zinc-400 tracking-wider">
-                    위치 <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={formCategory}
-                    onChange={(e) => setFormCategory(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-zinc-100 dark:bg-zinc-800/90 border border-zinc-200 dark:border-zinc-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/20 text-sm font-semibold text-zinc-900 dark:text-white transition-all"
-                  />
-                  {existingLocations.length > 0 && (
-                    <div className="flex gap-1 pt-0.5 flex-wrap">
-                      {existingLocations.map((loc) => (
-                        <button
-                          key={loc}
-                          type="button"
-                          onClick={() => setFormCategory(loc)}
-                          className={`text-[9px] font-bold px-2 py-0.5 rounded-md border transition-all cursor-pointer select-none active:scale-95 ${
-                            formCategory === loc
-                              ? "bg-blue-600 text-white border-blue-600 font-black shadow-xs"
-                              : "bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400 border-zinc-200/80 dark:border-zinc-700/80"
-                          }`}
-                        >
-                          {loc}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Type */}
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[11px] font-black uppercase text-zinc-500 dark:text-zinc-400 tracking-wider">
-                    유형
-                  </label>
-                  <input
-                    type="text"
-                    value={formType}
-                    onChange={(e) => setFormType(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-zinc-100 dark:bg-zinc-800/90 border border-zinc-200 dark:border-zinc-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/20 text-sm font-semibold text-zinc-900 dark:text-white transition-all"
-                  />
-                  {existingTypes.length > 0 && (
-                    <div className="flex gap-1 pt-0.5 flex-wrap">
-                      {existingTypes.map((t) => (
-                        <button
-                          key={t}
-                          type="button"
-                          onClick={() => setFormType(t)}
-                          className={`text-[9px] font-bold px-2 py-0.5 rounded-md border transition-all cursor-pointer select-none active:scale-95 ${
-                            formType === t
-                              ? "bg-blue-600 text-white border-blue-600 font-black shadow-xs"
-                              : "bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400 border-zinc-200/80 dark:border-zinc-700/80"
-                          }`}
-                        >
-                          {t}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* 4. Quantity (수량) & Unit (단위) */}
-              <div className="grid grid-cols-12 gap-2.5">
-                {/* Quantity */}
-                <div className="col-span-8 flex flex-col gap-1.5">
-                  <label className="text-[11px] font-black uppercase text-zinc-500 dark:text-zinc-400 tracking-wider">
-                    수량 <span className="text-rose-500">*</span>
-                  </label>
-                  <div className="flex items-center gap-1.5 w-full">
-                    <button
-                      type="button"
-                      onClick={() => setFormStock((prev) => Math.max(0, prev - 1))}
-                      className="w-10 h-10 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 font-black text-base border border-zinc-200 dark:border-zinc-700 active:scale-95 transition-all flex items-center justify-center cursor-pointer shrink-0"
-                      title="-1"
-                    >
-                      -
-                    </button>
-                    <input
-                      type="number"
-                      required
-                      min={0}
-                      value={formStock}
-                      onChange={(e) => setFormStock(Math.max(0, Number(e.target.value)))}
-                      className="flex-1 min-w-0 w-full py-2 px-2 bg-zinc-100 dark:bg-zinc-800/90 border border-zinc-200 dark:border-zinc-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/20 text-center font-black text-sm sm:text-base text-zinc-900 dark:text-white tabular-nums"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setFormStock((prev) => prev + 1)}
-                      className="w-10 h-10 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 font-black text-base border border-zinc-200 dark:border-zinc-700 active:scale-95 transition-all flex items-center justify-center cursor-pointer shrink-0"
-                      title="+1"
-                    >
-                      +
-                    </button>
-                  </div>
-                </div>
-
-                {/* Unit */}
-                <div className="col-span-4 flex flex-col gap-1.5">
-                  <label className="text-[11px] font-black uppercase text-zinc-500 dark:text-zinc-400 tracking-wider">
-                    단위
-                  </label>
-                  <input
-                    type="text"
-                    value={formUnit}
-                    onChange={(e) => setFormUnit(e.target.value)}
-                    className="w-full py-2 px-3 bg-zinc-100 dark:bg-zinc-800/90 border border-zinc-200 dark:border-zinc-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/20 text-center font-bold text-sm text-zinc-900 dark:text-white transition-all h-10"
-                  />
-                </div>
-              </div>
-
-              {/* 5. Item Modification History / Change Logs (최신 3줄만 간결 표시) */}
-              {editingProduct && (
-                <div className="pt-2.5 border-t border-zinc-100 dark:border-zinc-800/80 space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500">
-                      수정 이력 (최근 3건)
-                    </span>
-                    {editingProduct.updated_at && (
-                      <span className="text-[10px] text-zinc-400 dark:text-zinc-500">
-                        최근: {new Date(editingProduct.updated_at).toLocaleDateString()}
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="space-y-1">
-                    {loadingLogs ? (
-                      <p className="text-xs text-zinc-400 dark:text-zinc-500 py-0.5">이력을 불러오는 중...</p>
-                    ) : itemLogs.filter((log) => log.message.includes("재고") || log.message.includes("수량")).length > 0 ? (
-                      itemLogs
-                        .filter((log) => log.message.includes("재고") || log.message.includes("수량"))
-                        .slice(0, 3)
-                        .map((log) => {
-                          let displayMsg = log.message;
-
-                          // Format: [장소] [품목] 재고 +N
-                          const locItemMatch = displayMsg.match(/^\[(.*?)\]\s*\[(.*?)\]\s*(.*)$/);
-                          if (locItemMatch) {
-                            const loc = locItemMatch[1];
-                            const change = locItemMatch[3];
-                            displayMsg = activeLocations.length !== 1 ? `${loc} ${change}` : change;
-                          } else {
-                            const singleMatch = displayMsg.match(/^\[.*?\]\s*(.*)$/);
-                            if (singleMatch && singleMatch[1]) {
-                              displayMsg = singleMatch[1];
-                            }
-                          }
-
-                          // Convert older "수량 (5개 → 6개)" format to clean delta
-                          const qtyMatch = displayMsg.match(/수량\s*\((\d+)개?\s*→\s*(\d+)개?\)/);
-                          if (qtyMatch) {
-                            const oldQty = parseInt(qtyMatch[1], 10);
-                            const newQty = parseInt(qtyMatch[2], 10);
-                            const diff = newQty - oldQty;
-                            displayMsg = displayMsg.replace(/수량\s*\(\d+개?\s*→\s*\d+개?\)/, `재고 ${diff > 0 ? `+${diff}` : diff}`);
-                          }
-
-                          const formattedDate = (() => {
-                            try {
-                              const d = new Date(log.created_at);
-                              return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-                            } catch {
-                              return log.created_at;
-                            }
-                          })();
-
-                          return (
-                            <div key={log.id} className="text-xs text-zinc-500 dark:text-zinc-400 leading-snug">
-                              <div className="flex items-baseline justify-between gap-2">
-                                <span className="text-zinc-600 dark:text-zinc-300 font-medium truncate">
-                                  {displayMsg}
-                                </span>
-                                <span className="text-[10px] text-zinc-400 dark:text-zinc-500 shrink-0 tabular-nums">
-                                  {log.user_email || "USER"} • {formattedDate}
-                                </span>
-                              </div>
-                            </div>
-                          );
-                        })
-                    ) : (
-                      <p className="text-xs text-zinc-400 dark:text-zinc-500 py-0.5">
-                        기록된 재고 변경 이력이 없습니다.
-                      </p>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Action Buttons */}
-              {editingProduct ? (
-                <div className="flex gap-2.5 pt-3 border-t border-zinc-100 dark:border-zinc-800">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setDeletingProduct(editingProduct);
-                      setItemModalOpen(false);
-                      setDeleteModalOpen(true);
-                    }}
-                    className="px-4 py-2.5 border border-rose-200 dark:border-rose-900/50 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer"
-                  >
-                    삭제
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setItemModalOpen(false)}
-                    className="flex-1 py-2.5 border border-zinc-200 dark:border-zinc-700 rounded-xl font-bold text-xs sm:text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all cursor-pointer"
-                  >
-                    취소
-                  </button>
-                  <button
-                    type="submit"
-                    className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold text-xs sm:text-sm shadow-md shadow-blue-600/30 active:scale-95 transition-all cursor-pointer"
-                  >
-                    저장
-                  </button>
-                </div>
-              ) : (
-                <div className="flex gap-2.5 pt-3 border-t border-zinc-100 dark:border-zinc-800">
-                  <button
-                    type="button"
-                    onClick={() => setItemModalOpen(false)}
-                    className="flex-1 py-2.5 border border-zinc-200 dark:border-zinc-700 rounded-xl font-bold text-xs sm:text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all cursor-pointer"
-                  >
-                    취소
-                  </button>
-                  <button
-                    type="submit"
-                    className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold text-xs sm:text-sm shadow-md shadow-blue-600/30 active:scale-95 transition-all cursor-pointer"
-                  >
-                    저장
-                  </button>
-                </div>
-              )}
-            </form>
-          </div>
-        </div>
+        <ItemModal
+          key={editingProduct ? editingProduct.id : "new-item-modal"}
+          editingProduct={editingProduct}
+          defaultLocation={activeLocations.length === 1 ? activeLocations[0] : ""}
+          existingLocations={existingLocations}
+          existingTypes={existingTypes}
+          activeLocationsCount={activeLocations.length}
+          onClose={() => setItemModalOpen(false)}
+          onDeleteRequest={(prod) => {
+            setDeletingProduct(prod);
+            setItemModalOpen(false);
+            setDeleteModalOpen(true);
+          }}
+          onSave={handleSaveProduct}
+        />
       )}
 
       {/* 2. Delete Confirm Modal */}
