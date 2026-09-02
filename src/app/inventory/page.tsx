@@ -107,8 +107,15 @@ export default function InventoryPage() {
     }
   };
 
-  // 3. 5 Categories: 전체보기, 연구동, 자생동, 박사님 방, 컨테이너
-  const CATEGORIES = ["all", "연구동", "자생동", "박사님 방", "컨테이너"];
+  // 3. Dynamic Location Categories (Default 4 locations + any custom locations from products)
+  const DEFAULT_LOCATIONS = ["연구동", "자생동", "박사님 방", "컨테이너"];
+  const dynamicLocations = Array.from(
+    new Set([
+      ...DEFAULT_LOCATIONS,
+      ...products.map((p) => (p.category || "").trim()).filter(Boolean),
+    ])
+  );
+  const categoriesList = ["all", ...dynamicLocations];
 
   // 4. Filter products by search & location category
   const filteredProducts = products.filter((p) => {
@@ -249,10 +256,10 @@ export default function InventoryPage() {
     };
 
   return (
-    <div className="flex-1 p-3 sm:p-6 md:p-8 space-y-3 sm:space-y-4 flex flex-col min-h-0 bg-zinc-50 dark:bg-zinc-950">
+    <div className="flex-1 p-3 sm:p-6 md:p-8 flex flex-col min-h-0 bg-zinc-50 dark:bg-zinc-950">
       
       {/* Top Search Bar & Circular Plus Button */}
-      <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
+      <div className="flex items-center gap-2.5 sm:gap-3 shrink-0 mb-3 sm:mb-3.5">
         {/* Standalone Search Input */}
         <div className="relative flex-1">
           <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 dark:text-zinc-500" />
@@ -275,14 +282,14 @@ export default function InventoryPage() {
         </button>
       </div>
 
-      {/* 5 Location Categories Tabs (Spaced Equal Width Grid in Single Line) */}
-      <div className="grid grid-cols-5 gap-2 sm:gap-2.5 w-full shrink-0 my-0.5">
-        {CATEGORIES.map((c) => (
+      {/* Dynamic Location Categories Tabs (Equal Proportions & Generous Spacing) */}
+      <div className="flex items-center gap-2 sm:gap-2.5 w-full overflow-x-auto no-scrollbar py-0.5 mb-4 sm:mb-6 shrink-0">
+        {categoriesList.map((c) => (
           <button
             key={c}
             type="button"
             onClick={() => setSelectedCategory(c)}
-            className={`py-2.5 px-0.5 sm:px-2 rounded-2xl text-[11px] sm:text-xs font-bold text-center truncate transition-all duration-200 cursor-pointer select-none active:scale-95 ${
+            className={`flex-1 min-w-[70px] sm:min-w-[80px] py-2.5 px-2 rounded-2xl text-[11px] sm:text-xs font-bold text-center whitespace-nowrap transition-all duration-200 cursor-pointer select-none active:scale-95 shrink-0 sm:shrink ${
               selectedCategory === c
                 ? "bg-blue-600 text-white shadow-sm shadow-blue-600/30 font-black scale-[1.02]"
                 : "bg-white dark:bg-zinc-900 border border-zinc-200/90 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:border-zinc-300 dark:hover:border-zinc-700 hover:text-zinc-900 dark:hover:text-white shadow-xs"
@@ -578,7 +585,7 @@ export default function InventoryPage() {
                     className="w-full px-4 py-3 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/20 text-sm font-medium text-zinc-900 dark:text-white"
                   />
                   <div className="flex gap-1 pt-1 flex-wrap">
-                    {["연구동", "자생동", "박사님 방", "컨테이너"].map((loc) => (
+                    {dynamicLocations.map((loc) => (
                       <button
                         key={loc}
                         type="button"
