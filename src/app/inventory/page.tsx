@@ -12,7 +12,6 @@ import {
   Trash2, 
   ShoppingCart, 
   X,
-  TrendingDown,
   AlertCircle
 } from "lucide-react";
 
@@ -261,84 +260,21 @@ export default function InventoryPage() {
     }
   };
 
-  // Stats calculate
-  const totalItems = products.length;
-  const lowStockItems = products.filter((p) => p.stock > 0 && p.stock <= p.target * 0.3).length;
-  const outOfStockItems = products.filter((p) => p.stock === 0).length;
-  const totalValue = products.reduce((acc, p) => acc + p.stock * p.price, 0);
-
   return (
-    <div className="flex-1 p-4 sm:p-6 md:p-10 space-y-6 sm:space-y-8 flex flex-col min-h-0 bg-surface dark:bg-slate-900">
+    <div className="flex-1 p-3 sm:p-6 md:p-8 space-y-3 sm:space-y-4 flex flex-col min-h-0 bg-surface dark:bg-slate-900">
       
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-3 sm:gap-4 shrink-0">
-        <div>
-          <h2 className="text-2xl sm:text-3xl font-black font-headline text-primary dark:text-blue-400 tracking-tighter">
-            Atelier Inventory List
-          </h2>
-          <p className="text-xs sm:text-sm text-on-surface-variant dark:text-gray-400 font-semibold mt-1">
-            실시간 자재 및 자산의 현황을 조회하고 관리할 수 있습니다.
-          </p>
-        </div>
-        <div className="flex gap-2 sm:gap-3 w-full sm:w-auto justify-end">
-          <button
-            onClick={() => openItemModal(null)}
-            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 bg-primary dark:bg-blue-600 text-white rounded-2xl font-bold text-xs sm:text-sm shadow-md hover:shadow-lg transition-all duration-200 active:scale-95 cursor-pointer"
-          >
-            <Plus className="w-4 h-4" />
-            <span>새 품목 등록</span>
-          </button>
-          <button
-            onClick={() => {
-              setLoading(true);
-              fetchData();
-            }}
-            className="p-2.5 sm:p-3 bg-surface-container-low dark:bg-slate-800 text-on-surface-variant dark:text-gray-400 rounded-2xl hover:text-primary dark:hover:text-white transition-all cursor-pointer shadow-sm active:scale-95 shrink-0"
-            title="새로고침"
-          >
-            <RefreshCw className="w-4 h-4 sm:w-5 sm:h-5" />
-          </button>
-        </div>
-      </div>
-
-      {/* Stats Section */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6 shrink-0">
-        <div className="bg-white dark:bg-slate-800 p-4 sm:p-5 rounded-[1.8rem] sm:rounded-[2rem] shadow-sm border border-black/[0.02] dark:border-white/[0.02]">
-          <div className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-on-surface-variant/50 dark:text-gray-400 mb-1.5 sm:mb-2">Total Items</div>
-          <h3 className="text-xl sm:text-2xl md:text-3xl font-black text-primary dark:text-white">{totalItems}</h3>
-        </div>
-        <div className="bg-red-50/50 dark:bg-red-950/20 p-4 sm:p-5 rounded-[1.8rem] sm:rounded-[2rem] shadow-sm border border-red-100/50 dark:border-red-900/20">
-          <div className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-red-600/70 dark:text-red-400 mb-1.5 sm:mb-2 flex items-center gap-1">
-            <TrendingDown className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            <span>Low Stock</span>
-          </div>
-          <h3 className="text-xl sm:text-2xl md:text-3xl font-black text-red-600 dark:text-red-400">{lowStockItems}</h3>
-        </div>
-        <div className="bg-surface-container-low dark:bg-slate-800/60 p-4 sm:p-5 rounded-[1.8rem] sm:rounded-[2rem] shadow-sm border border-black/[0.02] dark:border-white/[0.02]">
-          <div className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-on-surface-variant/40 dark:text-gray-500 mb-1.5 sm:mb-2 flex items-center gap-1">
-            <AlertCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            <span>Out of Stock</span>
-          </div>
-          <h3 className="text-xl sm:text-2xl md:text-3xl font-black text-on-surface-variant dark:text-gray-400">{outOfStockItems}</h3>
-        </div>
-        <div className="bg-white dark:bg-slate-800 p-4 sm:p-5 rounded-[1.8rem] sm:rounded-[2rem] shadow-sm border border-black/[0.02] dark:border-white/[0.02]">
-          <div className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-on-surface-variant/50 dark:text-gray-400 mb-1.5 sm:mb-2">Total Value</div>
-          <h3 className="text-lg sm:text-xl md:text-2xl font-black text-primary dark:text-white truncate">₩{totalValue.toLocaleString()}</h3>
-        </div>
-      </div>
-
-      {/* Filter and Search controls */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4 shrink-0 bg-surface-container-low dark:bg-slate-800/40 p-3 sm:p-4 rounded-3xl">
-        {/* Category Chips with Horizontal Scroll on Mobile */}
-        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5 max-w-full">
+      {/* Top Filter, Search & Actions Bar */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5 sm:gap-3 shrink-0 bg-white dark:bg-slate-800/80 p-3 sm:p-3.5 rounded-2xl sm:rounded-3xl shadow-sm border border-black/[0.03] dark:border-white/[0.03]">
+        {/* Category Chips with Horizontal Scroll */}
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 max-w-full">
           {categories.map((cat) => (
             <button
               key={cat}
               onClick={() => setSelectedCategory(cat)}
-              className={`px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+              className={`px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 active:scale-95 ${
                 selectedCategory === cat
                   ? "bg-primary dark:bg-blue-600 text-white shadow-sm"
-                  : "bg-white dark:bg-slate-800 text-on-surface-variant dark:text-gray-400 hover:bg-surface-container-high dark:hover:bg-slate-700"
+                  : "bg-surface-container-low dark:bg-slate-700 text-on-surface-variant dark:text-gray-400 hover:bg-surface-container-high dark:hover:bg-slate-600"
               }`}
             >
               {cat === "all" ? "전체 보기" : cat}
@@ -346,16 +282,38 @@ export default function InventoryPage() {
           ))}
         </div>
 
-        {/* Search */}
-        <div className="relative w-full md:w-80 shrink-0">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant/40 dark:text-gray-500 w-4 h-4" />
-          <input
-            type="text"
-            placeholder="자재명 또는 카테고리 검색..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-white dark:bg-slate-800 border border-black/[0.05] dark:border-white/[0.05] rounded-xl text-xs font-medium outline-none focus:ring-2 focus:ring-primary/10 dark:focus:ring-blue-500/10 text-foreground transition-all"
-          />
+        {/* Right Controls: Search + New Item + Refresh */}
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="relative flex-1 md:w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant/40 dark:text-gray-500 w-4 h-4" />
+            <input
+              type="text"
+              placeholder="품목 검색..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-9 pr-3 py-2 bg-surface-container-low dark:bg-slate-700/60 border border-transparent dark:border-white/[0.05] rounded-xl text-xs font-medium outline-none focus:ring-2 focus:ring-primary/10 dark:focus:ring-blue-500/10 text-foreground transition-all"
+            />
+          </div>
+
+          <button
+            onClick={() => openItemModal(null)}
+            className="flex items-center justify-center gap-1.5 px-3.5 py-2 bg-primary hover:bg-primary-container dark:bg-blue-600 dark:hover:bg-blue-500 text-white rounded-xl font-bold text-xs shadow-sm transition-all active:scale-95 cursor-pointer shrink-0"
+            title="새 품목 등록"
+          >
+            <Plus className="w-4 h-4" />
+            <span className="hidden sm:inline">새 품목</span>
+          </button>
+
+          <button
+            onClick={() => {
+              setLoading(true);
+              fetchData();
+            }}
+            className="p-2 bg-surface-container-low dark:bg-slate-700/60 text-on-surface-variant/60 dark:text-gray-400 hover:text-primary dark:hover:text-white rounded-xl transition-all cursor-pointer active:scale-95 shrink-0"
+            title="새로고침"
+          >
+            <RefreshCw className="w-4 h-4" />
+          </button>
         </div>
       </div>
 
