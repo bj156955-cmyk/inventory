@@ -108,7 +108,7 @@ export default function InventoryPage() {
     }
   };
 
-  // 3. Location Categories: Only locations with actual products + 'all' (전체보기)
+  // 3. Location Categories & Types: Only from actual products
   const existingLocations = useMemo(() => {
     return Array.from(
       new Set(
@@ -124,18 +124,16 @@ export default function InventoryPage() {
   // Derived active category (auto-fallback to 'all' if selected is not present)
   const activeCategory = categoriesList.includes(selectedCategory) ? selectedCategory : "all";
 
-  // Suggested locations for modal quick selection
-  const modalSuggestedLocations = useMemo(() => {
+  // Existing Types: Only types that previously exist in products
+  const existingTypes = useMemo(() => {
     return Array.from(
-      new Set([
-        "연구동",
-        "자생동",
-        "박사님 방",
-        "컨테이너",
-        ...existingLocations
-      ])
+      new Set(
+        products
+          .map((p) => (p.item_type || "").trim())
+          .filter(Boolean)
+      )
     );
-  }, [existingLocations]);
+  }, [products]);
 
   // 4. Filter products by search & location category
   const filteredProducts = products.filter((p) => {
@@ -628,8 +626,7 @@ export default function InventoryPage() {
                   required
                   value={formName}
                   onChange={(e) => setFormName(e.target.value)}
-                  placeholder="품목 이름 입력 (예: 알루미늄 프로파일 2020)"
-                  className="w-full px-4 py-3.5 bg-zinc-100 dark:bg-zinc-800/90 border border-zinc-200 dark:border-zinc-700 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500/20 text-sm font-semibold text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 transition-all"
+                  className="w-full px-4 py-3.5 bg-zinc-100 dark:bg-zinc-800/90 border border-zinc-200 dark:border-zinc-700 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500/20 text-sm font-semibold text-zinc-900 dark:text-white transition-all"
                 />
               </div>
 
@@ -643,25 +640,26 @@ export default function InventoryPage() {
                   required
                   value={formCategory}
                   onChange={(e) => setFormCategory(e.target.value)}
-                  placeholder="보관 위치 (예: 연구동, 자생동, 박사님 방, 컨테이너)"
-                  className="w-full px-4 py-3.5 bg-zinc-100 dark:bg-zinc-800/90 border border-zinc-200 dark:border-zinc-700 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500/20 text-sm font-semibold text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 transition-all"
+                  className="w-full px-4 py-3.5 bg-zinc-100 dark:bg-zinc-800/90 border border-zinc-200 dark:border-zinc-700 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500/20 text-sm font-semibold text-zinc-900 dark:text-white transition-all"
                 />
-                <div className="flex gap-1.5 pt-1 flex-wrap">
-                  {modalSuggestedLocations.map((loc) => (
-                    <button
-                      key={loc}
-                      type="button"
-                      onClick={() => setFormCategory(loc)}
-                      className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border transition-all cursor-pointer select-none active:scale-95 ${
-                        formCategory === loc
-                          ? "bg-blue-600 text-white border-blue-600 font-black shadow-xs"
-                          : "bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400 border-zinc-200/80 dark:border-zinc-700/80"
-                      }`}
-                    >
-                      {loc}
-                    </button>
-                  ))}
-                </div>
+                {existingLocations.length > 0 && (
+                  <div className="flex gap-1.5 pt-1 flex-wrap">
+                    {existingLocations.map((loc) => (
+                      <button
+                        key={loc}
+                        type="button"
+                        onClick={() => setFormCategory(loc)}
+                        className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border transition-all cursor-pointer select-none active:scale-95 ${
+                          formCategory === loc
+                            ? "bg-blue-600 text-white border-blue-600 font-black shadow-xs"
+                            : "bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400 border-zinc-200/80 dark:border-zinc-700/80"
+                        }`}
+                      >
+                        {loc}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* 3. Type (유형) */}
@@ -673,25 +671,26 @@ export default function InventoryPage() {
                   type="text"
                   value={formType}
                   onChange={(e) => setFormType(e.target.value)}
-                  placeholder="품목 유형 (예: 소모품, 시약, 공구, 원자재, 부품)"
-                  className="w-full px-4 py-3.5 bg-zinc-100 dark:bg-zinc-800/90 border border-zinc-200 dark:border-zinc-700 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500/20 text-sm font-semibold text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 transition-all"
+                  className="w-full px-4 py-3.5 bg-zinc-100 dark:bg-zinc-800/90 border border-zinc-200 dark:border-zinc-700 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500/20 text-sm font-semibold text-zinc-900 dark:text-white transition-all"
                 />
-                <div className="flex gap-1.5 pt-1 flex-wrap">
-                  {["소모품", "시약", "공구", "원자재", "부품", "기타"].map((t) => (
-                    <button
-                      key={t}
-                      type="button"
-                      onClick={() => setFormType(t)}
-                      className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border transition-all cursor-pointer select-none active:scale-95 ${
-                        formType === t
-                          ? "bg-blue-600 text-white border-blue-600 font-black shadow-xs"
-                          : "bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400 border-zinc-200/80 dark:border-zinc-700/80"
-                      }`}
-                    >
-                      {t}
-                    </button>
-                  ))}
-                </div>
+                {existingTypes.length > 0 && (
+                  <div className="flex gap-1.5 pt-1 flex-wrap">
+                    {existingTypes.map((t) => (
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => setFormType(t)}
+                        className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border transition-all cursor-pointer select-none active:scale-95 ${
+                          formType === t
+                            ? "bg-blue-600 text-white border-blue-600 font-black shadow-xs"
+                            : "bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400 border-zinc-200/80 dark:border-zinc-700/80"
+                        }`}
+                      >
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* 4. Quantity (수량) */}
@@ -699,11 +698,11 @@ export default function InventoryPage() {
                 <label className="text-[11px] font-black uppercase text-zinc-500 dark:text-zinc-400 tracking-wider">
                   수량 <span className="text-rose-500">*</span>
                 </label>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 w-full">
                   <button
                     type="button"
                     onClick={() => setFormStock((prev) => Math.max(0, prev - 1))}
-                    className="w-12 h-12 rounded-2xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 font-black text-lg border border-zinc-200 dark:border-zinc-700 active:scale-95 transition-all flex items-center justify-center cursor-pointer shrink-0"
+                    className="w-11 h-11 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 font-black text-base border border-zinc-200 dark:border-zinc-700 active:scale-95 transition-all flex items-center justify-center cursor-pointer shrink-0"
                     title="-1"
                   >
                     -
@@ -714,12 +713,12 @@ export default function InventoryPage() {
                     min={0}
                     value={formStock}
                     onChange={(e) => setFormStock(Math.max(0, Number(e.target.value)))}
-                    className="flex-1 py-3.5 px-4 bg-zinc-100 dark:bg-zinc-800/90 border border-zinc-200 dark:border-zinc-700 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500/20 text-center font-black text-base text-zinc-900 dark:text-white tabular-nums"
+                    className="flex-1 min-w-0 w-full py-2.5 sm:py-3 px-3 bg-zinc-100 dark:bg-zinc-800/90 border border-zinc-200 dark:border-zinc-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/20 text-center font-black text-sm sm:text-base text-zinc-900 dark:text-white tabular-nums"
                   />
                   <button
                     type="button"
                     onClick={() => setFormStock((prev) => prev + 1)}
-                    className="w-12 h-12 rounded-2xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 font-black text-lg border border-zinc-200 dark:border-zinc-700 active:scale-95 transition-all flex items-center justify-center cursor-pointer shrink-0"
+                    className="w-11 h-11 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 font-black text-base border border-zinc-200 dark:border-zinc-700 active:scale-95 transition-all flex items-center justify-center cursor-pointer shrink-0"
                     title="+1"
                   >
                     +
