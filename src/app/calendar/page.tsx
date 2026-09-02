@@ -393,6 +393,7 @@ export default function CalendarPage() {
   const endDate = endOfWeek(monthEnd);
 
   const days = eachDayOfInterval({ start: startDate, end: endDate });
+  const weekCount = Math.ceil(days.length / 7);
 
   // Open modal to view/edit/delete event
   const openViewModal = (e: React.SyntheticEvent, event: CalendarEvent) => {
@@ -483,7 +484,7 @@ export default function CalendarPage() {
 
 
   return (
-    <div className="flex-1 p-3 sm:p-5 md:p-6 pb-2 sm:pb-3 md:pb-4 space-y-3 bg-zinc-50 dark:bg-zinc-950 flex flex-col min-h-0 h-full">
+    <div className="flex-1 p-3 sm:p-5 md:p-6 flex flex-col min-h-0 lg:h-[100dvh] lg:max-h-[100dvh] lg:min-h-[640px] gap-3 bg-zinc-50 dark:bg-zinc-950">
       
       {/* Top Navigation Bar: Month Switcher only */}
       <div className="flex items-center justify-between gap-2.5 shrink-0">
@@ -511,10 +512,10 @@ export default function CalendarPage() {
       </div>
 
       {/* Main Content: Calendar Grid + Selected Day Agenda Panel */}
-      <div className="flex-1 flex flex-col lg:flex-row gap-3.5 sm:gap-4 min-h-0 h-full">
+      <div className="flex-1 flex flex-col lg:flex-row gap-3.5 sm:gap-4 min-h-0">
         
         {/* Left Column: Calendar Grid Card */}
-        <div className="flex-1 bg-white dark:bg-zinc-900 rounded-3xl shadow-xs border border-zinc-200/90 dark:border-zinc-800 overflow-hidden flex flex-col min-h-0 h-full">
+        <div className="flex-1 bg-white dark:bg-zinc-900 rounded-3xl shadow-xs border border-zinc-200/90 dark:border-zinc-800 overflow-hidden flex flex-col min-h-[440px] sm:min-h-[500px] lg:min-h-0 lg:h-full">
           {/* Days of Week Header */}
           <div className="grid grid-cols-7 border-b border-zinc-200/80 dark:border-zinc-800/80 bg-zinc-50/70 dark:bg-zinc-800/40 shrink-0">
             {["일", "월", "화", "수", "목", "금", "토"].map((day, idx) => (
@@ -539,7 +540,12 @@ export default function CalendarPage() {
               <RefreshCw className="w-8 h-8 text-blue-500 animate-spin" />
             </div>
           ) : (
-            <div className="flex-1 grid grid-cols-7 grid-rows-6 divide-x divide-y divide-zinc-200/70 dark:divide-zinc-800/70 min-h-0">
+            <div 
+              className="flex-1 grid grid-cols-7 divide-x divide-y divide-zinc-200/70 dark:divide-zinc-800/70 min-h-0"
+              style={{
+                gridTemplateRows: `repeat(${weekCount}, minmax(0, 1fr))`
+              }}
+            >
               {days.map((day) => {
                 const dayStr = format(day, "yyyy-MM-dd");
                 const dayEvents = events.filter((e) => {
@@ -586,7 +592,7 @@ export default function CalendarPage() {
                     onMouseDown={() => handleMouseDown(day)}
                     onMouseEnter={() => handleMouseEnter(day)}
                     onClick={() => handleDayClick(day)}
-                    className={`pt-1.5 pb-1 flex flex-col space-y-1 h-full min-h-0 overflow-hidden cursor-pointer select-none transition-colors ${
+                    className={`pt-1.5 pb-1 flex flex-col space-y-1 h-full min-h-[56px] sm:min-h-[72px] lg:min-h-0 overflow-hidden cursor-pointer select-none transition-colors ${
                       isSelectedInDrag 
                         ? "bg-blue-500/10 ring-2 ring-inset ring-blue-500/40" 
                         : isActive
@@ -700,7 +706,7 @@ export default function CalendarPage() {
         </div>
 
         {/* Right Column: Selected Day's Agenda Detail */}
-        <div className="w-full lg:w-[320px] xl:w-[350px] bg-white dark:bg-zinc-900 rounded-3xl p-5 sm:p-6 shadow-xs border border-zinc-200/90 dark:border-zinc-800 flex flex-col shrink-0 min-h-0 h-auto lg:h-full">
+        <div className="w-full lg:w-[320px] xl:w-[350px] bg-white dark:bg-zinc-900 rounded-3xl p-5 sm:p-6 shadow-xs border border-zinc-200/90 dark:border-zinc-800 flex flex-col shrink-0 min-h-[300px] lg:min-h-0 lg:h-full">
           {/* Agenda Header */}
           <div className="flex justify-between items-center pb-3.5 border-b border-zinc-100 dark:border-zinc-800 shrink-0">
             <div className="flex items-center gap-2">
