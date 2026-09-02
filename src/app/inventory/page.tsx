@@ -336,11 +336,23 @@ export default function InventoryPage() {
         const newType = formType.trim();
         const oldStock = editingProduct.stock;
         const newStock = formStock;
+        const delta = newStock - oldStock;
 
+        // Stock quantity change log
+        if (delta !== 0) {
+          const sign = delta > 0 ? `+${delta}` : `${delta}`;
+          if (activeCategory === "all") {
+            const locName = newCat || oldCat || "연구동";
+            changes.push(`${locName} 재고 ${sign}`);
+          } else {
+            changes.push(`재고 ${sign}`);
+          }
+        }
+
+        // Other field changes
         if (oldName !== newName) changes.push(`이름 (${oldName} → ${newName})`);
         if (oldCat !== newCat) changes.push(`위치 (${oldCat || "미정"} → ${newCat})`);
         if (oldType !== newType) changes.push(`유형 (${oldType || "미정"} → ${newType || "없음"})`);
-        if (oldStock !== newStock) changes.push(`수량 (${oldStock}개 → ${newStock}개)`);
 
         const changeDesc = changes.length > 0 ? changes.join(", ") : "정보 확인/저장";
         const logMsg = `[${newName}] ${changeDesc}`;
@@ -613,35 +625,35 @@ export default function InventoryPage() {
         )}
       </div>
 
-      {/* 1. Item Form Modal (NEW/EDIT) */}
+      {/* 1. Item Form Modal (NEW/EDIT - Compact Fit with No Scroll) */}
       {itemModalOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[200] flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-white dark:bg-zinc-900 w-full max-w-[480px] max-h-[92vh] overflow-y-auto custom-scrollbar rounded-[2.5rem] shadow-2xl p-6 sm:p-8 space-y-5 border border-zinc-200 dark:border-zinc-800">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[200] flex items-center justify-center p-3 sm:p-4 animate-fadeIn">
+          <div className="bg-white dark:bg-zinc-900 w-full max-w-[390px] rounded-[1.75rem] shadow-2xl p-4 sm:p-5 space-y-2.5 border border-zinc-200 dark:border-zinc-800">
             {/* Modal Header */}
-            <div className="flex justify-between items-center pb-2 border-b border-zinc-100 dark:border-zinc-800/80">
+            <div className="flex justify-between items-center pb-1 border-b border-zinc-100 dark:border-zinc-800/80">
               <div>
-                <h3 className="text-2xl sm:text-3xl font-black text-zinc-900 dark:text-white tracking-tight font-headline">
+                <h3 className="text-lg sm:text-xl font-black text-zinc-900 dark:text-white tracking-tight font-headline">
                   Item
                 </h3>
-                <p className="text-xs font-semibold text-zinc-400 dark:text-zinc-500 mt-0.5">
+                <p className="text-[11px] font-semibold text-zinc-400 dark:text-zinc-500">
                   {editingProduct ? "품목 정보 수정" : "새로운 품목 등록"}
                 </p>
               </div>
               <button 
                 type="button"
                 onClick={() => setItemModalOpen(false)}
-                className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-400 hover:text-zinc-700 dark:hover:text-white rounded-full transition-colors cursor-pointer"
+                className="p-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-400 hover:text-zinc-700 dark:hover:text-white rounded-full transition-colors cursor-pointer"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
             
             {/* Form Fields: Name, Location, Type, Quantity */}
-            <form onSubmit={saveProduct} className="space-y-4">
+            <form onSubmit={saveProduct} className="space-y-2">
               
               {/* 1. Name (이름) */}
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[11px] font-black uppercase text-zinc-500 dark:text-zinc-400 tracking-wider">
+              <div className="flex flex-col gap-1">
+                <label className="text-[10px] font-black uppercase text-zinc-500 dark:text-zinc-400 tracking-wider">
                   이름 <span className="text-rose-500">*</span>
                 </label>
                 <input
@@ -649,13 +661,13 @@ export default function InventoryPage() {
                   required
                   value={formName}
                   onChange={(e) => setFormName(e.target.value)}
-                  className="w-full px-4 py-3.5 bg-zinc-100 dark:bg-zinc-800/90 border border-zinc-200 dark:border-zinc-700 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500/20 text-sm font-semibold text-zinc-900 dark:text-white transition-all"
+                  className="w-full px-3 py-2 bg-zinc-100 dark:bg-zinc-800/90 border border-zinc-200 dark:border-zinc-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/20 text-xs sm:text-sm font-semibold text-zinc-900 dark:text-white transition-all"
                 />
               </div>
 
               {/* 2. Location (위치) */}
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[11px] font-black uppercase text-zinc-500 dark:text-zinc-400 tracking-wider">
+              <div className="flex flex-col gap-1">
+                <label className="text-[10px] font-black uppercase text-zinc-500 dark:text-zinc-400 tracking-wider">
                   위치 <span className="text-rose-500">*</span>
                 </label>
                 <input
@@ -663,16 +675,16 @@ export default function InventoryPage() {
                   required
                   value={formCategory}
                   onChange={(e) => setFormCategory(e.target.value)}
-                  className="w-full px-4 py-3.5 bg-zinc-100 dark:bg-zinc-800/90 border border-zinc-200 dark:border-zinc-700 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500/20 text-sm font-semibold text-zinc-900 dark:text-white transition-all"
+                  className="w-full px-3 py-2 bg-zinc-100 dark:bg-zinc-800/90 border border-zinc-200 dark:border-zinc-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/20 text-xs sm:text-sm font-semibold text-zinc-900 dark:text-white transition-all"
                 />
                 {existingLocations.length > 0 && (
-                  <div className="flex gap-1.5 pt-1 flex-wrap">
+                  <div className="flex gap-1 pt-0.5 flex-wrap">
                     {existingLocations.map((loc) => (
                       <button
                         key={loc}
                         type="button"
                         onClick={() => setFormCategory(loc)}
-                        className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border transition-all cursor-pointer select-none active:scale-95 ${
+                        className={`text-[9px] font-bold px-2 py-0.5 rounded-md border transition-all cursor-pointer select-none active:scale-95 ${
                           formCategory === loc
                             ? "bg-blue-600 text-white border-blue-600 font-black shadow-xs"
                             : "bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400 border-zinc-200/80 dark:border-zinc-700/80"
@@ -686,24 +698,24 @@ export default function InventoryPage() {
               </div>
 
               {/* 3. Type (유형) */}
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[11px] font-black uppercase text-zinc-500 dark:text-zinc-400 tracking-wider">
+              <div className="flex flex-col gap-1">
+                <label className="text-[10px] font-black uppercase text-zinc-500 dark:text-zinc-400 tracking-wider">
                   유형
                 </label>
                 <input
                   type="text"
                   value={formType}
                   onChange={(e) => setFormType(e.target.value)}
-                  className="w-full px-4 py-3.5 bg-zinc-100 dark:bg-zinc-800/90 border border-zinc-200 dark:border-zinc-700 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500/20 text-sm font-semibold text-zinc-900 dark:text-white transition-all"
+                  className="w-full px-3 py-2 bg-zinc-100 dark:bg-zinc-800/90 border border-zinc-200 dark:border-zinc-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/20 text-xs sm:text-sm font-semibold text-zinc-900 dark:text-white transition-all"
                 />
                 {existingTypes.length > 0 && (
-                  <div className="flex gap-1.5 pt-1 flex-wrap">
+                  <div className="flex gap-1 pt-0.5 flex-wrap">
                     {existingTypes.map((t) => (
                       <button
                         key={t}
                         type="button"
                         onClick={() => setFormType(t)}
-                        className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border transition-all cursor-pointer select-none active:scale-95 ${
+                        className={`text-[9px] font-bold px-2 py-0.5 rounded-md border transition-all cursor-pointer select-none active:scale-95 ${
                           formType === t
                             ? "bg-blue-600 text-white border-blue-600 font-black shadow-xs"
                             : "bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400 border-zinc-200/80 dark:border-zinc-700/80"
@@ -717,15 +729,15 @@ export default function InventoryPage() {
               </div>
 
               {/* 4. Quantity (수량) */}
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[11px] font-black uppercase text-zinc-500 dark:text-zinc-400 tracking-wider">
+              <div className="flex flex-col gap-1">
+                <label className="text-[10px] font-black uppercase text-zinc-500 dark:text-zinc-400 tracking-wider">
                   수량 <span className="text-rose-500">*</span>
                 </label>
-                <div className="flex items-center gap-2 w-full">
+                <div className="flex items-center gap-1.5 w-full">
                   <button
                     type="button"
                     onClick={() => setFormStock((prev) => Math.max(0, prev - 1))}
-                    className="w-11 h-11 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 font-black text-base border border-zinc-200 dark:border-zinc-700 active:scale-95 transition-all flex items-center justify-center cursor-pointer shrink-0"
+                    className="w-8 h-8 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 font-black text-sm border border-zinc-200 dark:border-zinc-700 active:scale-95 transition-all flex items-center justify-center cursor-pointer shrink-0"
                     title="-1"
                   >
                     -
@@ -736,12 +748,12 @@ export default function InventoryPage() {
                     min={0}
                     value={formStock}
                     onChange={(e) => setFormStock(Math.max(0, Number(e.target.value)))}
-                    className="flex-1 min-w-0 w-full py-2.5 sm:py-3 px-3 bg-zinc-100 dark:bg-zinc-800/90 border border-zinc-200 dark:border-zinc-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/20 text-center font-black text-sm sm:text-base text-zinc-900 dark:text-white tabular-nums"
+                    className="flex-1 min-w-0 w-full py-1.5 px-2 bg-zinc-100 dark:bg-zinc-800/90 border border-zinc-200 dark:border-zinc-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500/20 text-center font-black text-xs sm:text-sm text-zinc-900 dark:text-white tabular-nums"
                   />
                   <button
                     type="button"
                     onClick={() => setFormStock((prev) => prev + 1)}
-                    className="w-11 h-11 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 font-black text-base border border-zinc-200 dark:border-zinc-700 active:scale-95 transition-all flex items-center justify-center cursor-pointer shrink-0"
+                    className="w-8 h-8 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 font-black text-sm border border-zinc-200 dark:border-zinc-700 active:scale-95 transition-all flex items-center justify-center cursor-pointer shrink-0"
                     title="+1"
                   >
                     +
@@ -749,29 +761,38 @@ export default function InventoryPage() {
                 </div>
               </div>
 
-              {/* 5. Item Modification History / Change Logs (수정 이력: 박스 없이 연한 회색으로 간결 표시) */}
+              {/* 5. Item Modification History / Change Logs (최신 3줄만 간결 표시) */}
               {editingProduct && (
-                <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800/80 space-y-1.5">
+                <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800/80 space-y-1">
                   <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500">
-                      수정 이력
+                    <span className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500">
+                      수정 이력 (최근 3건)
                     </span>
                     {editingProduct.updated_at && (
-                      <span className="text-[10px] text-zinc-400 dark:text-zinc-500">
+                      <span className="text-[9px] text-zinc-400 dark:text-zinc-500">
                         최근: {new Date(editingProduct.updated_at).toLocaleDateString()}
                       </span>
                     )}
                   </div>
 
-                  <div className="max-h-32 overflow-y-auto space-y-1.5 custom-scrollbar pr-0.5">
+                  <div className="space-y-1">
                     {loadingLogs ? (
-                      <p className="text-[11px] text-zinc-400 dark:text-zinc-500 py-1">이력을 불러오는 중...</p>
+                      <p className="text-[10px] text-zinc-400 dark:text-zinc-500 py-0.5">이력을 불러오는 중...</p>
                     ) : itemLogs.length > 0 ? (
-                      itemLogs.map((log) => {
+                      itemLogs.slice(0, 3).map((log) => {
                         let displayMsg = log.message;
                         const match = displayMsg.match(/^\[.*?\]\s*(.*)$/);
                         if (match && match[1]) {
                           displayMsg = match[1];
+                        }
+
+                        // Convert older "수량 (5개 → 6개)" format to clean delta
+                        const qtyMatch = displayMsg.match(/수량\s*\((\d+)개?\s*→\s*(\d+)개?\)/);
+                        if (qtyMatch) {
+                          const oldQty = parseInt(qtyMatch[1], 10);
+                          const newQty = parseInt(qtyMatch[2], 10);
+                          const diff = newQty - oldQty;
+                          displayMsg = displayMsg.replace(/수량\s*\(\d+개?\s*→\s*\d+개?\)/, `재고 ${diff > 0 ? `+${diff}` : diff}`);
                         }
 
                         const formattedDate = (() => {
@@ -784,12 +805,12 @@ export default function InventoryPage() {
                         })();
 
                         return (
-                          <div key={log.id} className="text-xs text-zinc-500 dark:text-zinc-400 leading-snug">
-                            <div className="flex items-baseline justify-between gap-2">
-                              <span className="text-zinc-600 dark:text-zinc-300 font-medium">
+                          <div key={log.id} className="text-[11px] text-zinc-500 dark:text-zinc-400 leading-tight">
+                            <div className="flex items-baseline justify-between gap-1.5">
+                              <span className="text-zinc-600 dark:text-zinc-300 font-medium truncate">
                                 {displayMsg}
                               </span>
-                              <span className="text-[10px] text-zinc-400 dark:text-zinc-500 shrink-0 tabular-nums">
+                              <span className="text-[9px] text-zinc-400 dark:text-zinc-500 shrink-0 tabular-nums">
                                 {log.user_email || "USER"} • {formattedDate}
                               </span>
                             </div>
@@ -797,7 +818,7 @@ export default function InventoryPage() {
                         );
                       })
                     ) : (
-                      <p className="text-[11px] text-zinc-400 dark:text-zinc-500 py-1">
+                      <p className="text-[10px] text-zinc-400 dark:text-zinc-500 py-0.5">
                         기록된 수정 이력이 없습니다.
                       </p>
                     )}
@@ -807,7 +828,7 @@ export default function InventoryPage() {
 
               {/* Action Buttons */}
               {editingProduct ? (
-                <div className="flex gap-2.5 pt-4 border-t border-zinc-100 dark:border-zinc-800">
+                <div className="flex gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-800">
                   <button
                     type="button"
                     onClick={() => {
@@ -815,36 +836,36 @@ export default function InventoryPage() {
                       setItemModalOpen(false);
                       setDeleteModalOpen(true);
                     }}
-                    className="px-4 py-3.5 border border-rose-200 dark:border-rose-900/50 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-2xl font-black text-sm transition-all cursor-pointer"
+                    className="px-3 py-2 border border-rose-200 dark:border-rose-900/50 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-xl font-black text-xs transition-all cursor-pointer"
                   >
                     삭제
                   </button>
                   <button
                     type="button"
                     onClick={() => setItemModalOpen(false)}
-                    className="flex-1 py-3.5 border border-zinc-200 dark:border-zinc-700 rounded-2xl font-black text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all cursor-pointer"
+                    className="flex-1 py-2 border border-zinc-200 dark:border-zinc-700 rounded-xl font-bold text-xs text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all cursor-pointer"
                   >
                     취소
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 py-3.5 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-black text-sm shadow-md shadow-blue-600/30 active:scale-95 transition-all cursor-pointer"
+                    className="flex-1 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold text-xs shadow-sm active:scale-95 transition-all cursor-pointer"
                   >
                     저장
                   </button>
                 </div>
               ) : (
-                <div className="flex gap-3 pt-4 border-t border-zinc-100 dark:border-zinc-800">
+                <div className="flex gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-800">
                   <button
                     type="button"
                     onClick={() => setItemModalOpen(false)}
-                    className="flex-1 py-3.5 border border-zinc-200 dark:border-zinc-700 rounded-2xl font-black text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all cursor-pointer"
+                    className="flex-1 py-2 border border-zinc-200 dark:border-zinc-700 rounded-xl font-bold text-xs text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all cursor-pointer"
                   >
                     취소
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 py-3.5 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-black text-sm shadow-md shadow-blue-600/30 active:scale-95 transition-all cursor-pointer"
+                    className="flex-1 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold text-xs shadow-sm active:scale-95 transition-all cursor-pointer"
                   >
                     저장
                   </button>
