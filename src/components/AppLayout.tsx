@@ -13,7 +13,9 @@ import {
   Moon, 
   Laptop, 
   LogOut, 
-  ShieldCheck
+  ShieldCheck,
+  Users,
+  ChevronRight
 } from "lucide-react";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -48,8 +50,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         return "연구실 공간";
       case "/calendar":
         return "팀 캘린더";
-      case "/chat":
-        return "실시간 채팅";
       case "/notices":
         return "공지사항";
       case "/members":
@@ -125,6 +125,32 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   </p>
                 </div>
               </div>
+
+              {/* Members Directory Link Button */}
+              <Link
+                href="/members"
+                onClick={() => setUserMenuOpen(false)}
+                className={`flex items-center justify-between p-2.5 rounded-xl border transition-all active:scale-[0.98] ${
+                  pathname === "/members"
+                    ? "bg-blue-500/10 border-blue-500/30 text-blue-500"
+                    : "bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-800/60 dark:hover:bg-zinc-800 border-zinc-200/60 dark:border-zinc-700/60 text-zinc-800 dark:text-zinc-200"
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${
+                    pathname === "/members"
+                      ? "bg-blue-600 text-white"
+                      : "bg-blue-500/15 text-blue-500 dark:text-blue-400"
+                  }`}>
+                    <Users className="w-4 h-4" />
+                  </div>
+                  <div className="text-left">
+                    <div className="text-xs font-bold">팀원 디렉토리</div>
+                    <div className="text-[9px] text-zinc-400 dark:text-zinc-500">접속 현황 및 멤버 관리</div>
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 opacity-50" />
+              </Link>
 
               {/* Theme Settings Selector */}
               <div className="space-y-1.5">
