@@ -13,6 +13,8 @@ export interface Product {
   edit_user?: string | null;
   updated_at?: string | null;
   edit_date?: string | null;
+  locations?: string[];
+  locationCount?: number;
 }
 
 export interface Activity {

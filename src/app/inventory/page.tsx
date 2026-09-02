@@ -163,17 +163,96 @@ export default function InventoryPage() {
     );
   }, [products]);
 
-  // 4. Filter products by search & location category
-  const filteredProducts = products.filter((p) => {
-    const pCategory = (p.category || "").trim();
-    const searchLower = search.toLowerCase();
-    const matchesSearch = p.name.toLowerCase().includes(searchLower) || 
-                          pCategory.toLowerCase().includes(searchLower);
-    const matchesCategory = activeCategory === "all" || 
-                            pCategory === activeCategory || 
-                            pCategory.includes(activeCategory);
-    return matchesSearch && matchesCategory;
-  });
+  // 4. Filter & Aggregate Products:
+  // When 'all' (전체보기) is active, merge items with the same name into 1 row with combined total stock quantity
+  const filteredProducts = useMemo(() => {
+    const searchLower = search.trim().toLowerCase();
+
+    if (activeCategory === "all") {
+      const map = new Map<string, {
+        product: Product;
+        totalStock: number;
+        totalTarget: number;
+        locations: Set<string>;
+      }>();
+
+      for (const p of products) {
+        const pName = (p.name || "").trim();
+        const pCategory = (p.category || "").trim();
+        const pType = (p.item_type || "").trim();
+
+        if (searchLower) {
+          const matches = pName.toLowerCase().includes(searchLower) ||
+                          pCategory.toLowerCase().includes(searchLower) ||
+                          pType.toLowerCase().includes(searchLower);
+          if (!matches) continue;
+        }
+
+        const key = pName.toLowerCase();
+        if (!map.has(key)) {
+          map.set(key, {
+            product: { ...p },
+            totalStock: p.stock,
+            totalTarget: p.target,
+            locations: new Set(pCategory ? [pCategory] : []),
+          });
+        } else {
+          const existing = map.get(key)!;
+          existing.totalStock += p.stock;
+          existing.totalTarget += p.target;
+          if (pCategory) existing.locations.add(pCategory);
+
+          if (p.edit_date && (!existing.product.edit_date || new Date(p.edit_date) > new Date(existing.product.edit_date))) {
+            existing.product.edit_user = p.edit_user;
+            existing.product.edit_date = p.edit_date;
+          }
+          if (!existing.product.item_type && p.item_type) {
+            existing.product.item_type = p.item_type;
+          }
+        }
+      }
+
+      return Array.from(map.values())
+        .map(({ product, totalStock, totalTarget, locations }) => {
+          const locArray = Array.from(locations);
+          return {
+            ...product,
+            stock: totalStock,
+            stock_quantity: totalStock,
+            target: totalTarget,
+            target_quantity: totalTarget,
+            category: locArray.join(", "),
+            locations: locArray,
+            locationCount: locArray.length,
+          };
+        })
+        .sort((a, b) => a.name.localeCompare(b.name));
+    } else {
+      // Specific Location Tab: show only items in that location
+      return products
+        .filter((p) => {
+          const pCategory = (p.category || "").trim();
+          const pName = (p.name || "").trim();
+          const pType = (p.item_type || "").trim();
+
+          const matchesCategory = pCategory === activeCategory || pCategory.includes(activeCategory);
+          if (!matchesCategory) return false;
+
+          if (searchLower) {
+            return pName.toLowerCase().includes(searchLower) ||
+                   pCategory.toLowerCase().includes(searchLower) ||
+                   pType.toLowerCase().includes(searchLower);
+          }
+          return true;
+        })
+        .map((p) => ({
+          ...p,
+          locations: p.category ? [p.category] : [],
+          locationCount: 1,
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name));
+    }
+  }, [products, activeCategory, search]);
 
   // 5. Open Form Modal for Create/Update
   const openItemModal = (product: Product | null = null) => {
@@ -436,9 +515,20 @@ export default function InventoryPage() {
                         </td>
                         <td className="px-8 py-5">
                           <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="px-3 py-1 bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 rounded-lg text-[10px] font-bold border border-zinc-200/60 dark:border-zinc-700/60">
-                              {p.category || "기타"}
-                            </span>
+                            {p.locations && p.locations.length > 0 ? (
+                              p.locations.map((loc) => (
+                                <span
+                                  key={loc}
+                                  className="px-2.5 py-1 bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 rounded-lg text-[10px] font-bold border border-zinc-200/60 dark:border-zinc-700/60"
+                                >
+                                  {loc}
+                                </span>
+                              ))
+                            ) : (
+                              <span className="px-3 py-1 bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 rounded-lg text-[10px] font-bold border border-zinc-200/60 dark:border-zinc-700/60">
+                                {p.category || "기타"}
+                              </span>
+                            )}
                             {p.item_type && (
                               <span className="px-2 py-0.5 bg-blue-500/10 dark:bg-blue-500/15 text-blue-600 dark:text-blue-400 rounded-md text-[9px] font-black border border-blue-500/20">
                                 {p.item_type}
@@ -547,9 +637,20 @@ export default function InventoryPage() {
                           )}
                         </div>
                         <div className="flex flex-wrap gap-1.5 items-center mt-1.5">
-                          <span className="text-[10px] bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 font-bold px-2 py-0.5 rounded-md border border-zinc-200/60 dark:border-zinc-700/60">
-                            {p.category || "기타"}
-                          </span>
+                          {p.locations && p.locations.length > 0 ? (
+                            p.locations.map((loc) => (
+                              <span
+                                key={loc}
+                                className="text-[10px] bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 font-bold px-2 py-0.5 rounded-md border border-zinc-200/60 dark:border-zinc-700/60"
+                              >
+                                {loc}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="text-[10px] bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 font-bold px-2 py-0.5 rounded-md border border-zinc-200/60 dark:border-zinc-700/60">
+                              {p.category || "기타"}
+                            </span>
+                          )}
                           {p.item_type && (
                             <span className="text-[10px] bg-blue-500/10 dark:bg-blue-500/15 text-blue-600 dark:text-blue-400 font-black px-2 py-0.5 rounded-md border border-blue-500/20">
                               {p.item_type}
