@@ -29,7 +29,7 @@ export default function InventoryPage() {
   const [formCategory, setFormCategory] = useState("");
   const [formType, setFormType] = useState("");
   const [formStock, setFormStock] = useState(1);
-  const [formUnit, setFormUnit] = useState("개");
+  const [formUnit, setFormUnit] = useState("");
   const [formPrice, setFormPrice] = useState(0);
 
   // Item modification logs state
@@ -45,9 +45,20 @@ export default function InventoryPage() {
 
     const normalizeProduct = (p: Record<string, unknown>): Product => {
       const rawSku = p.sku ? String(p.sku) : "";
-      const parsedType = rawSku 
-        ? (rawSku.includes("_") ? rawSku.split("_")[0] : rawSku) 
-        : (p.item_type ? String(p.item_type) : "");
+      let parsedType = "";
+      let parsedUnit = "";
+
+      if (rawSku.includes(":::")) {
+        const parts = rawSku.split(":::");
+        parsedType = parts[0] || "";
+        parsedUnit = parts[1] || "";
+      } else if (rawSku.includes("_")) {
+        parsedType = rawSku.split("_")[0] || "";
+        parsedUnit = "";
+      } else {
+        parsedType = rawSku || (p.item_type ? String(p.item_type) : "");
+        parsedUnit = p.unit ? String(p.unit) : "";
+      }
 
       const stockNum = typeof p.stock_quantity === "number" ? p.stock_quantity : (typeof p.stock === "number" ? p.stock : 0);
       const targetNum = typeof p.target_quantity === "number" ? p.target_quantity : (typeof p.target === "number" ? p.target : 0);
@@ -58,7 +69,7 @@ export default function InventoryPage() {
         category: String(p.category || ""),
         sku: p.sku ? String(p.sku) : null,
         item_type: parsedType,
-        unit: p.unit ? String(p.unit) : "개",
+        unit: parsedUnit,
         stock_quantity: stockNum,
         stock: stockNum,
         target_quantity: targetNum,
@@ -303,7 +314,7 @@ export default function InventoryPage() {
       setFormCategory(product.category);
       setFormType(product.item_type || "");
       setFormStock(product.stock);
-      setFormUnit(product.unit || "개");
+      setFormUnit(product.unit || "");
       setFormPrice(product.price || 0);
       fetchItemLogs(product.name, product.category);
     } else {
@@ -312,7 +323,7 @@ export default function InventoryPage() {
       setFormCategory(activeCategory !== "all" ? activeCategory : "");
       setFormType("");
       setFormStock(1);
-      setFormUnit("개");
+      setFormUnit("");
       setFormPrice(0);
       setItemLogs([]);
     }
@@ -328,14 +339,16 @@ export default function InventoryPage() {
     }
 
     const userShort = user.email ? user.email.split("@")[0].toUpperCase() : "USER";
-    const skuVal = formType.trim() ? `${formType.trim()}_${Date.now().toString(36)}` : null;
-    const unitVal = formUnit.trim() || "개";
+    const typeVal = formType.trim();
+    const unitVal = formUnit.trim();
+    const skuVal = (typeVal || unitVal) 
+      ? `${typeVal}:::${unitVal}:::${Date.now().toString(36)}` 
+      : `:::${Date.now().toString(36)}`;
 
     const payload: Record<string, unknown> = {
       name: formName.trim(),
       category: formCategory.trim(),
       sku: skuVal,
-      unit: unitVal,
       stock_quantity: formStock,
       target_quantity: formStock,
       price: formPrice || 0,
@@ -354,13 +367,7 @@ export default function InventoryPage() {
         const delta = newStock - oldStock;
 
         // Update DB
-        let { error } = await supabase.from("products").update(payload).eq("id", editingProduct.id);
-        if (error && error.message?.includes("unit")) {
-          // Fallback if 'unit' column doesn't exist in Supabase table
-          delete payload.unit;
-          const retry = await supabase.from("products").update(payload).eq("id", editingProduct.id);
-          error = retry.error;
-        }
+        const { error } = await supabase.from("products").update(payload).eq("id", editingProduct.id);
         if (error) throw error;
         
         // Log ONLY when stock quantity changes - tagged with [장소] [품목명]
@@ -378,8 +385,16 @@ export default function InventoryPage() {
           .eq("category", formCategory.trim());
 
         const matched = existingRows?.find((r) => {
-          const existingType = r.sku ? r.sku.split("_")[0] : "";
-          return formType.trim() === existingType || (!formType.trim() && !existingType);
+          const rSku = r.sku ? String(r.sku) : "";
+          let rType = "";
+          if (rSku.includes(":::")) {
+            rType = rSku.split(":::")[0];
+          } else if (rSku.includes("_")) {
+            rType = rSku.split("_")[0];
+          } else {
+            rType = rSku;
+          }
+          return typeVal === rType || (!typeVal && !rType);
         }) || (existingRows && existingRows.length === 1 ? existingRows[0] : null);
 
         if (matched) {
@@ -390,6 +405,7 @@ export default function InventoryPage() {
             .update({
               stock_quantity: newTotalStock,
               target_quantity: newTotalStock,
+              sku: skuVal,
               updated_by: userShort,
               updated_at: new Date().toISOString()
             })
@@ -401,11 +417,6 @@ export default function InventoryPage() {
         } else {
           // Insert new item
           let { error } = await supabase.from("products").insert([payload]);
-          if (error && error.message?.includes("unit")) {
-            delete payload.unit;
-            const retry = await supabase.from("products").insert([payload]);
-            error = retry.error;
-          }
           if (error && error.message?.includes("sku")) {
             payload.sku = null;
             const retry = await supabase.from("products").insert([payload]);
@@ -578,7 +589,9 @@ export default function InventoryPage() {
                             }`}>
                               {p.stock}
                             </span>
-                            <span className="text-xs font-bold text-zinc-400 dark:text-zinc-500">{p.unit || "개"}</span>
+                            {p.unit && (
+                              <span className="text-xs font-bold text-zinc-400 dark:text-zinc-500">{p.unit}</span>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -653,7 +666,9 @@ export default function InventoryPage() {
                       }`}>
                         {p.stock}
                       </span>
-                      <span className="text-xs font-bold text-zinc-400 dark:text-zinc-500">{p.unit || "개"}</span>
+                      {p.unit && (
+                        <span className="text-xs font-bold text-zinc-400 dark:text-zinc-500">{p.unit}</span>
+                      )}
                     </div>
                   </div>
                 );
