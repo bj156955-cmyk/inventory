@@ -42,3 +42,53 @@ export interface ChatMessage {
   user_name: string;
   created_at: string;
 }
+
+export interface PublicHoliday {
+  date: string;
+  localName: string;
+  name: string;
+  countryCode: string;
+}
+
+export interface AllowedUser {
+  id?: string;
+  username: string;
+  created_by?: string;
+  created_at?: string;
+}
+
+export interface PresencePayload {
+  initials?: string;
+  user?: string;
+  online_at?: string;
+}
+
+export interface Reservation {
+  equipment: string;
+  day: string;
+  slot: string;
+  user: string;
+}
+
+export interface CleaningAssignment {
+  member: string;
+  cleaning: boolean;
+  waste: boolean;
+}
+
+export interface CleaningState {
+  assignments: CleaningAssignment[];
+  baseWeek: number;
+}
+
+export interface LabOrder {
+  id: string;
+  itemName: string;
+  requestedBy: string;
+  status: "REQUESTED" | "ORDERED" | "RECEIVED";
+  createdAt: string;
+  orderedAt?: string;
+  orderedBy?: string;
+  receivedAt?: string;
+  receivedBy?: string;
+}

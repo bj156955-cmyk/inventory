@@ -51,66 +51,70 @@ export default function LoginPage() {
         });
         if (error) throw error;
       }
-    } catch (err: any) {
-      setErrorMsg(err.message || "인증에 실패했습니다.");
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setErrorMsg(err.message);
+      } else {
+        setErrorMsg("인증에 실패했습니다.");
+      }
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="flex-1 flex items-center justify-center p-6 bg-surface dark:bg-slate-950">
-      <div className="w-full max-w-[420px] p-10 bg-surface-container-lowest dark:bg-slate-900 rounded-[2.5rem] shadow-2xl border border-black/[0.02] dark:border-white/[0.02] space-y-8 transition-all duration-300">
+    <div className="flex-1 flex items-center justify-center p-4 sm:p-6 bg-surface dark:bg-slate-950 min-h-[100dvh]">
+      <div className="w-full max-w-[420px] p-6 sm:p-10 bg-surface-container-lowest dark:bg-slate-900 rounded-[2rem] sm:rounded-[2.5rem] shadow-2xl border border-black/[0.02] dark:border-white/[0.02] space-y-6 sm:space-y-8 transition-all duration-300">
         
         {/* Header Branding */}
-        <div className="text-center space-y-4">
-          <div className="w-20 h-20 bg-primary rounded-[2rem] flex items-center justify-center mx-auto shadow-xl hover:rotate-6 transition-all duration-300">
-            <Package className="text-white w-10 h-10" />
+        <div className="text-center space-y-3 sm:space-y-4">
+          <div className="w-16 h-16 sm:w-20 sm:h-20 bg-primary rounded-[1.5rem] sm:rounded-[2rem] flex items-center justify-center mx-auto shadow-xl hover:rotate-6 transition-all duration-300">
+            <Package className="text-white w-8 h-8 sm:w-10 sm:h-10" />
           </div>
           <div>
-            <h2 className="text-3xl font-black font-headline tracking-tighter text-primary dark:text-blue-400">
+            <h2 className="text-2xl sm:text-3xl font-black font-headline tracking-tighter text-primary dark:text-blue-400">
               Atelier
             </h2>
-            <p className="text-on-surface-variant dark:text-gray-400 text-xs font-semibold uppercase tracking-widest mt-1">
+            <p className="text-on-surface-variant dark:text-gray-400 text-[10px] sm:text-xs font-semibold uppercase tracking-widest mt-1">
               {isSignUp ? "Create New Access" : "Warehouse & Collaboration"}
             </p>
           </div>
         </div>
 
         {/* Auth Form */}
-        <form onSubmit={handleAuth} className="space-y-5">
+        <form onSubmit={handleAuth} className="space-y-4 sm:space-y-5">
           <div className="relative">
-            <User className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant/40 dark:text-gray-500 w-5 h-5" />
+            <User className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant/40 dark:text-gray-500 w-4 h-4 sm:w-5 sm:h-5" />
             <input
               type="text"
               required
               value={userId}
               onChange={(e) => setUserId(e.target.value)}
               placeholder="USER ID"
-              className="w-full pl-12 pr-4 py-4 bg-surface-container-low dark:bg-slate-800 text-foreground rounded-2xl outline-none focus:ring-2 focus:ring-primary/20 dark:focus:ring-blue-500/20 text-xs font-bold tracking-widest uppercase placeholder:text-on-surface-variant/30 transition-all border border-black/[0.03] dark:border-white/[0.03]"
+              className="w-full pl-11 sm:pl-12 pr-4 py-3.5 sm:py-4 bg-surface-container-low dark:bg-slate-800 text-foreground rounded-2xl outline-none focus:ring-2 focus:ring-primary/20 dark:focus:ring-blue-500/20 text-xs sm:text-sm font-bold tracking-wider uppercase placeholder:text-on-surface-variant/30 transition-all border border-black/[0.03] dark:border-white/[0.03]"
             />
           </div>
 
           <div className="relative">
-            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant/40 dark:text-gray-500 w-5 h-5" />
+            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant/40 dark:text-gray-500 w-4 h-4 sm:w-5 sm:h-5" />
             <input
               type="password"
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="PASSWORD"
-              className="w-full pl-12 pr-4 py-4 bg-surface-container-low dark:bg-slate-800 text-foreground rounded-2xl outline-none focus:ring-2 focus:ring-primary/20 dark:focus:ring-blue-500/20 text-xs font-bold tracking-widest placeholder:text-on-surface-variant/30 transition-all border border-black/[0.03] dark:border-white/[0.03]"
+              className="w-full pl-11 sm:pl-12 pr-4 py-3.5 sm:py-4 bg-surface-container-low dark:bg-slate-800 text-foreground rounded-2xl outline-none focus:ring-2 focus:ring-primary/20 dark:focus:ring-blue-500/20 text-xs sm:text-sm font-bold tracking-wider placeholder:text-on-surface-variant/30 transition-all border border-black/[0.03] dark:border-white/[0.03]"
             />
           </div>
 
           {errorMsg && (
-            <div className="p-4 bg-error-container text-error rounded-2xl text-[11px] font-bold tracking-tight">
+            <div className="p-3.5 sm:p-4 bg-error-container text-error rounded-2xl text-[11px] sm:text-xs font-bold tracking-tight">
               ⚠️ {errorMsg}
             </div>
           )}
 
           {successMsg && (
-            <div className="p-4 bg-emerald-50 text-emerald-600 dark:bg-emerald-950/20 dark:text-emerald-400 rounded-2xl text-[11px] font-bold tracking-tight">
+            <div className="p-3.5 sm:p-4 bg-emerald-50 text-emerald-600 dark:bg-emerald-950/20 dark:text-emerald-400 rounded-2xl text-[11px] sm:text-xs font-bold tracking-tight">
               ✅ {successMsg}
             </div>
           )}
@@ -118,7 +122,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-primary dark:bg-blue-600 hover:bg-primary-container dark:hover:bg-blue-700 text-white py-4 rounded-2xl font-headline font-black flex items-center justify-center gap-2 shadow-lg hover:shadow-2xl transition-all duration-200 active:scale-[0.98] disabled:opacity-55"
+            className="w-full bg-primary dark:bg-blue-600 hover:bg-primary-container dark:hover:bg-blue-700 text-white py-3.5 sm:py-4 rounded-2xl font-headline font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg hover:shadow-2xl transition-all duration-200 active:scale-[0.98] disabled:opacity-55 cursor-pointer"
           >
             <span>{loading ? "처리 중..." : isSignUp ? "계정 등록 신청" : "Atelier 입장"}</span>
             {!loading && <ArrowRight className="w-4 h-4" />}
@@ -134,7 +138,7 @@ export default function LoginPage() {
               setErrorMsg("");
               setSuccessMsg("");
             }}
-            className="text-xs font-black text-on-surface-variant/60 hover:text-primary dark:text-gray-400 dark:hover:text-blue-400 transition-colors uppercase tracking-widest"
+            className="text-xs font-black text-on-surface-variant/60 hover:text-primary dark:text-gray-400 dark:hover:text-blue-400 transition-colors uppercase tracking-wider cursor-pointer"
           >
             {isSignUp ? "기존 계정으로 로그인" : "초대받은 분 가입하기"}
           </button>

@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
-import { CalendarEvent } from "@/types";
+import { CalendarEvent, PublicHoliday, AllowedUser } from "@/types";
 import { useAuth } from "@/context/AuthContext";
 import { 
   startOfMonth, 
@@ -208,7 +208,6 @@ export default function CalendarPage() {
 
   // Fetch Calendar Events
   const fetchEvents = async () => {
-    setLoading(true);
     try {
       const { data, error } = await supabase
         .from("calendar_events")
@@ -244,7 +243,7 @@ export default function CalendarPage() {
         if (!res.ok) throw new Error("API response error");
         const data = await res.json();
         const holidayMap: { [key: string]: string } = {};
-        data.forEach((h: any) => {
+        (data as PublicHoliday[]).forEach((h) => {
           holidayMap[h.date] = h.localName;
         });
         // Merge with fallback data just in case API data is incomplete or has missing dates
@@ -259,24 +258,42 @@ export default function CalendarPage() {
   }, [currentMonth]);
 
   useEffect(() => {
-    fetchEvents();
+    let ignore = false;
 
-    const fetchTeamMembers = async () => {
+    const loadCalendarData = async () => {
       try {
-        const { data, error } = await supabase
+        const { data: eventData, error: eventError } = await supabase
+          .from("calendar_events")
+          .select("*");
+        if (eventError) throw eventError;
+        const fetchedEvents = eventData || [];
+        if (!ignore) setEvents(fetchedEvents);
+
+        const creators = fetchedEvents
+          .map((e) => e.created_by)
+          .filter(Boolean)
+          .flatMap((c: string) => c.split(",").map((m: string) => m.trim().toUpperCase()))
+          .filter(Boolean);
+
+        const { data: userData, error: userError } = await supabase
           .from("allowed_users")
           .select("username")
           .order("created_at", { ascending: true });
-        if (error) throw error;
-        if (data) {
-          const list = data.map((d: any) => d.username.toUpperCase());
-          setAllMembers(list);
+        if (userError) throw userError;
+
+        const userList = userData ? (userData as AllowedUser[]).map((d) => d.username.toUpperCase()) : [];
+
+        if (!ignore) {
+          setAllMembers((prev) => Array.from(new Set([...prev, ...creators, ...userList])));
         }
       } catch (err) {
-        console.error("Error fetching team members:", err);
+        console.error("Error loading calendar data:", err);
+      } finally {
+        if (!ignore) setLoading(false);
       }
     };
-    fetchTeamMembers();
+
+    loadCalendarData();
 
     // Setup Realtime Sync for calendar_events
     const channel = supabase
@@ -291,6 +308,7 @@ export default function CalendarPage() {
       .subscribe();
 
     return () => {
+      ignore = true;
       supabase.removeChannel(channel);
     };
   }, []);
@@ -325,7 +343,7 @@ export default function CalendarPage() {
     }
   };
 
-  const handleMouseUp = () => {
+  const handleMouseUp = useCallback(() => {
     if (isDragging && dragStart && dragEnd) {
       setIsDragging(false);
       
@@ -347,7 +365,7 @@ export default function CalendarPage() {
       setDragStart(null);
       setDragEnd(null);
     }
-  };
+  }, [isDragging, dragStart, dragEnd, user]);
 
   useEffect(() => {
     const handleGlobalMouseUp = () => {
@@ -357,7 +375,7 @@ export default function CalendarPage() {
     };
     window.addEventListener("mouseup", handleGlobalMouseUp);
     return () => window.removeEventListener("mouseup", handleGlobalMouseUp);
-  }, [isDragging, dragStart, dragEnd]);
+  }, [isDragging, handleMouseUp]);
 
   // Handlers for month nav
   const handlePrevMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
@@ -370,22 +388,6 @@ export default function CalendarPage() {
   const endDate = endOfWeek(monthEnd);
 
   const days = eachDayOfInterval({ start: startDate, end: endDate });
-
-  // Open modal to add event
-  const openAddModal = (date: Date) => {
-    setSelectedDate(date);
-    setSelectedEvent(null);
-    setFormTitle("");
-    setFormDesc("");
-    const dateStr = format(date, "yyyy-MM-dd");
-    setFormStartDate(dateStr);
-    setFormEndDate(dateStr);
-    setFormStartTime("09:00");
-    setFormEndTime("18:00");
-    const defaultUser = user?.email?.split("@")[0].toUpperCase() || "UNKNOWN";
-    setSelectedMembers([defaultUser]);
-    setModalOpen(true);
-  };
 
   // Open modal to view/edit/delete event
   const openViewModal = (e: React.SyntheticEvent, event: CalendarEvent) => {
@@ -465,49 +467,63 @@ export default function CalendarPage() {
 
 
   return (
-    <div className="flex-1 p-6 md:p-10 space-y-6 bg-surface dark:bg-slate-900 flex flex-col min-h-0">
+    <div className="flex-1 p-4 sm:p-6 md:p-10 space-y-4 sm:space-y-6 bg-surface dark:bg-slate-900 flex flex-col min-h-0">
       
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shrink-0">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 shrink-0">
         <div>
-          <h2 className="text-3xl font-black font-headline text-primary dark:text-blue-400 tracking-tighter">
+          <h2 className="text-2xl sm:text-3xl font-black font-headline text-primary dark:text-blue-400 tracking-tighter">
             Team Shared Calendar
           </h2>
-          <p className="text-xs md:text-sm text-on-surface-variant dark:text-gray-400 font-semibold mt-1">
+          <p className="text-xs sm:text-sm text-on-surface-variant dark:text-gray-400 font-semibold mt-1">
             팀원들의 일정을 등록하고 실시간으로 공유하는 단독 캘린더입니다.
           </p>
         </div>
-        <div className="flex items-center gap-3 bg-white dark:bg-slate-800 p-2 rounded-2xl border border-black/[0.03] dark:border-white/[0.03]">
-          <button 
-            onClick={handlePrevMonth}
-            className="p-2 hover:bg-surface-container-low dark:hover:bg-slate-700 rounded-xl transition-all cursor-pointer text-on-surface-variant dark:text-gray-400"
+        <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-3 w-full sm:w-auto">
+          <div className="flex items-center gap-1.5 sm:gap-3 bg-white dark:bg-slate-800 p-1.5 sm:p-2 rounded-2xl border border-black/[0.03] dark:border-white/[0.03] shadow-sm">
+            <button 
+              onClick={handlePrevMonth}
+              className="p-1.5 sm:p-2 hover:bg-surface-container-low dark:hover:bg-slate-700 rounded-xl transition-all cursor-pointer text-on-surface-variant dark:text-gray-400 active:scale-95"
+              title="이전 달"
+            >
+              <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+            </button>
+            <span className="text-xs sm:text-sm font-black text-primary dark:text-white px-2 uppercase tracking-wider">
+              {format(currentMonth, "yyyy. MMMM", { locale: ko })}
+            </span>
+            <button 
+              onClick={handleNextMonth}
+              className="p-1.5 sm:p-2 hover:bg-surface-container-low dark:hover:bg-slate-700 rounded-xl transition-all cursor-pointer text-on-surface-variant dark:text-gray-400 active:scale-95"
+              title="다음 달"
+            >
+              <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
+            </button>
+          </div>
+          <button
+            onClick={() => {
+              setLoading(true);
+              fetchEvents();
+            }}
+            className="p-2.5 sm:p-3 bg-surface-container-low dark:bg-slate-800 text-on-surface-variant dark:text-gray-400 rounded-2xl hover:text-primary dark:hover:text-white transition-all cursor-pointer shadow-sm active:scale-95 shrink-0"
+            title="새로고침"
           >
-            <ChevronLeft className="w-5 h-5" />
-          </button>
-          <span className="text-sm font-black text-primary dark:text-white px-2 uppercase tracking-widest">
-            {format(currentMonth, "yyyy. MMMM", { locale: ko })}
-          </span>
-          <button 
-            onClick={handleNextMonth}
-            className="p-2 hover:bg-surface-container-low dark:hover:bg-slate-700 rounded-xl transition-all cursor-pointer text-on-surface-variant dark:text-gray-400"
-          >
-            <ChevronRight className="w-5 h-5" />
+            <RefreshCw className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
         </div>
       </div>
 
 
       {/* Master-Detail Layout: Calendar + Selected Day Agenda */}
-      <div className="flex-1 flex flex-col lg:flex-row gap-6 min-h-[400px]">
+      <div className="flex-1 flex flex-col lg:flex-row gap-5 sm:gap-6 min-h-[400px]">
         
         {/* Left Column: Calendar Grid */}
-        <div className="flex-1 bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-md border border-black/[0.02] dark:border-white/[0.02] overflow-hidden flex flex-col min-h-[400px]">
+        <div className="flex-1 bg-white dark:bg-slate-800 rounded-[2rem] sm:rounded-[2.5rem] shadow-md border border-black/[0.02] dark:border-white/[0.02] overflow-hidden flex flex-col min-h-[360px]">
           {/* Days of Week Header */}
           <div className="grid grid-cols-7 border-b border-black/[0.02] dark:border-white/[0.02] bg-surface-container-low/50 dark:bg-slate-700/50">
             {["일", "월", "화", "수", "목", "금", "토"].map((day, idx) => (
               <div 
                 key={day} 
-                className={`py-4 text-center text-[10px] font-black uppercase tracking-widest ${
+                className={`py-2.5 sm:py-4 text-center text-[10px] sm:text-xs font-black uppercase tracking-widest ${
                   idx === 0 ? "text-red-500" : idx === 6 ? "text-blue-500" : "text-on-surface-variant dark:text-gray-300"
                 }`}
               >
@@ -523,7 +539,7 @@ export default function CalendarPage() {
             </div>
           ) : (
             <div className="flex-1 grid grid-cols-7 grid-rows-6 divide-x divide-y divide-black/[0.02] dark:divide-white/[0.02] border-t border-black/[0.02] dark:border-white/[0.02]">
-              {days.map((day, dayIdx) => {
+              {days.map((day) => {
                 const dayStr = format(day, "yyyy-MM-dd");
                 const dayEvents = events.filter((e) => {
                   const startStr = format(new Date(e.start_time), "yyyy-MM-dd");

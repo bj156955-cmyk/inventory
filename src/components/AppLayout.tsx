@@ -24,16 +24,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   if (isLoginPage) {
-    return <div className="flex-1 flex flex-col min-h-screen">{children}</div>;
+    return <div className="flex-1 flex flex-col min-h-[100dvh]">{children}</div>;
   }
 
   return (
-    <div className="flex flex-col md:flex-row min-h-screen">
+    <div className="flex flex-col md:flex-row min-h-[100dvh] w-full">
       {/* Responsive Sidebar */}
       <Sidebar />
       
       {/* Main App Content Area */}
-      <main className="flex-1 md:pl-24 pb-24 md:pb-0 min-h-screen flex flex-col">
+      <main className="flex-1 md:pl-20 lg:pl-24 pb-20 md:pb-0 min-h-[100dvh] flex flex-col overflow-x-hidden">
         {children}
       </main>
     </div>

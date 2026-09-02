@@ -1,18 +1,19 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 import { 
+  Reservation, 
+  CleaningAssignment, 
+  CleaningState, 
+  LabOrder, 
+  AllowedUser 
+} from "@/types";
+import { 
   FlaskConical, 
-  Settings, 
-  Calendar, 
-  Trash2, 
-  Check, 
-  User, 
   RefreshCw,
   Sparkles,
-  HelpCircle,
   Plus,
   GripVertical,
   X,
@@ -98,38 +99,9 @@ const SLOTS = [
   "18:00", "18:30", "19:00"
 ];
 
-interface Reservation {
-  equipment: string; // "A" or "B"
-  day: string; // "월", "화", ...
-  slot: string; // "09:00", ...
-  user: string; // "BJ", ...
-}
-
-interface CleaningAssignment {
-  member: string;
-  cleaning: boolean;
-  waste: boolean;
-}
-
-interface CleaningState {
-  assignments: CleaningAssignment[];
-  baseWeek: number;
-}
-
-interface LabOrder {
-  id: string;
-  itemName: string;
-  requestedBy: string;
-  status: "REQUESTED" | "ORDERED" | "RECEIVED";
-  createdAt: string;
-  orderedAt?: string;
-  orderedBy?: string;
-  receivedAt?: string;
-  receivedBy?: string;
-}
-
 export default function LabPage() {
   const { user } = useAuth();
+  const [mountTime] = useState(() => Date.now());
   const [members, setMembers] = useState<string[]>([]);
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [cleaningState, setCleaningState] = useState<CleaningState | null>(null);
@@ -164,113 +136,88 @@ export default function LabPage() {
   const [resDbId, setResDbId] = useState<string | null>(null);
   const [cleanDbId, setCleanDbId] = useState<string | null>(null);
 
-  // 1. Fetch Registered Team Members from allowed_users
-  const fetchMembers = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("allowed_users")
-        .select("username")
-        .order("created_at", { ascending: true });
-      if (error) throw error;
-      if (data) {
-        setMembers(data.map((d: any) => d.username.toUpperCase()));
-      }
-    } catch (err) {
-      console.error("Error fetching members:", err);
-    }
-  };
-
-  // 2. Fetch Reservations and Cleaning duties from notices table shadow rows
-  const fetchLabData = async () => {
-    setLoading(true);
-    try {
-      // Fetch reservations
-      const { data: resData, error: resError } = await supabase
-        .from("notices")
-        .select("*")
-        .eq("title", "__LAB_RESERVATIONS__")
-        .limit(1);
-      
-      if (resError) throw resError;
-      
-      if (resData && resData.length > 0) {
-        setResDbId(resData[0].id);
-        setReservations(JSON.parse(resData[0].content) as Reservation[]);
-      } else {
-        setReservations([]);
-      }
-
-      // Fetch cleaning duties
-      const { data: cleanData, error: cleanError } = await supabase
-        .from("notices")
-        .select("*")
-        .eq("title", "__LAB_CLEANING__")
-        .limit(1);
-      
-      if (cleanError) throw cleanError;
-
-      if (cleanData && cleanData.length > 0) {
-        setCleanDbId(cleanData[0].id);
-        const parsed = JSON.parse(cleanData[0].content);
-        if (parsed.assignments) {
-          const sanitized = (parsed.assignments as any[]).map((item: any) => ({
-            member: item.member,
-            cleaning: typeof item.cleaning === "boolean" ? item.cleaning : (item.cleaning !== "면제" && !!item.cleaning),
-            waste: typeof item.waste === "boolean" ? item.waste : (item.waste !== "면제" && !!item.waste)
-          }));
-          setCleaningState({
-            baseWeek: parsed.baseWeek || 0,
-            assignments: sanitized
-          });
-        } else if (parsed.baseSequence) {
-          // Backward compatibility adapter
-          const baseSeq = parsed.baseSequence as string[];
-          const N = baseSeq.length;
-          const convertedAssignments = baseSeq.map((member, i) => {
-            // First 3 clean, middle shifted by N/2 waste
-            const cleaning = i < Math.min(3, N);
-            const s = Math.max(1, Math.floor(N / 2));
-            const wasteIdx = (i - s + N) % N;
-            const waste = wasteIdx < Math.min(2, N);
-            return { member, cleaning, waste };
-          });
-          setCleaningState({
-            baseWeek: parsed.baseWeek || 0,
-            assignments: convertedAssignments
-          });
-        }
-      } else {
-        setCleaningState(null);
-      }
-
-      // Fetch lab orders
-      const { data: orderData, error: orderError } = await supabase
-        .from("notices")
-        .select("*")
-        .eq("title", "__LAB_ORDERS__")
-        .limit(1);
-      
-      if (orderError) throw orderError;
-
-      if (orderData && orderData.length > 0) {
-        setOrderDbId(orderData[0].id);
-        setOrders(JSON.parse(orderData[0].content) as LabOrder[]);
-      } else {
-        setOrders([]);
-      }
-    } catch (err) {
-      console.error("Error fetching lab workspace data:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // 1. Fetch initial lab workspace data (Members, Reservations, Cleaning duties, Orders)
   useEffect(() => {
-    fetchMembers();
-    fetchLabData();
+    let ignore = false;
+
+    const loadInitialData = async () => {
+      try {
+        const { data: memberData, error: memberError } = await supabase
+          .from("allowed_users")
+          .select("username")
+          .order("created_at", { ascending: true });
+        if (memberError) throw memberError;
+        if (memberData && !ignore) {
+          setMembers((memberData as AllowedUser[]).map((d) => d.username.toUpperCase()));
+        }
+
+        const { data: resData, error: resError } = await supabase
+          .from("notices")
+          .select("*")
+          .eq("title", "__LAB_RESERVATIONS__")
+          .limit(1);
+        if (resError) throw resError;
+        if (!ignore) {
+          if (resData && resData.length > 0) {
+            setResDbId(resData[0].id);
+            setReservations(JSON.parse(resData[0].content) as Reservation[]);
+          } else {
+            setReservations([]);
+          }
+        }
+
+        const { data: cleanData, error: cleanError } = await supabase
+          .from("notices")
+          .select("*")
+          .eq("title", "__LAB_CLEANING__")
+          .limit(1);
+        if (cleanError) throw cleanError;
+        if (!ignore && cleanData && cleanData.length > 0) {
+          setCleanDbId(cleanData[0].id);
+          const parsed = JSON.parse(cleanData[0].content);
+          if (parsed.assignments) {
+            const rawAssignments = parsed.assignments as Array<{ member: string; cleaning: boolean | string; waste: boolean | string }>;
+            const sanitized: CleaningAssignment[] = rawAssignments.map((item) => ({
+              member: item.member,
+              cleaning: typeof item.cleaning === "boolean" ? item.cleaning : (item.cleaning !== "면제" && !!item.cleaning),
+              waste: typeof item.waste === "boolean" ? item.waste : (item.waste !== "면제" && !!item.waste)
+            }));
+            setCleaningState({
+              baseWeek: parsed.baseWeek || 0,
+              assignments: sanitized
+            });
+          }
+        }
+
+        const { data: orderData, error: orderError } = await supabase
+          .from("notices")
+          .select("*")
+          .eq("title", "__LAB_ORDERS__")
+          .limit(1);
+        if (orderError) throw orderError;
+        if (!ignore) {
+          if (orderData && orderData.length > 0) {
+            setOrderDbId(orderData[0].id);
+            setOrders(JSON.parse(orderData[0].content) as LabOrder[]);
+          } else {
+            setOrders([]);
+          }
+        }
+      } catch (err) {
+        console.error("Error loading lab data:", err);
+      } finally {
+        if (!ignore) setLoading(false);
+      }
+    };
+
+    loadInitialData();
+
+    return () => {
+      ignore = true;
+    };
   }, []);
 
-  const saveReservationsState = async (updated: Reservation[]) => {
+  const saveReservationsState = useCallback(async (updated: Reservation[]) => {
     try {
       if (resDbId) {
         await supabase
@@ -291,7 +238,7 @@ export default function LabPage() {
     } catch (err) {
       console.error("Error saving reservations:", err);
     }
-  };
+  }, [resDbId]);
 
   const commitDurationReservation = async (equipment: string, day: string, startSlot: string, durationSlots: number) => {
     const startIdx = SLOTS.indexOf(startSlot);
@@ -467,7 +414,7 @@ export default function LabPage() {
     return () => {
       window.removeEventListener("mouseup", handleGlobalMouseUp);
     };
-  }, [isDragging, activeDrag, dragStart, dragEnd, reservations, resDbId, user]);
+  }, [isDragging, activeDrag, dragStart, dragEnd, reservations, resDbId, user, saveReservationsState]);
 
   // Drag mouse event handlers
   const handleCellMouseDown = (equipment: string, day: string, slot: string) => {
@@ -689,12 +636,14 @@ export default function LabPage() {
     };
   });
 
-  const threeDaysAgo = Date.now() - 3 * 24 * 60 * 60 * 1000;
-  const visibleOrders = orders.filter(order => {
-    if (order.status !== "RECEIVED") return true;
-    if (!order.receivedAt) return true;
-    return new Date(order.receivedAt).getTime() >= threeDaysAgo;
-  });
+  const visibleOrders = useMemo(() => {
+    const threeDaysAgo = mountTime - 3 * 24 * 60 * 60 * 1000;
+    return orders.filter((order) => {
+      if (order.status !== "RECEIVED") return true;
+      if (!order.receivedAt) return true;
+      return new Date(order.receivedAt).getTime() >= threeDaysAgo;
+    });
+  }, [orders, mountTime]);
   // Find helper to search reservation state
   const getReservedUser = (equipment: string, day: string, slot: string) => {
     return reservations.find(r => r.equipment === equipment && r.day === day && r.slot === slot)?.user || "";
@@ -717,17 +666,42 @@ export default function LabPage() {
   };
 
   return (
-    <div className="flex-1 p-6 md:p-10 bg-surface dark:bg-slate-900 flex flex-col min-h-0">
+    <div className="flex-1 p-4 sm:p-6 md:p-10 space-y-6 sm:space-y-8 flex flex-col min-h-0 bg-surface dark:bg-slate-900">
+      
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-3 sm:gap-4 shrink-0">
+        <div>
+          <h2 className="text-2xl sm:text-3xl font-black font-headline text-primary dark:text-blue-400 tracking-tighter">
+            Atelier Lab Workspace
+          </h2>
+          <p className="text-xs sm:text-sm text-on-surface-variant dark:text-gray-400 font-semibold mt-1">
+            실험실 벤치 예약, 연구 물품 주문, 주간 청소 당번을 실시간으로 관리합니다.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => {
+              setLoading(true);
+              // Trigger reload
+              window.location.reload();
+            }}
+            className="p-2.5 sm:p-3 bg-surface-container-low dark:bg-slate-800 text-on-surface-variant dark:text-gray-400 rounded-2xl hover:text-primary dark:hover:text-white transition-all cursor-pointer shadow-sm active:scale-95 shrink-0"
+            title="새로고침"
+          >
+            <RefreshCw className="w-4 h-4 sm:w-5 sm:h-5" />
+          </button>
+        </div>
+      </div>
 
       {loading ? (
-        <div className="flex-1 flex items-center justify-center">
+        <div className="flex-1 flex items-center justify-center min-h-[300px]">
           <RefreshCw className="w-8 h-8 text-primary dark:text-blue-500 animate-spin" />
         </div>
       ) : (
-        <div className="space-y-6 flex flex-col min-h-0 flex-1 overflow-y-auto pr-1 custom-scrollbar">
-          
-          {/* Mobile Day Selector Tabs */}
-          <div className="flex md:hidden items-center justify-center gap-1.5 p-1 bg-white dark:bg-slate-800 rounded-2xl border border-black/[0.03] dark:border-white/[0.03] shadow-sm select-none shrink-0">
+        <div className="space-y-6 sm:space-y-8 flex-1 overflow-y-auto pr-1 sm:pr-2 custom-scrollbar">
+
+          {/* Mobile Only: Day of Week Tabs */}
+          <div className="flex md:hidden bg-surface-container-low dark:bg-slate-800/80 p-1.5 rounded-2xl gap-1 shrink-0 select-none shadow-sm">
             {DAYS.map((day) => {
               const isActive = selectedDayTab === day;
               return (
@@ -735,10 +709,10 @@ export default function LabPage() {
                   key={day}
                   type="button"
                   onClick={() => setSelectedDayTab(day)}
-                  className={`flex-1 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${
-                    isActive 
-                      ? "bg-primary text-white dark:bg-blue-600 shadow-sm"
-                      : "text-on-surface-variant/60 dark:text-gray-400 hover:bg-black/5 dark:hover:bg-white/5"
+                  className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer text-center ${
+                    isActive
+                      ? "bg-primary dark:bg-blue-600 text-white shadow-sm font-extrabold scale-[1.02]"
+                      : "text-on-surface-variant/70 dark:text-gray-400 hover:bg-black/5 dark:hover:bg-white/5"
                   }`}
                 >
                   {day}요일
@@ -748,14 +722,14 @@ export default function LabPage() {
           </div>
 
           {/* Top Section: Two Reservation Tables */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-6">
             
             {/* Table 1: Equipment A */}
-            <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] p-6 shadow-md border border-black/[0.02] dark:border-white/[0.02] flex flex-col h-full">
+            <div className="bg-white dark:bg-slate-800 rounded-[2rem] sm:rounded-[2.5rem] p-5 sm:p-6 shadow-md border border-black/[0.02] dark:border-white/[0.02] flex flex-col h-full">
               <div className="pb-3 border-b border-black/[0.02] dark:border-white/[0.02] shrink-0">
                 <h3 className="text-base font-black text-primary dark:text-white flex items-center gap-2">
                   <FlaskConical className="w-5 h-5 text-emerald-500 animate-pulse" />
-                  <span>왼쪽 벤치</span>
+                  <span>왼쪽 벤치 (Bench A)</span>
                 </h3>
               </div>
 
@@ -1163,12 +1137,12 @@ export default function LabPage() {
                                 <GripVertical className="hidden md:block w-3.5 h-3.5 text-on-surface-variant/30 shrink-0 cursor-grab active:cursor-grabbing" />
                                 
                                 {/* Mobile: Move Buttons */}
-                                <div className="flex md:hidden items-center gap-0.5 shrink-0 select-none">
+                                <div className="flex md:hidden items-center gap-1 shrink-0 select-none">
                                   <button
                                     type="button"
                                     disabled={idx === 0}
                                     onClick={() => handleRowDrop(idx, idx - 1)}
-                                    className={`p-0.5 rounded text-[8px] font-black hover:bg-slate-100 dark:hover:bg-slate-700 ${
+                                    className={`w-5 h-5 flex items-center justify-center rounded text-[9px] font-black bg-slate-100 dark:bg-slate-700 active:scale-90 ${
                                       idx === 0 ? "opacity-20 cursor-not-allowed" : "text-primary dark:text-blue-400 cursor-pointer"
                                     }`}
                                     title="위로 이동"
@@ -1179,7 +1153,7 @@ export default function LabPage() {
                                     type="button"
                                     disabled={idx === assignments.length - 1}
                                     onClick={() => handleRowDrop(idx, idx + 1)}
-                                    className={`p-0.5 rounded text-[8px] font-black hover:bg-slate-100 dark:hover:bg-slate-700 ${
+                                    className={`w-5 h-5 flex items-center justify-center rounded text-[9px] font-black bg-slate-100 dark:bg-slate-700 active:scale-90 ${
                                       idx === assignments.length - 1 ? "opacity-20 cursor-not-allowed" : "text-primary dark:text-blue-400 cursor-pointer"
                                     }`}
                                     title="아래로 이동"
@@ -1188,14 +1162,14 @@ export default function LabPage() {
                                   </button>
                                 </div>
 
-                                <span className="text-[10px] text-foreground dark:text-white font-bold truncate">
+                                <span className="text-xs text-foreground dark:text-white font-bold truncate">
                                   {row.member}
                                 </span>
                               </div>
                               <button
                                 type="button"
                                 onClick={() => handleRemoveUser(rotatedIdx)}
-                                className="text-on-surface-variant/40 dark:text-gray-500 hover:text-red-500 opacity-0 group-hover:opacity-60 hover:!opacity-100 transition-all p-0.5 shrink-0 cursor-pointer"
+                                className="text-on-surface-variant/40 dark:text-gray-500 hover:text-red-500 opacity-0 group-hover:opacity-60 hover:!opacity-100 transition-all p-1 shrink-0 cursor-pointer"
                                 title="제거"
                               >
                                 <X className="w-3.5 h-3.5" />
@@ -1205,19 +1179,23 @@ export default function LabPage() {
                           <td 
                             className={`py-2 border-r border-black/[0.01] dark:border-white/[0.01] px-1 cursor-pointer select-none transition-all ${
                               row.cleaning 
-                                ? "bg-blue-500 dark:bg-blue-600 hover:bg-blue-600 dark:hover:bg-blue-500" 
-                                : "hover:bg-slate-50 dark:hover:bg-slate-700/20"
+                                ? "bg-blue-500 dark:bg-blue-600 hover:bg-blue-600 dark:hover:bg-blue-500 text-white font-black" 
+                                : "hover:bg-slate-50 dark:hover:bg-slate-700/20 text-transparent"
                             }`}
                             onClick={() => handleToggleDuty(rotatedIdx, "cleaning")}
-                          />
+                          >
+                            <span className="text-xs select-none">✓</span>
+                          </td>
                           <td 
                             className={`py-2 px-1 cursor-pointer select-none transition-all ${
                               row.waste 
-                                ? "bg-blue-500 dark:bg-blue-600 hover:bg-blue-600 dark:hover:bg-blue-500" 
-                                : "hover:bg-slate-50 dark:hover:bg-slate-700/20"
+                                ? "bg-blue-500 dark:bg-blue-600 hover:bg-blue-600 dark:hover:bg-blue-500 text-white font-black" 
+                                : "hover:bg-slate-50 dark:hover:bg-slate-700/20 text-transparent"
                             }`}
                             onClick={() => handleToggleDuty(rotatedIdx, "waste")}
-                          />
+                          >
+                            <span className="text-xs select-none">✓</span>
+                          </td>
                         </tr>
                       );
                     })}

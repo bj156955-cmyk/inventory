@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Manrope } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
@@ -17,6 +17,18 @@ const manrope = Manrope({
 export const metadata: Metadata = {
   title: "Atelier Stock & Collaboration System",
   description: "Real-time stock management and collaboration dashboard",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: "cover",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#faf9fd" },
+    { media: "(prefers-color-scheme: dark)", color: "#0b111e" },
+  ],
 };
 
 export default function RootLayout({

@@ -31,7 +31,6 @@ export default function NoticesPage() {
   const [formContent, setFormContent] = useState("");
 
   const fetchNotices = async () => {
-    setLoading(true);
     try {
       const { data, error } = await supabase
         .from("notices")
@@ -53,7 +52,30 @@ export default function NoticesPage() {
   };
 
   useEffect(() => {
-    fetchNotices();
+    let ignore = false;
+
+    const loadNotices = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("notices")
+          .select("*")
+          .order("created_at", { ascending: false });
+        if (error) throw error;
+        const filtered = (data || []).filter(
+          (n) => 
+            n.title !== "__TEAM_MEMBERS__" && 
+            n.title !== "__LAB_RESERVATIONS__" && 
+            n.title !== "__LAB_CLEANING__"
+        );
+        if (!ignore) setNotices(filtered);
+      } catch (err) {
+        console.error("Error fetching notices:", err);
+      } finally {
+        if (!ignore) setLoading(false);
+      }
+    };
+
+    loadNotices();
 
     // Setup Realtime Sync for notices
     const channel = supabase
@@ -68,6 +90,7 @@ export default function NoticesPage() {
       .subscribe();
 
     return () => {
+      ignore = true;
       supabase.removeChannel(channel);
     };
   }, []);
@@ -140,68 +163,72 @@ export default function NoticesPage() {
   };
 
   return (
-    <div className="flex-1 p-6 md:p-10 space-y-6 bg-surface dark:bg-slate-900 flex flex-col min-h-0">
+    <div className="flex-1 p-4 sm:p-6 md:p-10 space-y-4 sm:space-y-6 bg-surface dark:bg-slate-900 flex flex-col min-h-0">
       
       {/* Header */}
-      <div className="flex justify-between items-end shrink-0">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 shrink-0">
         <div>
-          <h2 className="text-3xl font-black font-headline text-primary dark:text-blue-400 tracking-tighter">
+          <h2 className="text-2xl sm:text-3xl font-black font-headline text-primary dark:text-blue-400 tracking-tighter">
             Atelier Announcement
           </h2>
-          <p className="text-xs md:text-sm text-on-surface-variant dark:text-gray-400 font-semibold mt-1">
+          <p className="text-xs sm:text-sm text-on-surface-variant dark:text-gray-400 font-semibold mt-1">
             팀원들에게 공유할 공지사항과 중요 변경사항을 공지합니다.
           </p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex gap-2 sm:gap-3 w-full sm:w-auto justify-end">
           <button
             onClick={() => openFormModal(null)}
-            className="flex items-center gap-2 px-5 py-3 bg-primary dark:bg-blue-600 text-white rounded-2xl font-bold text-sm shadow-lg hover:shadow-2xl transition-all duration-200 active:scale-95 cursor-pointer"
+            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 bg-primary dark:bg-blue-600 text-white rounded-2xl font-bold text-xs sm:text-sm shadow-md hover:shadow-lg transition-all duration-200 active:scale-95 cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>공지 작성</span>
           </button>
           <button
-            onClick={fetchNotices}
-            className="p-3 bg-surface-container-low dark:bg-slate-800 text-on-surface-variant dark:text-gray-400 rounded-2xl hover:text-primary dark:hover:text-white transition-all"
+            onClick={() => {
+              setLoading(true);
+              fetchNotices();
+            }}
+            className="p-2.5 sm:p-3 bg-surface-container-low dark:bg-slate-800 text-on-surface-variant dark:text-gray-400 rounded-2xl hover:text-primary dark:hover:text-white transition-all cursor-pointer active:scale-95 shadow-sm shrink-0"
+            title="새로고침"
           >
-            <RefreshCw className="w-5 h-5" />
+            <RefreshCw className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
         </div>
       </div>
 
       {/* Notices Board */}
-      <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
+      <div className="flex-1 overflow-y-auto pr-1 sm:pr-2 custom-scrollbar">
         {loading ? (
           <div className="h-64 flex items-center justify-center">
             <RefreshCw className="w-8 h-8 text-primary dark:text-blue-500 animate-spin" />
           </div>
         ) : notices.length === 0 ? (
-          <div className="h-64 flex flex-col items-center justify-center text-center space-y-3 bg-white dark:bg-slate-800 rounded-[2.5rem] border border-black/[0.02]">
+          <div className="h-64 flex flex-col items-center justify-center text-center space-y-3 bg-white dark:bg-slate-800 rounded-[2rem] sm:rounded-[2.5rem] border border-black/[0.02]">
             <AlertCircle className="w-12 h-12 text-on-surface-variant/30" />
             <p className="text-sm font-semibold text-on-surface-variant/60 dark:text-gray-400">
               등록된 공지사항이 없습니다.
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
             {notices.map((notice) => (
               <div
                 key={notice.id}
                 onClick={() => openViewModal(notice)}
-                className="bg-white dark:bg-slate-800 p-6 rounded-[2rem] shadow-sm hover:shadow-md border border-black/[0.02] dark:border-white/[0.02] transition-all duration-200 cursor-pointer flex flex-col justify-between h-[200px]"
+                className="bg-white dark:bg-slate-800 p-5 sm:p-6 rounded-[1.8rem] sm:rounded-[2rem] shadow-sm hover:shadow-md border border-black/[0.02] dark:border-white/[0.02] transition-all duration-200 cursor-pointer flex flex-col justify-between min-h-[160px] h-auto gap-4"
               >
                 <div>
-                  <div className="flex justify-between items-start gap-4">
-                    <h3 className="font-bold text-base text-primary dark:text-white line-clamp-1">
+                  <div className="flex justify-between items-start gap-3">
+                    <h3 className="font-bold text-sm sm:text-base text-primary dark:text-white line-clamp-1">
                       {notice.title}
                     </h3>
                   </div>
-                  <p className="text-xs text-on-surface-variant/70 dark:text-gray-300 mt-3 line-clamp-4 leading-relaxed font-medium">
+                  <p className="text-xs sm:text-sm text-on-surface-variant/70 dark:text-gray-300 mt-2.5 line-clamp-3 sm:line-clamp-4 leading-relaxed font-normal">
                     {notice.content}
                   </p>
                 </div>
 
-                <div className="flex justify-between items-center pt-4 border-t border-black/[0.02] dark:border-white/[0.02] text-[10px] font-black text-on-surface-variant/40 dark:text-gray-500 uppercase tracking-widest">
+                <div className="flex justify-between items-center pt-3 border-t border-black/[0.03] dark:border-white/[0.03] text-[10px] font-bold text-on-surface-variant/50 dark:text-gray-400 uppercase tracking-wider">
                   <div className="flex items-center gap-3">
                     <span className="flex items-center gap-1">
                       <User className="w-3 h-3" />
@@ -215,13 +242,15 @@ export default function NoticesPage() {
                   <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
                     <button
                       onClick={() => openFormModal(notice)}
-                      className="p-1 hover:text-primary dark:hover:text-blue-400"
+                      className="p-1 hover:text-primary dark:hover:text-blue-400 rounded"
+                      title="수정"
                     >
                       <Edit className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => handleDeleteNotice(notice.id)}
-                      className="p-1 hover:text-error"
+                      className="p-1 hover:text-error rounded"
+                      title="삭제"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>

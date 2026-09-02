@@ -7,10 +7,9 @@ import { useAuth } from "@/context/AuthContext";
 import { 
   Send, 
   MessageSquare, 
-  User, 
   Clock, 
-  RefreshCw,
-  AlertCircle
+  RefreshCw, 
+  AlertCircle 
 } from "lucide-react";
 
 // Same color mapping function to maintain UI consistency
@@ -24,7 +23,6 @@ export default function ChatPage() {
 
   // 1. Fetch initial messages (Limit to past 30 days to optimize DB space)
   const fetchMessages = async () => {
-    setLoading(true);
     try {
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -45,7 +43,29 @@ export default function ChatPage() {
   };
 
   useEffect(() => {
-    fetchMessages();
+    let ignore = false;
+
+    const loadMessages = async () => {
+      try {
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+        const { data, error } = await supabase
+          .from("chat_messages")
+          .select("*")
+          .gte("created_at", thirtyDaysAgo.toISOString())
+          .order("created_at", { ascending: true });
+
+        if (error) throw error;
+        if (!ignore) setMessages(data || []);
+      } catch (err) {
+        console.error("Error fetching chat messages:", err);
+      } finally {
+        if (!ignore) setLoading(false);
+      }
+    };
+
+    loadMessages();
 
     // 2. Setup Realtime channel
     const channel = supabase
@@ -65,6 +85,7 @@ export default function ChatPage() {
       .subscribe();
 
     return () => {
+      ignore = true;
       supabase.removeChannel(channel);
     };
   }, []);
@@ -106,37 +127,41 @@ export default function ChatPage() {
   };
 
   return (
-    <div className="flex-1 bg-surface dark:bg-slate-900 flex flex-col h-[100vh] min-h-0">
+    <div className="flex-1 bg-surface dark:bg-slate-900 flex flex-col h-[100dvh] min-h-0">
       
       {/* Header */}
-      <header className="px-6 py-4 border-b border-black/[0.03] dark:border-white/[0.03] bg-white dark:bg-slate-800 flex justify-between items-center shrink-0">
+      <header className="px-4 sm:px-6 py-3.5 sm:py-4 border-b border-black/[0.04] dark:border-white/[0.04] bg-white dark:bg-slate-800 flex justify-between items-center shrink-0 shadow-sm">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-primary/5 dark:bg-blue-500/10 rounded-xl flex items-center justify-center text-primary dark:text-blue-400">
+          <div className="w-9 h-9 sm:w-10 sm:h-10 bg-primary/5 dark:bg-blue-500/10 rounded-xl flex items-center justify-center text-primary dark:text-blue-400 shrink-0">
             <MessageSquare className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-base font-black text-primary dark:text-white tracking-tight">Atelier Live Chat</h2>
-            <p className="text-[10px] text-on-surface-variant/50 dark:text-gray-400 font-bold uppercase tracking-wider">팀원 실시간 소통 채널</p>
+            <h2 className="text-sm sm:text-base font-black text-primary dark:text-white tracking-tight">Atelier Live Chat</h2>
+            <p className="text-[9px] sm:text-[10px] text-on-surface-variant/60 dark:text-gray-400 font-bold uppercase tracking-wider">팀원 실시간 소통 채널</p>
           </div>
         </div>
         <button
-          onClick={fetchMessages}
-          className="p-2 hover:bg-surface-container-low dark:hover:bg-slate-700 rounded-xl text-on-surface-variant/40 hover:text-primary dark:hover:text-white transition-all"
+          onClick={() => {
+            setLoading(true);
+            fetchMessages();
+          }}
+          className="p-2 sm:p-2.5 hover:bg-surface-container-low dark:hover:bg-slate-700 rounded-xl text-on-surface-variant/50 hover:text-primary dark:hover:text-white transition-all cursor-pointer active:scale-95"
+          title="새로고침"
         >
           <RefreshCw className="w-4 h-4" />
         </button>
       </header>
 
       {/* Message Area */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar bg-surface-container-low/20">
+      <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 custom-scrollbar bg-surface-container-low/20">
         {loading ? (
           <div className="h-full flex items-center justify-center">
             <RefreshCw className="w-8 h-8 text-primary dark:text-blue-500 animate-spin" />
           </div>
         ) : messages.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center text-center space-y-2">
-            <AlertCircle className="w-10 h-10 text-on-surface-variant/20" />
-            <p className="text-xs font-semibold text-on-surface-variant/40 dark:text-gray-500">
+          <div className="h-full flex flex-col items-center justify-center text-center space-y-2 p-6">
+            <AlertCircle className="w-10 h-10 text-on-surface-variant/30" />
+            <p className="text-xs sm:text-sm font-semibold text-on-surface-variant/60 dark:text-gray-400">
               아직 나눈 대화가 없습니다. 첫 메시지를 보내보세요!
             </p>
           </div>
@@ -146,28 +171,28 @@ export default function ChatPage() {
             return (
               <div 
                 key={msg.id} 
-                className={`max-w-[70%] ${isMe ? "ml-auto text-right" : "mr-auto"}`}
+                className={`max-w-[85%] sm:max-w-[70%] ${isMe ? "ml-auto text-right" : "mr-auto"}`}
               >
                 <div className="space-y-1">
                   {/* Sender Name */}
-                  <span className={`text-[10px] font-black text-on-surface-variant/50 dark:text-gray-400 uppercase tracking-widest px-1 block mb-1 ${isMe ? "text-right" : "text-left"}`}>
+                  <span className={`text-[10px] font-black text-on-surface-variant/60 dark:text-gray-400 uppercase tracking-widest px-1 block mb-0.5 ${isMe ? "text-right" : "text-left"}`}>
                     {msg.user_name}
                   </span>
                   
                   {/* Bubble content */}
-                  <div className={`p-4 rounded-[1.5rem] shadow-sm text-xs font-semibold leading-relaxed text-left w-fit ${
+                  <div className={`p-3.5 sm:p-4 rounded-[1.3rem] sm:rounded-[1.5rem] shadow-sm text-xs sm:text-sm font-medium leading-relaxed text-left w-fit ${
                     isMe 
                       ? "bg-primary text-white dark:bg-blue-600 rounded-tr-none ml-auto" 
-                      : "bg-white dark:bg-slate-800 text-foreground dark:text-gray-200 border border-black/[0.01] dark:border-white/[0.01] rounded-tl-none"
+                      : "bg-white dark:bg-slate-800 text-foreground dark:text-gray-200 border border-black/[0.02] dark:border-white/[0.02] rounded-tl-none"
                   }`}>
                     {msg.message}
                   </div>
                   
                   {/* Time indicator */}
-                  <div className={`text-[8px] font-black text-on-surface-variant/30 dark:text-gray-500 uppercase tracking-widest flex items-center gap-1 ${
+                  <div className={`text-[9px] font-bold text-on-surface-variant/40 dark:text-gray-500 tracking-wider flex items-center gap-1 ${
                     isMe ? "justify-end" : "justify-start"
                   }`}>
-                    <Clock className="w-2 h-2" />
+                    <Clock className="w-2.5 h-2.5" />
                     <span>{new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                   </div>
                 </div>
@@ -179,25 +204,25 @@ export default function ChatPage() {
       </div>
 
       {/* Input Bar */}
-      <footer className="p-4 bg-white dark:bg-slate-800 border-t border-black/[0.03] dark:border-white/[0.03] shrink-0">
-        <form onSubmit={handleSendMessage} className="flex gap-3">
+      <footer className="p-3 sm:p-4 bg-white dark:bg-slate-800 border-t border-black/[0.04] dark:border-white/[0.04] shrink-0 shadow-lg">
+        <form onSubmit={handleSendMessage} className="flex gap-2 sm:gap-3">
           <input
             type="text"
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
-            placeholder="메시지를 입력해 주세요..."
-            className="flex-1 px-5 py-4 bg-surface-container-low dark:bg-slate-900 border border-black/[0.02] dark:border-white/[0.02] rounded-2xl text-xs font-medium outline-none focus:ring-2 focus:ring-primary/10 dark:focus:ring-blue-500/10 text-foreground transition-all"
+            placeholder="메시지를 입력하세요 (Shift + Enter 줄바꿈)..."
+            className="flex-1 bg-surface-container-low dark:bg-slate-900 border border-black/[0.05] dark:border-white/[0.05] rounded-2xl px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-medium outline-none focus:ring-2 focus:ring-primary/20 dark:focus:ring-blue-500/20 text-foreground transition-all"
           />
           <button
             type="submit"
             disabled={!newMessage.trim()}
-            className="px-5 bg-primary dark:bg-blue-600 hover:bg-primary-container dark:hover:bg-blue-700 text-white rounded-2xl font-bold text-sm shadow-md hover:shadow-xl active:scale-[0.97] transition-all flex items-center justify-center cursor-pointer disabled:opacity-50"
+            className="px-4 sm:px-6 py-2.5 sm:py-3 bg-primary dark:bg-blue-600 text-white rounded-2xl font-bold text-xs sm:text-sm flex items-center gap-1.5 shadow-md hover:shadow-lg disabled:opacity-40 disabled:pointer-events-none transition-all active:scale-95 cursor-pointer shrink-0"
           >
             <Send className="w-4 h-4" />
+            <span className="hidden sm:inline">전송</span>
           </button>
         </form>
       </footer>
-
     </div>
   );
 }

@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
+import { AllowedUser, PresencePayload } from "@/types";
 import { 
   Users, 
   UserPlus, 
@@ -94,7 +95,6 @@ export default function MembersPage() {
 
   // 1. Fetch Registered Team Members from allowed_users
   const fetchRegisteredMembers = async () => {
-    setLoading(true);
     try {
       const { data, error } = await supabase
         .from("allowed_users")
@@ -104,7 +104,7 @@ export default function MembersPage() {
       if (error) throw error;
       
       if (data && data.length > 0) {
-        const list = data.map((d: any) => d.username.toUpperCase());
+        const list = (data as AllowedUser[]).map((d) => d.username.toUpperCase());
         setMembers(list);
       } else {
         setMembers(DEFAULT_MEMBERS);
@@ -118,7 +118,35 @@ export default function MembersPage() {
 
   // 2. Setup Real-time Presence
   useEffect(() => {
-    fetchRegisteredMembers();
+    let ignore = false;
+
+    const loadMembers = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("allowed_users")
+          .select("username")
+          .order("created_at", { ascending: true });
+        
+        if (error) throw error;
+        
+        if (data && data.length > 0) {
+          const list = (data as AllowedUser[]).map((d) => d.username.toUpperCase());
+          if (!ignore) setMembers(list);
+        } else {
+          if (!ignore) setMembers(DEFAULT_MEMBERS);
+        }
+      } catch (err) {
+        console.error("Error fetching registered team members:", err);
+      } finally {
+        if (!ignore) setLoading(false);
+      }
+    };
+
+    loadMembers();
+
+    return () => {
+      ignore = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -141,8 +169,8 @@ export default function MembersPage() {
         const onlineMap: { [key: string]: string } = {};
         
         // Robust extraction from payloads
-        Object.values(state).forEach((presences: any) => {
-          presences.forEach((presence: any) => {
+        Object.values(state).forEach((presences) => {
+          (presences as unknown as PresencePayload[]).forEach((presence) => {
             const initials = (presence.initials || presence.user || "").toUpperCase();
             if (initials) {
               onlineMap[initials] = presence.online_at || new Date().toLocaleTimeString();
@@ -222,45 +250,49 @@ export default function MembersPage() {
   };
 
   return (
-    <div className="flex-1 p-6 md:p-10 space-y-6 bg-surface dark:bg-slate-900 flex flex-col min-h-0">
+    <div className="flex-1 p-4 sm:p-6 md:p-10 space-y-4 sm:space-y-6 bg-surface dark:bg-slate-900 flex flex-col min-h-0">
       
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shrink-0">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 shrink-0">
         <div>
-          <h2 className="text-3xl font-black font-headline text-primary dark:text-blue-400 tracking-tighter">
+          <h2 className="text-2xl sm:text-3xl font-black font-headline text-primary dark:text-blue-400 tracking-tighter">
             Team Workspace Directory
           </h2>
-          <p className="text-xs md:text-sm text-on-surface-variant dark:text-gray-400 font-semibold mt-1">
+          <p className="text-xs sm:text-sm text-on-surface-variant dark:text-gray-400 font-semibold mt-1">
             등록된 팀원 목록을 확인하고 실시간 네트워크 접속 현황을 모니터링합니다.
           </p>
         </div>
         
         <button
-          onClick={fetchRegisteredMembers}
-          className="p-3 bg-white dark:bg-slate-800 text-on-surface-variant dark:text-gray-400 rounded-2xl hover:text-primary dark:hover:text-white border border-black/[0.03] dark:border-white/[0.03] shadow-sm hover:shadow transition-all"
+          onClick={() => {
+            setLoading(true);
+            fetchRegisteredMembers();
+          }}
+          className="p-2.5 sm:p-3 bg-white dark:bg-slate-800 text-on-surface-variant dark:text-gray-400 rounded-2xl hover:text-primary dark:hover:text-white border border-black/[0.03] dark:border-white/[0.03] shadow-sm hover:shadow transition-all cursor-pointer active:scale-95 shrink-0"
+          title="새로고침"
         >
-          <RefreshCw className="w-5 h-5" />
+          <RefreshCw className="w-4 h-4 sm:w-5 sm:h-5" />
         </button>
       </div>
 
       {/* Main Grid */}
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-6 min-h-0">
+      <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-5 sm:gap-6 min-h-0">
         
         {/* Left 2 Columns: Directory Grid */}
-        <div className="lg:col-span-2 flex flex-col min-h-0 bg-white dark:bg-slate-800 rounded-[2.5rem] p-6 shadow-md border border-black/[0.02] dark:border-white/[0.02] overflow-hidden">
-          <div className="flex justify-between items-center pb-4 border-b border-black/[0.02] dark:border-white/[0.02]">
-            <h3 className="text-lg font-black text-primary dark:text-white flex items-center gap-2">
+        <div className="lg:col-span-2 flex flex-col min-h-0 bg-white dark:bg-slate-800 rounded-[2rem] sm:rounded-[2.5rem] p-5 sm:p-6 shadow-md border border-black/[0.02] dark:border-white/[0.02] overflow-hidden">
+          <div className="flex justify-between items-center pb-3 sm:pb-4 border-b border-black/[0.02] dark:border-white/[0.02]">
+            <h3 className="text-base sm:text-lg font-black text-primary dark:text-white flex items-center gap-2">
               <Users className="w-5 h-5 text-primary" />
               <span>등록된 팀원 리스트 ({members.length}명)</span>
             </h3>
           </div>
 
           {loading ? (
-            <div className="flex-1 flex items-center justify-center">
+            <div className="flex-1 flex items-center justify-center min-h-[250px]">
               <RefreshCw className="w-8 h-8 text-primary dark:text-blue-500 animate-spin" />
             </div>
           ) : (
-            <div className="flex-1 overflow-y-auto pr-1 mt-4 flex flex-wrap gap-4 content-start custom-scrollbar">
+            <div className="flex-1 overflow-y-auto pr-1 mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 content-start custom-scrollbar">
               {members.map((member) => {
                 const color = getColorForUser(member);
                 const isOnline = !!onlineMembers[member];
@@ -269,37 +301,37 @@ export default function MembersPage() {
                 return (
                   <div 
                     key={member}
-                    className="w-full sm:w-[260px] p-4 bg-surface-container-low dark:bg-slate-900/60 rounded-[1.8rem] border border-black/[0.02] dark:border-white/[0.02] hover:border-black/[0.08] dark:hover:border-white/[0.08] hover:shadow-md transition-all duration-300 flex items-center justify-between group"
+                    className="w-full p-3.5 sm:p-4 bg-surface-container-low dark:bg-slate-900/60 rounded-[1.5rem] sm:rounded-[1.8rem] border border-black/[0.02] dark:border-white/[0.02] hover:border-black/[0.08] dark:hover:border-white/[0.08] hover:shadow-md transition-all duration-200 flex items-center justify-between group"
                   >
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-3 sm:gap-4 min-w-0">
                       {/* Avatar */}
-                      <div className={`w-12 h-12 rounded-[1.2rem] flex items-center justify-center font-headline font-black text-sm border shadow-inner ${color.badge}`}>
+                      <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-[1rem] sm:rounded-[1.2rem] flex items-center justify-center font-headline font-black text-xs sm:text-sm border shadow-inner shrink-0 ${color.badge}`}>
                         {member}
                       </div>
 
                       {/* Info */}
-                      <div className="space-y-1">
+                      <div className="space-y-0.5 sm:space-y-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <span className="font-bold text-sm text-foreground dark:text-white">{member}</span>
+                          <span className="font-bold text-sm text-foreground dark:text-white truncate">{member}</span>
                           {isOnline ? (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-50 dark:bg-emerald-950/20 text-[9px] font-black text-emerald-600 dark:text-emerald-400 rounded-lg select-none">
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-emerald-50 dark:bg-emerald-950/20 text-[9px] font-black text-emerald-600 dark:text-emerald-400 rounded-md select-none shrink-0">
                               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
                               <span>ON</span>
                             </span>
                           ) : (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-[9px] font-black text-slate-400 rounded-lg select-none">
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 text-[9px] font-black text-slate-400 rounded-md select-none shrink-0">
                               <span>OFF</span>
                             </span>
                           )}
                         </div>
-                        <div className="flex items-center gap-1 text-[10px] font-black text-on-surface-variant/40 dark:text-gray-500 uppercase tracking-wide">
+                        <div className="flex items-center gap-1 text-[10px] font-medium text-on-surface-variant/50 dark:text-gray-400 truncate">
                           {isOnline ? (
                             <>
-                              <Clock className="w-3 h-3" />
-                              <span>접속 시각: {onlineTime}</span>
+                              <Clock className="w-2.5 h-2.5 shrink-0" />
+                              <span className="truncate">{onlineTime} 접속</span>
                             </>
                           ) : (
-                            <span>현재 오프라인</span>
+                            <span>오프라인</span>
                           )}
                         </div>
                       </div>
@@ -309,7 +341,7 @@ export default function MembersPage() {
                     {member !== "ADMIN" && (
                       <button 
                         onClick={() => handleDeleteMember(member)}
-                        className="p-2 text-on-surface-variant/40 hover:text-red-500 dark:hover:text-red-400 rounded-xl hover:bg-white dark:hover:bg-slate-800 opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
+                        className="p-1.5 sm:p-2 text-on-surface-variant/40 hover:text-red-500 dark:hover:text-red-400 rounded-xl hover:bg-white dark:hover:bg-slate-800 opacity-0 group-hover:opacity-100 transition-all cursor-pointer shrink-0"
                         title="팀원 삭제"
                       >
                         <Trash2 className="w-4 h-4" />
