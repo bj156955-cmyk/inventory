@@ -483,12 +483,23 @@ export default function InventoryPage() {
                 const isLow = p.stock > 0 && p.stock <= p.target * 0.3;
                 const isOut = p.stock === 0;
                 return (
-                  <div key={p.id} className="bg-surface-container-low dark:bg-slate-800/90 p-4 sm:p-5 rounded-2xl border border-black/[0.03] dark:border-white/[0.03] space-y-3 shadow-sm">
+                  <div key={p.id} className="bg-white dark:bg-slate-800/95 p-4 rounded-2xl border border-black/[0.04] dark:border-white/[0.04] space-y-3 shadow-sm active:border-black/10 transition-all">
                     <div className="flex justify-between items-start gap-2">
                       <div className="min-w-0">
-                        <h4 className="font-bold text-sm sm:text-base text-primary dark:text-white truncate">{p.name}</h4>
+                        <div className="flex items-center gap-1.5">
+                          <h4 className="font-extrabold text-sm sm:text-base text-primary dark:text-white truncate">{p.name}</h4>
+                          {isOut ? (
+                            <span className="px-1.5 py-0.5 bg-red-100 dark:bg-red-950/40 text-red-600 dark:text-red-400 text-[9px] font-black rounded-md shrink-0">
+                              품절
+                            </span>
+                          ) : isLow ? (
+                            <span className="px-1.5 py-0.5 bg-amber-100 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 text-[9px] font-black rounded-md shrink-0">
+                              부족
+                            </span>
+                          ) : null}
+                        </div>
                         <div className="flex flex-wrap gap-1.5 items-center mt-1">
-                          <span className="text-[10px] bg-white dark:bg-slate-700 text-on-surface-variant dark:text-gray-300 font-bold px-2 py-0.5 rounded-md border border-black/[0.03] dark:border-white/[0.03]">
+                          <span className="text-[10px] bg-surface-container-low dark:bg-slate-700 text-on-surface-variant dark:text-gray-300 font-bold px-2 py-0.5 rounded-md border border-black/[0.02] dark:border-white/[0.02]">
                             {p.category || "기타"}
                           </span>
                           <span className="text-[10px] text-on-surface-variant/60 dark:text-gray-400 font-semibold">
@@ -499,7 +510,7 @@ export default function InventoryPage() {
                       <div className="flex gap-1 shrink-0">
                         <button
                           onClick={() => openItemModal(p)}
-                          className="p-2 text-on-surface-variant/50 dark:text-gray-400 hover:text-primary rounded-lg active:scale-95"
+                          className="p-2 text-on-surface-variant/40 hover:text-primary dark:text-gray-400 dark:hover:text-white rounded-lg active:scale-95 cursor-pointer"
                           title="수정"
                         >
                           <Edit className="w-4 h-4" />
@@ -509,7 +520,7 @@ export default function InventoryPage() {
                             setDeletingProduct(p);
                             setDeleteModalOpen(true);
                           }}
-                          className="p-2 text-on-surface-variant/50 hover:text-error rounded-lg active:scale-95"
+                          className="p-2 text-on-surface-variant/40 hover:text-error rounded-lg active:scale-95 cursor-pointer"
                           title="삭제"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -517,31 +528,31 @@ export default function InventoryPage() {
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between pt-2.5 border-t border-black/[0.04] dark:border-white/[0.04] gap-2">
+                    <div className="flex items-center justify-between pt-3 border-t border-black/[0.03] dark:border-white/[0.03] gap-2">
                       <div className="flex flex-col">
-                        <span className="text-[9px] font-black uppercase text-on-surface-variant/40 dark:text-gray-500 tracking-wider">Current Stock</span>
-                        <span className={`text-lg sm:text-xl font-black ${
+                        <span className="text-[9px] font-black uppercase text-on-surface-variant/40 dark:text-gray-500 tracking-wider">현재 재고</span>
+                        <span className={`text-xl font-black tracking-tight ${
                           isOut ? "text-red-500" : isLow ? "text-amber-500" : "text-primary dark:text-blue-400"
                         }`}>
-                          {p.stock} <span className="text-xs font-normal text-on-surface-variant/50 dark:text-gray-500">/ 목표 {p.target}</span>
+                          {p.stock} <span className="text-xs font-semibold text-on-surface-variant/40 dark:text-gray-500">/ {p.target}개</span>
                         </span>
                       </div>
 
-                      <div className="flex items-center gap-1.5 shrink-0">
+                      <div className="flex items-center gap-2 shrink-0">
                         <button
                           onClick={() => adjustStock(p, 1)}
-                          className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold text-sm shadow-sm active:scale-90 transition-transform"
+                          className="px-3.5 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 font-black text-xs shadow-sm active:scale-90 transition-transform cursor-pointer border border-emerald-100 dark:border-emerald-900/30"
                           title="입고 +1"
                         >
-                          +1
+                          +1 입고
                         </button>
                         <button
                           onClick={() => adjustStock(p, -1)}
-                          className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 flex items-center justify-center font-bold text-sm shadow-sm active:scale-90 transition-transform disabled:opacity-30 disabled:pointer-events-none"
+                          className="px-3.5 py-2 rounded-xl bg-red-50 hover:bg-red-100 dark:bg-red-950/30 text-red-600 dark:text-red-400 font-black text-xs shadow-sm active:scale-90 transition-transform disabled:opacity-30 disabled:pointer-events-none cursor-pointer border border-red-100 dark:border-red-900/30"
                           disabled={p.stock <= 0}
                           title="출고 -1"
                         >
-                          -1
+                          -1 출고
                         </button>
                         <button
                           onClick={() => {
@@ -549,7 +560,7 @@ export default function InventoryPage() {
                             setOrderQty(1);
                             setOrderModalOpen(true);
                           }}
-                          className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-primary/10 dark:bg-blue-500/20 text-primary dark:text-blue-400 flex items-center justify-center shadow-sm active:scale-90 transition-transform"
+                          className="p-2 rounded-xl bg-surface-container-low dark:bg-slate-700 text-primary dark:text-blue-400 shadow-sm active:scale-90 transition-transform cursor-pointer"
                           title="일괄 출고"
                         >
                           <ShoppingCart className="w-4 h-4" />

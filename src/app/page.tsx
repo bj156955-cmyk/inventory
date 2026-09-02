@@ -14,7 +14,8 @@ import {
   Calendar,
   MessageSquare,
   ArrowRight,
-  RefreshCw
+  RefreshCw,
+  FlaskConical
 } from "lucide-react";
 
 export default function DashboardPage() {
@@ -184,9 +185,52 @@ export default function DashboardPage() {
         </div>
       ) : (
         <>
+          {/* Mobile Quick Action Buttons (App-style) */}
+          <div className="md:hidden grid grid-cols-4 gap-2.5 shrink-0">
+            <Link 
+              href="/inventory"
+              className="flex flex-col items-center justify-center p-3 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-black/[0.03] dark:border-white/[0.03] active:scale-95 transition-all text-center"
+            >
+              <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-1.5 shadow-inner">
+                <Package className="w-5 h-5" />
+              </div>
+              <span className="text-[11px] font-extrabold text-foreground dark:text-white">재고 관리</span>
+            </Link>
+
+            <Link 
+              href="/lab"
+              className="flex flex-col items-center justify-center p-3 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-black/[0.03] dark:border-white/[0.03] active:scale-95 transition-all text-center"
+            >
+              <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-1.5 shadow-inner">
+                <FlaskConical className="w-5 h-5" />
+              </div>
+              <span className="text-[11px] font-extrabold text-foreground dark:text-white">연구실</span>
+            </Link>
+
+            <Link 
+              href="/calendar"
+              className="flex flex-col items-center justify-center p-3 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-black/[0.03] dark:border-white/[0.03] active:scale-95 transition-all text-center"
+            >
+              <div className="w-10 h-10 rounded-xl bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 flex items-center justify-center mb-1.5 shadow-inner">
+                <Calendar className="w-5 h-5" />
+              </div>
+              <span className="text-[11px] font-extrabold text-foreground dark:text-white">팀 캘린더</span>
+            </Link>
+
+            <Link 
+              href="/chat"
+              className="flex flex-col items-center justify-center p-3 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-black/[0.03] dark:border-white/[0.03] active:scale-95 transition-all text-center"
+            >
+              <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 flex items-center justify-center mb-1.5 shadow-inner">
+                <MessageSquare className="w-5 h-5" />
+              </div>
+              <span className="text-[11px] font-extrabold text-foreground dark:text-white">라이브챗</span>
+            </Link>
+          </div>
+
           {/* Stats Overview */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6 shrink-0">
-            <Link href="/inventory" className="bg-white dark:bg-slate-800 p-4 sm:p-6 rounded-[1.8rem] sm:rounded-[2rem] shadow-sm hover:shadow-md border border-black/[0.02] dark:border-white/[0.02] transition-all hover:-translate-y-0.5">
+            <Link href="/inventory" className="bg-white dark:bg-slate-800 p-4 sm:p-6 rounded-[1.8rem] sm:rounded-[2rem] shadow-sm hover:shadow-md border border-black/[0.02] dark:border-white/[0.02] transition-all hover:-translate-y-0.5 active:scale-[0.98]">
               <div className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-on-surface-variant/50 dark:text-gray-400 mb-2 sm:mb-3 flex justify-between items-center">
                 <span>Total Items</span>
                 <Package className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary/40" />
@@ -194,7 +238,7 @@ export default function DashboardPage() {
               <h3 className="text-xl sm:text-2xl md:text-3xl font-black text-primary dark:text-white">{totalItems}</h3>
             </Link>
 
-            <Link href="/inventory" className="bg-red-50/50 dark:bg-red-950/20 p-4 sm:p-6 rounded-[1.8rem] sm:rounded-[2rem] shadow-sm hover:shadow-md border border-red-100/50 dark:border-red-900/20 transition-all hover:-translate-y-0.5">
+            <Link href="/inventory" className="bg-red-50/50 dark:bg-red-950/20 p-4 sm:p-6 rounded-[1.8rem] sm:rounded-[2rem] shadow-sm hover:shadow-md border border-red-100/50 dark:border-red-900/20 transition-all hover:-translate-y-0.5 active:scale-[0.98]">
               <div className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-red-600/70 dark:text-red-400 mb-2 sm:mb-3 flex justify-between items-center">
                 <span>Low Stock</span>
                 <TrendingDown className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-red-500/50" />
@@ -202,7 +246,7 @@ export default function DashboardPage() {
               <h3 className="text-xl sm:text-2xl md:text-3xl font-black text-red-600 dark:text-red-400">{lowStock}</h3>
             </Link>
 
-            <Link href="/inventory" className="bg-surface-container-low dark:bg-slate-800/60 p-4 sm:p-6 rounded-[1.8rem] sm:rounded-[2rem] shadow-sm hover:shadow-md border border-black/[0.02] dark:border-white/[0.02] transition-all hover:-translate-y-0.5">
+            <Link href="/inventory" className="bg-surface-container-low dark:bg-slate-800/60 p-4 sm:p-6 rounded-[1.8rem] sm:rounded-[2rem] shadow-sm hover:shadow-md border border-black/[0.02] dark:border-white/[0.02] transition-all hover:-translate-y-0.5 active:scale-[0.98]">
               <div className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-on-surface-variant/50 dark:text-gray-400 mb-2 sm:mb-3 flex justify-between items-center">
                 <span>Out of Stock</span>
                 <AlertCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-on-surface-variant/30" />

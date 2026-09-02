@@ -98,6 +98,7 @@ export default function LabPage() {
   const [draggedRowIdx, setDraggedRowIdx] = useState<number | null>(null);
   const [showAddSelect, setShowAddSelect] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [activeMobileTab, setActiveMobileTab] = useState<"orders" | "cleaning">("orders");
   
   // Orders states
   const [orders, setOrders] = useState<LabOrder[]>([]);
@@ -488,16 +489,48 @@ export default function LabPage() {
           <RefreshCw className="w-8 h-8 text-primary dark:text-blue-500 animate-spin" />
         </div>
       ) : (
-        <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-8 min-h-0">
+        <div className="flex-1 flex flex-col space-y-4 min-h-0">
+          {/* Mobile Segment Tab Bar (App-style) */}
+          <div className="lg:hidden flex bg-surface-container-low dark:bg-slate-800/90 p-1.5 rounded-2xl gap-1.5 shrink-0 select-none shadow-sm">
+            <button
+              type="button"
+              onClick={() => setActiveMobileTab("orders")}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer active:scale-95 ${
+                activeMobileTab === "orders"
+                  ? "bg-primary dark:bg-blue-600 text-white shadow-md font-black scale-[1.02]"
+                  : "text-on-surface-variant/70 dark:text-gray-400 hover:bg-black/5 dark:hover:bg-white/5"
+              }`}
+            >
+              <ShoppingCart className="w-4 h-4" />
+              <span>물품 주문 ({visibleOrders.length})</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveMobileTab("cleaning")}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer active:scale-95 ${
+                activeMobileTab === "cleaning"
+                  ? "bg-primary dark:bg-blue-600 text-white shadow-md font-black scale-[1.02]"
+                  : "text-on-surface-variant/70 dark:text-gray-400 hover:bg-black/5 dark:hover:bg-white/5"
+              }`}
+            >
+              <Sparkles className="w-4 h-4" />
+              <span>청소 당번</span>
+            </button>
+          </div>
 
-          {/* Left Column: Item Orders Status */}
-          <div className="bg-white dark:bg-slate-800 rounded-[2rem] sm:rounded-[2.5rem] p-5 sm:p-7 shadow-md border border-black/[0.02] dark:border-white/[0.02] flex flex-col min-h-[420px] overflow-hidden">
-            
-            <div className="flex justify-between items-center pb-3 border-b border-black/[0.03] dark:border-white/[0.03] shrink-0">
-              <h3 className="text-base sm:text-lg font-black text-primary dark:text-white flex items-center gap-2">
-                <ShoppingCart className="w-5 h-5 text-blue-500" />
-                <span>연구실 물품 주문 현황 ({visibleOrders.length}건)</span>
-              </h3>
+          {/* Main 2-Column Content (1-Column on Mobile depending on activeMobileTab) */}
+          <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-8 min-h-0">
+
+            {/* Left Column: Item Orders Status */}
+            <div className={`bg-white dark:bg-slate-800 rounded-[2rem] sm:rounded-[2.5rem] p-5 sm:p-7 shadow-md border border-black/[0.02] dark:border-white/[0.02] flex-col min-h-[420px] overflow-hidden ${
+              activeMobileTab === "orders" ? "flex" : "hidden lg:flex"
+            }`}>
+              
+              <div className="flex justify-between items-center pb-3 border-b border-black/[0.03] dark:border-white/[0.03] shrink-0">
+                <h3 className="text-base sm:text-lg font-black text-primary dark:text-white flex items-center gap-2">
+                  <ShoppingCart className="w-5 h-5 text-blue-500" />
+                  <span>연구실 물품 주문 현황 ({visibleOrders.length}건)</span>
+                </h3>
               
               <button
                 onClick={() => setShowAddOrderInput(!showAddOrderInput)}
@@ -657,7 +690,9 @@ export default function LabPage() {
           </div>
 
           {/* Right Column: Cleaning & Waste Duties Table */}
-          <div className="bg-white dark:bg-slate-800 rounded-[2rem] sm:rounded-[2.5rem] p-5 sm:p-7 shadow-md border border-black/[0.02] dark:border-white/[0.02] flex flex-col min-h-[420px] overflow-hidden">
+          <div className={`bg-white dark:bg-slate-800 rounded-[2rem] sm:rounded-[2.5rem] p-5 sm:p-7 shadow-md border border-black/[0.02] dark:border-white/[0.02] flex-col min-h-[420px] overflow-hidden ${
+            activeMobileTab === "cleaning" ? "flex" : "hidden lg:flex"
+          }`}>
             
             <div className="flex justify-between items-center pb-3 border-b border-black/[0.03] dark:border-white/[0.03] shrink-0">
               <h3 className="text-base sm:text-lg font-black text-primary dark:text-white flex items-center gap-2">
@@ -813,6 +848,7 @@ export default function LabPage() {
 
           </div>
 
+        </div>
         </div>
       )}
 
