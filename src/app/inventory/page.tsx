@@ -110,11 +110,15 @@ export default function InventoryPage() {
   // 3. 5 Categories: 전체보기, 연구동, 자생동, 박사님 방, 컨테이너
   const CATEGORIES = ["all", "연구동", "자생동", "박사님 방", "컨테이너"];
 
-  // 4. Filter products
+  // 4. Filter products by search & location category
   const filteredProducts = products.filter((p) => {
-    const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase()) || 
-                          (p.category && p.category.toLowerCase().includes(search.toLowerCase()));
-    const matchesCategory = selectedCategory === "all" || p.category === selectedCategory;
+    const pCategory = (p.category || "").trim();
+    const searchLower = search.toLowerCase();
+    const matchesSearch = p.name.toLowerCase().includes(searchLower) || 
+                          pCategory.toLowerCase().includes(searchLower);
+    const matchesCategory = selectedCategory === "all" || 
+                            pCategory === selectedCategory || 
+                            pCategory.includes(selectedCategory);
     return matchesSearch && matchesCategory;
   });
 
@@ -130,7 +134,7 @@ export default function InventoryPage() {
     } else {
       setEditingProduct(null);
       setFormName("");
-      setFormCategory("");
+      setFormCategory(selectedCategory !== "all" ? selectedCategory : "연구동");
       setFormStock(0);
       setFormTarget(0);
       setFormPrice(0);
@@ -248,7 +252,7 @@ export default function InventoryPage() {
     <div className="flex-1 p-3 sm:p-6 md:p-8 space-y-3 sm:space-y-4 flex flex-col min-h-0 bg-zinc-50 dark:bg-zinc-950">
       
       {/* Top Search Bar & Circular Plus Button */}
-      <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+      <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
         {/* Standalone Search Input */}
         <div className="relative flex-1">
           <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 dark:text-zinc-500" />
@@ -271,17 +275,17 @@ export default function InventoryPage() {
         </button>
       </div>
 
-      {/* 5 Categories Bar (Equal Width Grid in Single Line) */}
-      <div className="grid grid-cols-5 gap-1 sm:gap-2 w-full shrink-0">
+      {/* 5 Location Categories Tabs (Spaced Equal Width Grid in Single Line) */}
+      <div className="grid grid-cols-5 gap-2 sm:gap-2.5 w-full shrink-0 my-0.5">
         {CATEGORIES.map((c) => (
           <button
             key={c}
             type="button"
             onClick={() => setSelectedCategory(c)}
-            className={`py-2 px-0.5 sm:px-2 rounded-xl text-[11px] sm:text-xs font-bold text-center truncate transition-all duration-200 cursor-pointer select-none ${
+            className={`py-2.5 px-0.5 sm:px-2 rounded-2xl text-[11px] sm:text-xs font-bold text-center truncate transition-all duration-200 cursor-pointer select-none active:scale-95 ${
               selectedCategory === c
                 ? "bg-blue-600 text-white shadow-sm shadow-blue-600/30 font-black scale-[1.02]"
-                : "bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white shadow-xs"
+                : "bg-white dark:bg-zinc-900 border border-zinc-200/90 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:border-zinc-300 dark:hover:border-zinc-700 hover:text-zinc-900 dark:hover:text-white shadow-xs"
             }`}
             title={c === "all" ? "전체보기" : c}
           >
@@ -300,7 +304,9 @@ export default function InventoryPage() {
           <div className="flex-1 flex flex-col items-center justify-center p-12 sm:p-20 text-center space-y-3 bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800">
             <AlertCircle className="w-12 h-12 text-zinc-300 dark:text-zinc-700" />
             <p className="text-sm font-semibold text-zinc-500 dark:text-zinc-400">
-              일치하는 품목이 없습니다.
+              {selectedCategory === "all" 
+                ? "등록된 품목이 없습니다." 
+                : `'${selectedCategory}' 위치에 등록된 품목이 없습니다.`}
             </p>
           </div>
         ) : (
@@ -311,7 +317,7 @@ export default function InventoryPage() {
                 <thead className="bg-zinc-50 dark:bg-zinc-800/60 sticky top-0 z-10 border-b border-zinc-200 dark:border-zinc-800">
                   <tr>
                     <th className="px-8 py-5 text-[10px] font-black text-zinc-500 dark:text-zinc-400 uppercase tracking-widest">품목 상세</th>
-                    <th className="px-8 py-5 text-[10px] font-black text-zinc-500 dark:text-zinc-400 uppercase tracking-widest">카테고리</th>
+                    <th className="px-8 py-5 text-[10px] font-black text-zinc-500 dark:text-zinc-400 uppercase tracking-widest">보관 위치</th>
                     <th className="px-8 py-5 text-[10px] font-black text-zinc-500 dark:text-zinc-400 uppercase tracking-widest text-center">재고 현황</th>
                     <th className="px-8 py-5 text-[10px] font-black text-zinc-500 dark:text-zinc-400 uppercase tracking-widest text-right">단가 (₩)</th>
                     <th className="px-8 py-5 text-[10px] font-black text-zinc-500 dark:text-zinc-400 uppercase tracking-widest text-center">동작</th>
