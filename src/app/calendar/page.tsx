@@ -25,8 +25,7 @@ import {
   FileText,
   User,
   Trash2,
-  RefreshCw,
-  Calendar
+  RefreshCw
 } from "lucide-react";
 
 const FALLBACK_HOLIDAYS: { [key: string]: string } = {
@@ -202,6 +201,13 @@ export default function CalendarPage() {
   const [dragEnd, setDragEnd] = useState<Date | null>(null);
   const [isDragging, setIsDragging] = useState(false);
 
+  // Go to Today
+  const handleGoToday = () => {
+    const now = new Date();
+    setCurrentMonth(now);
+    setActiveDay(now);
+  };
+
   // Open New Event Modal Helper
   const openNewEventModal = (targetDate: Date = activeDay) => {
     setSelectedDate(targetDate);
@@ -327,11 +333,8 @@ export default function CalendarPage() {
   }, []);
 
   const handleDayClick = (day: Date) => {
-    if (isSameDay(day, activeDay)) {
-      openNewEventModal(day);
-    } else {
-      setActiveDay(day);
-    }
+    setActiveDay(day);
+    openNewEventModal(day);
   };
 
   const handleMouseDown = (date: Date) => {
@@ -485,53 +488,71 @@ export default function CalendarPage() {
   return (
     <div className="flex-1 p-3 sm:p-5 md:p-6 flex flex-col min-h-0 lg:h-[100dvh] lg:max-h-[100dvh] lg:min-h-[640px] gap-3 bg-zinc-50 dark:bg-zinc-950">
       
-      {/* Top Navigation Bar: Month Switcher only */}
+      {/* Top Navigation & Action Bar */}
       <div className="flex items-center justify-between gap-2.5 shrink-0">
-        <div className="flex items-center bg-white dark:bg-zinc-900 border border-zinc-200/90 dark:border-zinc-800 rounded-2xl p-1 shadow-xs">
-          <button 
+        <div className="flex items-center gap-2">
+          <div className="flex items-center bg-white dark:bg-zinc-900 border border-zinc-200/90 dark:border-zinc-800 rounded-2xl p-1 shadow-xs">
+            <button 
+              type="button"
+              onClick={handlePrevMonth}
+              className="w-8 h-8 flex items-center justify-center hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl transition-all cursor-pointer text-zinc-600 dark:text-zinc-400 active:scale-95"
+              title="이전 달"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <span className="text-sm sm:text-base font-black text-zinc-900 dark:text-white px-3 min-w-[100px] sm:min-w-[120px] text-center tracking-tight">
+              {format(currentMonth, "yyyy. MM", { locale: ko })}
+            </span>
+            <button 
+              type="button"
+              onClick={handleNextMonth}
+              className="w-8 h-8 flex items-center justify-center hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl transition-all cursor-pointer text-zinc-600 dark:text-zinc-400 active:scale-95"
+              title="다음 달"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+
+          <button
             type="button"
-            onClick={handlePrevMonth}
-            className="w-8 h-8 flex items-center justify-center hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl transition-all cursor-pointer text-zinc-600 dark:text-zinc-400 active:scale-95"
-            title="이전 달"
+            onClick={handleGoToday}
+            className="px-3 py-2 bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 border border-zinc-200/90 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 rounded-2xl text-xs font-bold transition-all shadow-xs active:scale-95 cursor-pointer"
+            title="오늘로 이동"
           >
-            <ChevronLeft className="w-4 h-4" />
-          </button>
-          <span className="text-sm sm:text-base font-black text-zinc-900 dark:text-white px-3 min-w-[100px] sm:min-w-[120px] text-center tracking-tight">
-            {format(currentMonth, "yyyy. MM", { locale: ko })}
-          </span>
-          <button 
-            type="button"
-            onClick={handleNextMonth}
-            className="w-8 h-8 flex items-center justify-center hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl transition-all cursor-pointer text-zinc-600 dark:text-zinc-400 active:scale-95"
-            title="다음 달"
-          >
-            <ChevronRight className="w-4 h-4" />
+            오늘
           </button>
         </div>
+
+        <button
+          type="button"
+          onClick={() => openNewEventModal(activeDay)}
+          className="flex items-center gap-1.5 px-3.5 sm:px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-bold text-xs shadow-md shadow-blue-600/30 active:scale-95 transition-all cursor-pointer"
+          title="새 일정 추가"
+        >
+          <Plus className="w-4 h-4" />
+          <span>일정 추가</span>
+        </button>
       </div>
 
-      {/* Main Content: Calendar Grid + Selected Day Agenda Panel */}
-      <div className="flex-1 flex flex-col lg:flex-row gap-3.5 sm:gap-4 min-h-0">
-        
-        {/* Left Column: Calendar Grid Card */}
-        <div className="flex-1 bg-white dark:bg-zinc-900 rounded-3xl shadow-xs border border-zinc-200/90 dark:border-zinc-800 overflow-hidden flex flex-col min-h-[440px] sm:min-h-[500px] lg:min-h-0 lg:h-full">
-          {/* Days of Week Header */}
-          <div className="grid grid-cols-7 border-b border-zinc-200/80 dark:border-zinc-800/80 bg-zinc-50/70 dark:bg-zinc-800/40 shrink-0">
-            {["일", "월", "화", "수", "목", "금", "토"].map((day, idx) => (
-              <div 
-                key={day} 
-                className={`py-2.5 sm:py-3 text-center text-[11px] sm:text-xs font-bold tracking-wider ${
-                  idx === 0 
-                    ? "text-rose-500 dark:text-rose-400" 
-                    : idx === 6 
-                    ? "text-blue-500 dark:text-blue-400" 
-                    : "text-zinc-600 dark:text-zinc-400"
-                }`}
-              >
-                {day}
-              </div>
-            ))}
-          </div>
+      {/* Main Content: Full Calendar Grid Card */}
+      <div className="flex-1 bg-white dark:bg-zinc-900 rounded-3xl shadow-xs border border-zinc-200/90 dark:border-zinc-800 overflow-hidden flex flex-col min-h-[500px] sm:min-h-[600px] lg:min-h-0">
+        {/* Days of Week Header */}
+        <div className="grid grid-cols-7 border-b border-zinc-200/80 dark:border-zinc-800/80 bg-zinc-50/70 dark:bg-zinc-800/40 shrink-0">
+          {["일", "월", "화", "수", "목", "금", "토"].map((day, idx) => (
+            <div 
+              key={day} 
+              className={`py-2.5 sm:py-3.5 text-center text-xs sm:text-sm font-bold tracking-wider ${
+                idx === 0 
+                  ? "text-rose-500 dark:text-rose-400" 
+                  : idx === 6 
+                  ? "text-blue-500 dark:text-blue-400" 
+                  : "text-zinc-600 dark:text-zinc-400"
+              }`}
+            >
+              {day}
+            </div>
+          ))}
+        </div>
 
           {/* Days Grid */}
           {loading ? (
@@ -642,7 +663,7 @@ export default function CalendarPage() {
                           {holidayName}
                         </div>
                       )}
-                      {dayEvents.slice(0, 3).map((event) => {
+                      {dayEvents.slice(0, 4).map((event) => {
                         const color = getColorForEvent(event.created_by);
                         const startStr = format(new Date(event.start_time), "yyyy-MM-dd");
                         const endStr = format(new Date(event.end_time), "yyyy-MM-dd");
@@ -666,18 +687,18 @@ export default function CalendarPage() {
                             key={event.id}
                             onMouseDown={(e) => e.stopPropagation()}
                             onClick={(e) => openViewModal(e, event)}
-                            className={`px-1.5 py-0.5 ${color.bg} border ${color.border} text-[9.5px] font-bold ${color.text} ${cellStyle} truncate ${color.hoverBg} transition-colors flex items-center gap-1 shadow-2xs`}
+                            className={`px-1.5 py-0.5 ${color.bg} border ${color.border} text-[9.5px] sm:text-[10px] font-bold ${color.text} ${cellStyle} truncate ${color.hoverBg} transition-colors flex items-center gap-1 shadow-2xs`}
                           >
-                            <span className="font-black bg-black/[0.06] dark:bg-white/[0.1] px-1 rounded-sm text-[8px] tracking-tight shrink-0">
+                            <span className="font-black bg-black/[0.06] dark:bg-white/[0.1] px-1 rounded-sm text-[8px] sm:text-[8.5px] tracking-tight shrink-0">
                               {event.created_by}
                             </span>
                             <span className="truncate">{event.title}</span>
                           </div>
                         );
                       })}
-                      {dayEvents.length > 3 && (
+                      {dayEvents.length > 4 && (
                         <div className="text-[8.5px] font-black text-zinc-400 dark:text-zinc-500 text-center uppercase tracking-wider mx-1">
-                          + {dayEvents.length - 3}건 더보기
+                          + {dayEvents.length - 4}건 더보기
                         </div>
                       )}
                     </div>
@@ -703,115 +724,6 @@ export default function CalendarPage() {
             </div>
           )}
         </div>
-
-        {/* Right Column: Selected Day's Agenda Detail */}
-        <div className="w-full lg:w-[320px] xl:w-[350px] bg-white dark:bg-zinc-900 rounded-3xl p-5 sm:p-6 shadow-xs border border-zinc-200/90 dark:border-zinc-800 flex flex-col shrink-0 min-h-[300px] lg:min-h-0 lg:h-full">
-          {/* Agenda Header */}
-          <div className="flex justify-between items-center pb-3.5 border-b border-zinc-100 dark:border-zinc-800 shrink-0">
-            <div className="flex items-center gap-2">
-              <h3 className="text-sm sm:text-base font-black text-zinc-900 dark:text-white tracking-tight">
-                {format(activeDay, "M월 d일 (E)", { locale: ko })}
-              </h3>
-              {isSameDay(activeDay, new Date()) && (
-                <span className="px-1.5 py-0.5 bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 text-blue-600 dark:text-blue-400 text-[10px] font-black rounded-md">
-                  오늘
-                </span>
-              )}
-            </div>
-            
-            <button
-              type="button"
-              onClick={() => openNewEventModal(activeDay)}
-              className="w-7 h-7 bg-blue-600 hover:bg-blue-500 text-white rounded-xl flex items-center justify-center font-bold shadow-sm shadow-blue-600/30 transition-all cursor-pointer active:scale-95"
-              title="새 일정 추가"
-            >
-              <Plus className="w-3.5 h-3.5" />
-            </button>
-          </div>
-
-          {/* Agenda Scrollable List */}
-          <div className="flex-1 overflow-y-auto mt-3.5 space-y-2.5 pr-0.5 custom-scrollbar min-h-[220px]">
-            {(() => {
-              const activeDayStr = format(activeDay, "yyyy-MM-dd");
-              const activeDayEvents = events.filter((e) => {
-                const startStr = format(new Date(e.start_time), "yyyy-MM-dd");
-                const endStr = format(new Date(e.end_time), "yyyy-MM-dd");
-                return activeDayStr >= startStr && activeDayStr <= endStr;
-              });
-
-              // Sort by start time
-              activeDayEvents.sort((a, b) => a.start_time.localeCompare(b.start_time));
-
-              if (activeDayEvents.length === 0) {
-                return (
-                  <div className="h-full flex flex-col items-center justify-center text-center p-6 text-zinc-400 dark:text-zinc-500 space-y-2.5 my-auto">
-                    <div className="w-12 h-12 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-400 dark:text-zinc-600">
-                      <Calendar className="w-6 h-6" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold text-zinc-600 dark:text-zinc-400">등록된 일정이 없습니다</p>
-                      <p className="text-[11px] text-zinc-400 dark:text-zinc-500 mt-0.5">이 날짜에 새로운 일정을 추가해보세요</p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => openNewEventModal(activeDay)}
-                      className="px-3 py-1.5 text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40 rounded-xl hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors"
-                    >
-                      + 일정 등록하기
-                    </button>
-                  </div>
-                );
-              }
-
-              return activeDayEvents.map((event) => {
-                const color = getColorForEvent(event.created_by);
-                const startStr = format(new Date(event.start_time), "yyyy-MM-dd");
-                const endStr = format(new Date(event.end_time), "yyyy-MM-dd");
-                const startTimeStr = format(new Date(event.start_time), "HH:mm");
-                const endTimeStr = format(new Date(event.end_time), "HH:mm");
-                const isAllDay = (startStr !== endStr) || (startTimeStr === "00:00" && (endTimeStr === "23:59" || endTimeStr === "00:00"));
-
-                return (
-                  <div
-                    key={event.id}
-                    onClick={(e) => openViewModal(e, event)}
-                    className={`relative pl-3.5 pr-3 py-3 rounded-2xl border ${color.bg} ${color.border} hover:scale-[1.01] hover:shadow-xs cursor-pointer transition-all duration-200 flex flex-col gap-1.5 overflow-hidden`}
-                  >
-                    {/* Left Accent Strip */}
-                    <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${color.accent} rounded-l-2xl`} />
-
-                    <div className="flex justify-between items-start gap-2">
-                      <span className="font-extrabold text-xs sm:text-sm text-zinc-900 dark:text-white tracking-tight line-clamp-1">
-                        {event.title}
-                      </span>
-                      <span className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 shrink-0 tabular-nums">
-                        {isAllDay ? "종일" : `${startTimeStr} ~ ${endTimeStr}`}
-                      </span>
-                    </div>
-
-                    {event.description && (
-                      <p className="text-[11px] text-zinc-600 dark:text-zinc-300 line-clamp-2 leading-relaxed font-medium">
-                        {event.description}
-                      </p>
-                    )}
-
-                    <div className="flex items-center gap-1 pt-0.5 flex-wrap">
-                      {event.created_by.split(",").map((m) => {
-                        const memberColor = getColorForUser(m.trim());
-                        return (
-                          <span key={m} className={`px-2 py-0.5 text-[9px] font-bold rounded-md ${memberColor.badge}`}>
-                            {m.trim()}
-                          </span>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              });
-            })()}
-          </div>
-        </div>
-      </div>
 
       {/* Add / Edit / View Modal */}
       {modalOpen && selectedDate && (
