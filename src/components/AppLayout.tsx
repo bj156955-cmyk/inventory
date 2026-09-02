@@ -1,17 +1,43 @@
 "use client";
 
+import React, { useState, useRef, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import Sidebar from "@/components/Sidebar";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
-import { Loader2, Package, Sun, Moon, Laptop } from "lucide-react";
+import { 
+  Loader2, 
+  Package, 
+  Sun, 
+  Moon, 
+  Laptop, 
+  LogOut, 
+  ShieldCheck
+} from "lucide-react";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { user, loading } = useAuth();
-  const { theme, toggleTheme, resolvedTheme } = useTheme();
+  const { user, signOut, loading } = useAuth();
+  const { theme, setTheme } = useTheme();
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
   const isLoginPage = pathname === "/login";
+
+  // Close user dropdown menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setUserMenuOpen(false);
+      }
+    };
+    if (userMenuOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [userMenuOpen]);
 
   const getPageTitle = () => {
     switch (pathname) {
@@ -65,35 +91,105 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </span>
         </Link>
 
-        <div className="flex items-center gap-1.5">
-          {/* Quick Theme Toggle Button */}
+        {/* User Avatar & Dropdown Menu */}
+        <div className="relative" ref={userMenuRef}>
           <button
             type="button"
-            onClick={toggleTheme}
-            className="p-2 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:text-blue-500 dark:hover:text-blue-400 transition-all cursor-pointer active:scale-90"
-            title={`현재: ${theme === "system" ? "시스템 (" + resolvedTheme + ")" : theme === "dark" ? "다크" : "라이트"} (클릭하여 변경)`}
+            onClick={() => setUserMenuOpen(!userMenuOpen)}
+            className="w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 border border-zinc-200 dark:border-zinc-700 flex items-center justify-center relative font-headline font-black text-[11px] text-zinc-900 dark:text-zinc-100 shadow-sm transition-all duration-200 cursor-pointer active:scale-90"
+            title="사용자 메뉴 및 테마 설정"
           >
-            {theme === "system" ? (
-              <Laptop className="w-4 h-4" />
-            ) : resolvedTheme === "dark" ? (
-              <Moon className="w-4 h-4 text-amber-300" />
-            ) : (
-              <Sun className="w-4 h-4 text-amber-500" />
-            )}
+            <span>{currentUserInitials.slice(0, 2)}</span>
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-white dark:border-zinc-900 absolute -bottom-0.5 -right-0.5 animate-pulse" />
           </button>
 
-          <Link 
-            href="/chat"
-            className="flex items-center gap-1.5 px-2.5 py-1.5 bg-zinc-100 dark:bg-zinc-800 rounded-xl border border-zinc-200 dark:border-zinc-700 active:scale-95 transition-transform"
-          >
-            <div className="w-5 h-5 rounded-lg bg-zinc-200 dark:bg-zinc-700 text-zinc-900 dark:text-white flex items-center justify-center font-headline font-black text-[9px]">
-              {currentUserInitials.slice(0, 2)}
+          {/* User Popover Dropdown */}
+          {userMenuOpen && (
+            <div className="absolute right-0 top-11 w-64 bg-white dark:bg-zinc-900 rounded-2xl shadow-xl border border-zinc-200 dark:border-zinc-800 p-3.5 space-y-3.5 z-50 animate-fadeIn">
+              
+              {/* User Header */}
+              <div className="flex items-center gap-2.5 pb-3 border-b border-zinc-100 dark:border-zinc-800">
+                <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center font-headline font-black text-xs shadow-sm shadow-blue-600/30 shrink-0">
+                  {currentUserInitials.slice(0, 2)}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-bold text-xs text-zinc-900 dark:text-white truncate">{currentUserInitials}</span>
+                    <span className="inline-flex items-center gap-0.5 px-1 py-0.2 bg-emerald-500/15 border border-emerald-500/30 text-[8px] font-black text-emerald-400 rounded shrink-0">
+                      <ShieldCheck className="w-2.5 h-2.5" />
+                      <span>인증</span>
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-zinc-400 dark:text-zinc-500 truncate mt-0.5">
+                    {user?.email}
+                  </p>
+                </div>
+              </div>
+
+              {/* Theme Settings Selector */}
+              <div className="space-y-1.5">
+                <span className="text-[9px] font-black uppercase text-zinc-400 dark:text-zinc-500 tracking-wider px-0.5 block">
+                  화면 테마 설정
+                </span>
+                <div className="grid grid-cols-3 bg-zinc-100 dark:bg-zinc-800 p-1 rounded-xl gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setTheme("light")}
+                    className={`flex items-center justify-center gap-1 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                      theme === "light"
+                        ? "bg-white text-zinc-950 shadow-sm font-black"
+                        : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                    }`}
+                  >
+                    <Sun className="w-3.5 h-3.5 text-amber-500" />
+                    <span>라이트</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTheme("dark")}
+                    className={`flex items-center justify-center gap-1 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                      theme === "dark"
+                        ? "bg-zinc-900 text-white shadow-sm font-black"
+                        : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                    }`}
+                  >
+                    <Moon className="w-3.5 h-3.5 text-amber-300" />
+                    <span>다크</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTheme("system")}
+                    className={`flex items-center justify-center gap-1 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                      theme === "system"
+                        ? "bg-blue-600 text-white shadow-sm font-black"
+                        : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                    }`}
+                  >
+                    <Laptop className="w-3.5 h-3.5" />
+                    <span>시스템</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Logout Button */}
+              <div className="pt-1 border-t border-zinc-100 dark:border-zinc-800">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setUserMenuOpen(false);
+                    if (window.confirm("로그아웃하시겠습니까?")) {
+                      await signOut();
+                    }
+                  }}
+                  className="w-full flex items-center justify-center gap-1.5 py-2 bg-zinc-100 hover:bg-rose-500/10 dark:bg-zinc-800 dark:hover:bg-rose-500/10 text-zinc-600 hover:text-rose-500 dark:text-zinc-400 dark:hover:text-rose-400 rounded-xl font-bold text-xs transition-all active:scale-95 cursor-pointer"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  <span>로그아웃</span>
+                </button>
+              </div>
+
             </div>
-            <span className="text-[10px] font-extrabold text-zinc-900 dark:text-white truncate max-w-[60px]">
-              {currentUserInitials}
-            </span>
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-          </Link>
+          )}
         </div>
       </header>
 
