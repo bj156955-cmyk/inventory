@@ -539,14 +539,14 @@ export default function InventoryPage() {
                         className="hover:bg-zinc-50 dark:hover:bg-zinc-800/40 active:bg-zinc-100 dark:active:bg-zinc-800/70 transition-colors cursor-pointer select-none"
                       >
                         <td className="px-8 py-4">
-                          <div className="flex flex-col gap-1.5 min-w-0">
+                          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 min-w-0">
                             {/* Product Name */}
                             <span className="font-extrabold text-base text-zinc-900 dark:text-white leading-snug break-words">
                               {p.name}
                             </span>
 
-                            {/* Location & Type Badges */}
-                            <div className="flex items-center gap-1.5 flex-wrap">
+                            {/* Category & Status Badges Group (Wraps together cleanly when name is long) */}
+                            <div className="inline-flex items-center gap-1.5 flex-wrap">
                               {p.locations && p.locations.length > 0 ? (
                                 p.locations.map((loc) => (
                                   <span
@@ -615,14 +615,14 @@ export default function InventoryPage() {
                     onClick={() => openItemModal(p)}
                     className="bg-white dark:bg-zinc-900 px-4 py-3.5 sm:px-5 sm:py-4 rounded-2xl border border-zinc-200/90 dark:border-zinc-800/90 shadow-xs flex items-center justify-between gap-3 hover:border-zinc-400 dark:hover:border-zinc-700 active:scale-[0.99] active:bg-zinc-50 dark:active:bg-zinc-800/60 transition-all cursor-pointer select-none"
                   >
-                    {/* Left: Product Name & Category Badges */}
-                    <div className="min-w-0 flex-1 flex flex-col gap-1.5">
+                    {/* Left: Product Name & Category Badges (Inline with clean wrap on overflow) */}
+                    <div className="min-w-0 flex-1 flex flex-wrap items-center gap-x-2 gap-y-1">
                       <h4 className="font-extrabold text-sm sm:text-base text-zinc-900 dark:text-white leading-snug break-words">
                         {p.name}
                       </h4>
 
-                      {/* Location & Type Badges */}
-                      <div className="flex items-center gap-1.5 flex-wrap">
+                      {/* Location & Type Badges Group */}
+                      <div className="inline-flex items-center gap-1.5 flex-wrap">
                         {p.locations && p.locations.length > 0 ? (
                           p.locations.map((loc) => (
                             <span
