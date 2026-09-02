@@ -203,13 +203,6 @@ export default function CalendarPage() {
   const [dragEnd, setDragEnd] = useState<Date | null>(null);
   const [isDragging, setIsDragging] = useState(false);
 
-  // Go to Today
-  const handleGoToday = () => {
-    const now = new Date();
-    setCurrentMonth(now);
-    setActiveDay(now);
-  };
-
   // Open New Event Modal Helper
   const openNewEventModal = (targetDate: Date = activeDay) => {
     setSelectedDate(targetDate);
@@ -490,74 +483,38 @@ export default function CalendarPage() {
 
 
   return (
-    <div className="flex-1 p-3 sm:p-6 md:p-8 space-y-3.5 sm:space-y-4 bg-zinc-50 dark:bg-zinc-950 flex flex-col min-h-0">
+    <div className="flex-1 p-3 sm:p-5 md:p-6 pb-2 sm:pb-3 md:pb-4 space-y-3 bg-zinc-50 dark:bg-zinc-950 flex flex-col min-h-0 h-full">
       
-      {/* Top Navigation & Action Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-2.5 shrink-0">
-        {/* Left: Month Switcher & Today Quick Button */}
-        <div className="flex items-center gap-2">
-          <div className="flex items-center bg-white dark:bg-zinc-900 border border-zinc-200/90 dark:border-zinc-800 rounded-2xl p-1 shadow-xs">
-            <button 
-              type="button"
-              onClick={handlePrevMonth}
-              className="w-8 h-8 flex items-center justify-center hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl transition-all cursor-pointer text-zinc-600 dark:text-zinc-400 active:scale-95"
-              title="이전 달"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <span className="text-sm sm:text-base font-black text-zinc-900 dark:text-white px-3 min-w-[100px] sm:min-w-[120px] text-center tracking-tight">
-              {format(currentMonth, "yyyy. MM", { locale: ko })}
-            </span>
-            <button 
-              type="button"
-              onClick={handleNextMonth}
-              className="w-8 h-8 flex items-center justify-center hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl transition-all cursor-pointer text-zinc-600 dark:text-zinc-400 active:scale-95"
-              title="다음 달"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-
-          <button
+      {/* Top Navigation Bar: Month Switcher only */}
+      <div className="flex items-center justify-between gap-2.5 shrink-0">
+        <div className="flex items-center bg-white dark:bg-zinc-900 border border-zinc-200/90 dark:border-zinc-800 rounded-2xl p-1 shadow-xs">
+          <button 
             type="button"
-            onClick={handleGoToday}
-            className="px-3 py-2 bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 border border-zinc-200/90 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 rounded-2xl text-xs font-bold transition-all shadow-xs active:scale-95 cursor-pointer"
-            title="오늘로 이동"
+            onClick={handlePrevMonth}
+            className="w-8 h-8 flex items-center justify-center hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl transition-all cursor-pointer text-zinc-600 dark:text-zinc-400 active:scale-95"
+            title="이전 달"
           >
-            오늘
+            <ChevronLeft className="w-4 h-4" />
           </button>
-        </div>
-
-        {/* Right: Refresh & Add Event */}
-        <div className="flex items-center gap-2">
-          <button
+          <span className="text-sm sm:text-base font-black text-zinc-900 dark:text-white px-3 min-w-[100px] sm:min-w-[120px] text-center tracking-tight">
+            {format(currentMonth, "yyyy. MM", { locale: ko })}
+          </span>
+          <button 
             type="button"
-            onClick={() => {
-              setLoading(true);
-              fetchEvents();
-            }}
-            className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center bg-white dark:bg-zinc-900 border border-zinc-200/90 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white rounded-2xl transition-all shadow-xs cursor-pointer active:scale-95 shrink-0"
-            title="새로고침"
+            onClick={handleNextMonth}
+            className="w-8 h-8 flex items-center justify-center hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl transition-all cursor-pointer text-zinc-600 dark:text-zinc-400 active:scale-95"
+            title="다음 달"
           >
-            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin text-blue-500" : ""}`} />
-          </button>
-
-          <button
-            type="button"
-            onClick={() => openNewEventModal(activeDay)}
-            className="flex items-center gap-1.5 px-3.5 sm:px-4 py-2 sm:py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-bold text-xs shadow-md shadow-blue-600/30 active:scale-95 transition-all cursor-pointer"
-          >
-            <Plus className="w-4 h-4" />
-            <span>일정 추가</span>
+            <ChevronRight className="w-4 h-4" />
           </button>
         </div>
       </div>
 
       {/* Main Content: Calendar Grid + Selected Day Agenda Panel */}
-      <div className="flex-1 flex flex-col lg:flex-row gap-4 sm:gap-5 min-h-0">
+      <div className="flex-1 flex flex-col lg:flex-row gap-3.5 sm:gap-4 min-h-0 h-full">
         
         {/* Left Column: Calendar Grid Card */}
-        <div className="flex-1 bg-white dark:bg-zinc-900 rounded-3xl shadow-xs border border-zinc-200/90 dark:border-zinc-800 overflow-hidden flex flex-col min-h-[400px]">
+        <div className="flex-1 bg-white dark:bg-zinc-900 rounded-3xl shadow-xs border border-zinc-200/90 dark:border-zinc-800 overflow-hidden flex flex-col min-h-0 h-full">
           {/* Days of Week Header */}
           <div className="grid grid-cols-7 border-b border-zinc-200/80 dark:border-zinc-800/80 bg-zinc-50/70 dark:bg-zinc-800/40 shrink-0">
             {["일", "월", "화", "수", "목", "금", "토"].map((day, idx) => (
@@ -629,7 +586,7 @@ export default function CalendarPage() {
                     onMouseDown={() => handleMouseDown(day)}
                     onMouseEnter={() => handleMouseEnter(day)}
                     onClick={() => handleDayClick(day)}
-                    className={`pt-1.5 pb-1 flex flex-col space-y-1 h-full min-h-[70px] sm:min-h-[85px] overflow-hidden cursor-pointer select-none transition-colors ${
+                    className={`pt-1.5 pb-1 flex flex-col space-y-1 h-full min-h-0 overflow-hidden cursor-pointer select-none transition-colors ${
                       isSelectedInDrag 
                         ? "bg-blue-500/10 ring-2 ring-inset ring-blue-500/40" 
                         : isActive
@@ -743,7 +700,7 @@ export default function CalendarPage() {
         </div>
 
         {/* Right Column: Selected Day's Agenda Detail */}
-        <div className="w-full lg:w-[320px] xl:w-[350px] bg-white dark:bg-zinc-900 rounded-3xl p-5 sm:p-6 shadow-xs border border-zinc-200/90 dark:border-zinc-800 flex flex-col shrink-0 min-h-[360px]">
+        <div className="w-full lg:w-[320px] xl:w-[350px] bg-white dark:bg-zinc-900 rounded-3xl p-5 sm:p-6 shadow-xs border border-zinc-200/90 dark:border-zinc-800 flex flex-col shrink-0 min-h-0 h-auto lg:h-full">
           {/* Agenda Header */}
           <div className="flex justify-between items-center pb-3.5 border-b border-zinc-100 dark:border-zinc-800 shrink-0">
             <div className="flex items-center gap-2">
