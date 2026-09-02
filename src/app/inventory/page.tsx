@@ -10,7 +10,6 @@ import {
   RefreshCw, 
   Edit, 
   Trash2, 
-  ShoppingCart, 
   X,
   AlertCircle
 } from "lucide-react";
@@ -27,16 +26,12 @@ export default function InventoryPage() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   
   // Product Form states (Name, Location, Type, Quantity)
+  // Product Form states (Name, Location, Type, Quantity)
   const [formName, setFormName] = useState("");
   const [formCategory, setFormCategory] = useState("");
   const [formType, setFormType] = useState("");
   const [formStock, setFormStock] = useState(1);
   const [formPrice, setFormPrice] = useState(0);
-
-  // Order modal states
-  const [orderModalOpen, setOrderModalOpen] = useState(false);
-  const [orderingProduct, setOrderingProduct] = useState<Product | null>(null);
-  const [orderQty, setOrderQty] = useState(0);
 
   // Delete confirm modal states
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -331,39 +326,7 @@ export default function InventoryPage() {
     }
   };
 
-  // 7. Order Action
-  const handleOrder = async () => {
-    if (!orderingProduct || !user) return;
-    const newStock = orderingProduct.stock - orderQty;
-    if (newStock < 0) {
-      alert("출고량이 현재 재고보다 많을 수 없습니다.");
-      return;
-    }
-
-    try {
-      const userShort = user.email ? user.email.split("@")[0].toUpperCase() : "USER";
-      const { error } = await supabase
-        .from("products")
-        .update({
-          stock_quantity: newStock,
-          updated_by: userShort,
-          updated_at: new Date().toISOString()
-        })
-        .eq("id", orderingProduct.id);
-
-      if (error) throw error;
-
-      await logActivity(
-        "ORDER", 
-        `${orderingProduct.name} 품목을 ${orderQty}개 출고(Order) 처리했습니다.`
-      );
-      setOrderModalOpen(false);
-    } catch (err) {
-      console.error("Error ordering product:", err);
-    }
-  };
-
-  // 8. Delete Product
+  // 7. Delete Product
   const handleDelete = async () => {
     if (!deletingProduct) return;
     try {
@@ -475,10 +438,8 @@ export default function InventoryPage() {
                 <thead className="bg-zinc-50 dark:bg-zinc-800/60 sticky top-0 z-10 border-b border-zinc-200 dark:border-zinc-800">
                   <tr>
                     <th className="px-8 py-5 text-[10px] font-black text-zinc-500 dark:text-zinc-400 uppercase tracking-widest">품목 상세</th>
-                    <th className="px-8 py-5 text-[10px] font-black text-zinc-500 dark:text-zinc-400 uppercase tracking-widest">보관 위치</th>
-                    <th className="px-8 py-5 text-[10px] font-black text-zinc-500 dark:text-zinc-400 uppercase tracking-widest text-center">재고 현황</th>
-                    <th className="px-8 py-5 text-[10px] font-black text-zinc-500 dark:text-zinc-400 uppercase tracking-widest text-right">단가 (₩)</th>
-                    <th className="px-8 py-5 text-[10px] font-black text-zinc-500 dark:text-zinc-400 uppercase tracking-widest text-center">동작</th>
+                    <th className="px-8 py-5 text-[10px] font-black text-zinc-500 dark:text-zinc-400 uppercase tracking-widest text-center">재고 수량</th>
+                    <th className="px-8 py-5 text-[10px] font-black text-zinc-500 dark:text-zinc-400 uppercase tracking-widest text-center">재고 조절</th>
                     <th className="px-8 py-5 text-[10px] font-black text-zinc-500 dark:text-zinc-400 uppercase tracking-widest text-right">편집</th>
                   </tr>
                 </thead>
@@ -489,9 +450,35 @@ export default function InventoryPage() {
                     return (
                       <tr key={p.id} className="hover:bg-zinc-50/60 dark:hover:bg-zinc-800/30 transition-all">
                         <td className="px-8 py-5">
-                          <div>
-                            <div className="font-bold text-sm text-zinc-900 dark:text-white flex items-center gap-2">
-                              <span>{p.name}</span>
+                          <div className="space-y-1">
+                            {/* 1 Row: Name + Location Badges + Type Badge + Status (No '정상') */}
+                            <div className="font-bold text-sm text-zinc-900 dark:text-white flex items-center gap-2 flex-wrap">
+                              <span className="font-extrabold text-base">{p.name}</span>
+
+                              {/* Location Badges */}
+                              {p.locations && p.locations.length > 0 ? (
+                                p.locations.map((loc) => (
+                                  <span
+                                    key={loc}
+                                    className="px-2.5 py-0.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 rounded-md text-[10px] font-bold border border-zinc-200/60 dark:border-zinc-700/60"
+                                  >
+                                    {loc}
+                                  </span>
+                                ))
+                              ) : (
+                                <span className="px-2.5 py-0.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 rounded-md text-[10px] font-bold border border-zinc-200/60 dark:border-zinc-700/60">
+                                  {p.category || "기타"}
+                                </span>
+                              )}
+
+                              {/* Type Badge */}
+                              {p.item_type && (
+                                <span className="px-2 py-0.5 bg-blue-500/10 dark:bg-blue-500/15 text-blue-600 dark:text-blue-400 rounded-md text-[9px] font-black border border-blue-500/20">
+                                  {p.item_type}
+                                </span>
+                              )}
+
+                              {/* Status Badge (No '정상', only '품절' or '부족') */}
                               {isOut ? (
                                 <span className="px-2 py-0.5 bg-rose-500/15 border border-rose-500/30 text-rose-400 text-[9px] font-black rounded-md">
                                   품절
@@ -500,105 +487,74 @@ export default function InventoryPage() {
                                 <span className="px-2 py-0.5 bg-amber-500/15 border border-amber-500/30 text-amber-400 text-[9px] font-black rounded-md">
                                   부족
                                 </span>
-                              ) : (
-                                <span className="px-2 py-0.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[9px] font-black rounded-md">
-                                  정상
+                              ) : null}
+                            </div>
+
+                            {/* 2 Row: Current Stock below Name */}
+                            <div className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 flex items-center gap-1.5">
+                              <span>현재 재고:</span>
+                              <span className={`font-black tabular-nums ${
+                                isOut ? "text-rose-500 dark:text-rose-400" : isLow ? "text-amber-500 dark:text-amber-400" : "text-blue-600 dark:text-blue-400"
+                              }`}>
+                                {p.stock}개
+                              </span>
+                              {p.edit_user && (
+                                <span className="text-[9px] font-bold text-zinc-400 dark:text-zinc-500 ml-2">
+                                  ({p.edit_user} • {p.edit_date ? new Date(p.edit_date).toLocaleDateString() : ""})
                                 </span>
                               )}
                             </div>
-                            {p.edit_user && (
-                              <div className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mt-1">
-                                {p.edit_user} • {p.edit_date ? new Date(p.edit_date).toLocaleDateString() : ""}
-                              </div>
-                            )}
                           </div>
                         </td>
-                        <td className="px-8 py-5">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            {p.locations && p.locations.length > 0 ? (
-                              p.locations.map((loc) => (
-                                <span
-                                  key={loc}
-                                  className="px-2.5 py-1 bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 rounded-lg text-[10px] font-bold border border-zinc-200/60 dark:border-zinc-700/60"
-                                >
-                                  {loc}
-                                </span>
-                              ))
-                            ) : (
-                              <span className="px-3 py-1 bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 rounded-lg text-[10px] font-bold border border-zinc-200/60 dark:border-zinc-700/60">
-                                {p.category || "기타"}
-                              </span>
-                            )}
-                            {p.item_type && (
-                              <span className="px-2 py-0.5 bg-blue-500/10 dark:bg-blue-500/15 text-blue-600 dark:text-blue-400 rounded-md text-[9px] font-black border border-blue-500/20">
-                                {p.item_type}
-                              </span>
-                            )}
-                          </div>
+
+                        <td className="px-8 py-5 text-center">
+                          <span className={`text-base font-black tabular-nums ${
+                            isOut ? "text-rose-400 line-through" : isLow ? "text-amber-400 font-black" : "text-zinc-900 dark:text-white"
+                          }`}>
+                            {p.stock}
+                          </span>
                         </td>
-                        <td className="px-8 py-5">
-                          <div className="flex flex-col items-center">
-                            <span className={`text-base font-black tabular-nums ${
-                              isOut 
-                                ? "text-rose-400 line-through" 
-                                : isLow 
-                                ? "text-amber-400 font-black" 
-                                : "text-emerald-400 dark:text-emerald-400"
-                            }`}>
-                              {p.stock}
-                            </span>
-                            <span className="text-[10px] text-zinc-400 dark:text-zinc-500 font-bold mt-0.5">
-                              목표 {p.target}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-8 py-5 text-right font-bold text-sm tabular-nums text-zinc-800 dark:text-zinc-200">
-                          {p.price.toLocaleString()}
-                        </td>
+
                         <td className="px-8 py-5">
                           <div className="flex justify-center gap-1.5">
                             <button
-                              onClick={() => adjustStock(p, 1)}
-                              className="w-8 h-8 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 flex items-center justify-center font-bold hover:shadow-sm active:scale-95 transition-all cursor-pointer border border-zinc-200 dark:border-zinc-700"
-                              title="입고 +1"
-                            >
-                              +1
-                            </button>
-                            <button
+                              type="button"
                               onClick={() => adjustStock(p, -1)}
-                              className="w-8 h-8 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 flex items-center justify-center font-bold hover:shadow-sm active:scale-95 transition-all disabled:opacity-30 disabled:pointer-events-none cursor-pointer border border-zinc-200 dark:border-zinc-700"
+                              className="w-8 h-8 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 flex items-center justify-center font-black hover:shadow-sm active:scale-95 transition-all disabled:opacity-30 disabled:pointer-events-none cursor-pointer border border-zinc-200 dark:border-zinc-700"
                               disabled={p.stock <= 0}
-                              title="출고 -1"
+                              title="-1"
                             >
-                              -1
+                              -
                             </button>
                             <button
-                              onClick={() => {
-                                setOrderingProduct(p);
-                                setOrderQty(1);
-                                setOrderModalOpen(true);
-                              }}
-                              className="w-8 h-8 rounded-lg bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center font-bold hover:shadow-sm active:scale-95 transition-all cursor-pointer shadow-sm shadow-blue-600/30"
-                              title="일괄 출고"
+                              type="button"
+                              onClick={() => adjustStock(p, 1)}
+                              className="w-8 h-8 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 flex items-center justify-center font-black hover:shadow-sm active:scale-95 transition-all cursor-pointer border border-zinc-200 dark:border-zinc-700"
+                              title="+1"
                             >
-                              <ShoppingCart className="w-3.5 h-3.5" />
+                              +
                             </button>
                           </div>
                         </td>
+
                         <td className="px-8 py-5 text-right">
                           <div className="flex justify-end gap-1">
                             <button
+                              type="button"
                               onClick={() => openItemModal(p)}
                               className="p-2 text-zinc-400 hover:text-blue-400 transition-colors cursor-pointer"
+                              title="수정"
                             >
                               <Edit className="w-4 h-4" />
                             </button>
                             <button
+                              type="button"
                               onClick={() => {
                                 setDeletingProduct(p);
                                 setDeleteModalOpen(true);
                               }}
                               className="p-2 text-zinc-400 hover:text-rose-400 transition-colors cursor-pointer"
+                              title="삭제"
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>
@@ -611,117 +567,106 @@ export default function InventoryPage() {
               </table>
             </div>
 
-            {/* Mobile List View (No Outer Container Box) */}
+            {/* Mobile List View (Single Compact Card with No Bottom Box) */}
             <div className="md:hidden flex-1 overflow-y-auto space-y-3 custom-scrollbar pr-0.5">
               {filteredProducts.map((p) => {
                 const isLow = p.stock > 0 && p.stock <= p.target * 0.3;
                 const isOut = p.stock === 0;
                 return (
-                  <div key={p.id} className="bg-white dark:bg-zinc-900 p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 space-y-3 shadow-sm active:border-zinc-400 transition-all">
-                    <div className="flex justify-between items-start gap-2">
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <h4 className="font-extrabold text-sm sm:text-base text-zinc-900 dark:text-white truncate">{p.name}</h4>
-                          {isOut ? (
-                            <span className="px-1.5 py-0.5 bg-rose-500/15 border border-rose-500/30 text-rose-400 text-[9px] font-black rounded-md shrink-0">
-                              품절
+                  <div key={p.id} className="bg-white dark:bg-zinc-900 p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-xs flex items-center justify-between gap-3 hover:border-zinc-300 dark:hover:border-zinc-700 transition-all">
+                    {/* Left: Product Name, Category/Type Badges, and Stock */}
+                    <div className="min-w-0 flex-1 space-y-1">
+                      {/* 1 Row: Name + Location Badges + Type Badge + Status (No '정상') */}
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <h4 className="font-extrabold text-sm sm:text-base text-zinc-900 dark:text-white truncate">
+                          {p.name}
+                        </h4>
+
+                        {/* Location Badges */}
+                        {p.locations && p.locations.length > 0 ? (
+                          p.locations.map((loc) => (
+                            <span
+                              key={loc}
+                              className="text-[10px] bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-bold px-2 py-0.5 rounded-md border border-zinc-200/60 dark:border-zinc-700/60 shrink-0"
+                            >
+                              {loc}
                             </span>
-                          ) : isLow ? (
-                            <span className="px-1.5 py-0.5 bg-amber-500/15 border border-amber-500/30 text-amber-400 text-[9px] font-black rounded-md shrink-0">
-                              부족
-                            </span>
-                          ) : (
-                            <span className="px-1.5 py-0.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[9px] font-black rounded-md shrink-0">
-                              정상
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex flex-wrap gap-1.5 items-center mt-1.5">
-                          {p.locations && p.locations.length > 0 ? (
-                            p.locations.map((loc) => (
-                              <span
-                                key={loc}
-                                className="text-[10px] bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 font-bold px-2 py-0.5 rounded-md border border-zinc-200/60 dark:border-zinc-700/60"
-                              >
-                                {loc}
-                              </span>
-                            ))
-                          ) : (
-                            <span className="text-[10px] bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 font-bold px-2 py-0.5 rounded-md border border-zinc-200/60 dark:border-zinc-700/60">
-                              {p.category || "기타"}
-                            </span>
-                          )}
-                          {p.item_type && (
-                            <span className="text-[10px] bg-blue-500/10 dark:bg-blue-500/15 text-blue-600 dark:text-blue-400 font-black px-2 py-0.5 rounded-md border border-blue-500/20">
-                              {p.item_type}
-                            </span>
-                          )}
-                          {p.price > 0 && (
-                            <span className="text-[10px] text-zinc-500 dark:text-zinc-400 font-semibold">
-                              ₩{p.price.toLocaleString()}
-                            </span>
-                          )}
-                        </div>
+                          ))
+                        ) : (
+                          <span className="text-[10px] bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-bold px-2 py-0.5 rounded-md border border-zinc-200/60 dark:border-zinc-700/60 shrink-0">
+                            {p.category || "기타"}
+                          </span>
+                        )}
+
+                        {/* Type Badge */}
+                        {p.item_type && (
+                          <span className="text-[10px] bg-blue-500/10 dark:bg-blue-500/15 text-blue-600 dark:text-blue-400 font-black px-2 py-0.5 rounded-md border border-blue-500/20 shrink-0">
+                            {p.item_type}
+                          </span>
+                        )}
+
+                        {/* Status Badge (No '정상', only '품절' or '부족') */}
+                        {isOut ? (
+                          <span className="px-1.5 py-0.5 bg-rose-500/15 border border-rose-500/30 text-rose-400 text-[9px] font-black rounded-md shrink-0">
+                            품절
+                          </span>
+                        ) : isLow ? (
+                          <span className="px-1.5 py-0.5 bg-amber-500/15 border border-amber-500/30 text-amber-400 text-[9px] font-black rounded-md shrink-0">
+                            부족
+                          </span>
+                        ) : null}
                       </div>
-                      <div className="flex gap-1 shrink-0">
-                        <button
-                          onClick={() => openItemModal(p)}
-                          className="p-2 text-zinc-400 hover:text-blue-400 rounded-lg active:scale-95 cursor-pointer"
-                          title="수정"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => {
-                            setDeletingProduct(p);
-                            setDeleteModalOpen(true);
-                          }}
-                          className="p-2 text-zinc-400 hover:text-rose-400 rounded-lg active:scale-95 cursor-pointer"
-                          title="삭제"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+
+                      {/* 2 Row: Current Stock below Name */}
+                      <div className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 flex items-center gap-1">
+                        <span>현재 재고:</span>
+                        <span className={`font-black tabular-nums ${
+                          isOut ? "text-rose-500 dark:text-rose-400" : isLow ? "text-amber-500 dark:text-amber-400" : "text-blue-600 dark:text-blue-400"
+                        }`}>
+                          {p.stock}
+                        </span>
+                        <span>개</span>
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between pt-3 border-t border-zinc-100 dark:border-zinc-800 gap-2">
-                      <div className="flex flex-col">
-                        <span className="text-[9px] font-black uppercase text-zinc-400 dark:text-zinc-500 tracking-wider">현재 재고</span>
-                        <span className={`text-xl font-black tracking-tight ${
-                          isOut ? "text-rose-400 line-through" : isLow ? "text-amber-400 font-black" : "text-emerald-400"
-                        }`}>
-                          {p.stock} <span className="text-xs font-semibold text-zinc-400 dark:text-zinc-500">/ {p.target}개</span>
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-2 shrink-0">
-                        <button
-                          onClick={() => adjustStock(p, 1)}
-                          className="px-3.5 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 font-black text-xs shadow-sm active:scale-90 transition-transform cursor-pointer border border-zinc-200 dark:border-zinc-700"
-                          title="입고 +1"
-                        >
-                          +1 입고
-                        </button>
-                        <button
-                          onClick={() => adjustStock(p, -1)}
-                          className="px-3.5 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 font-black text-xs shadow-sm active:scale-90 transition-transform disabled:opacity-30 disabled:pointer-events-none cursor-pointer border border-zinc-200 dark:border-zinc-700"
-                          disabled={p.stock <= 0}
-                          title="출고 -1"
-                        >
-                          -1 출고
-                        </button>
-                        <button
-                          onClick={() => {
-                            setOrderingProduct(p);
-                            setOrderQty(1);
-                            setOrderModalOpen(true);
-                          }}
-                          className="p-2 rounded-xl bg-blue-600 text-white hover:bg-blue-500 shadow-sm shadow-blue-600/30 active:scale-90 transition-transform cursor-pointer"
-                          title="일괄 출고"
-                        >
-                          <ShoppingCart className="w-4 h-4" />
-                        </button>
-                      </div>
+                    {/* Right: Quick +/- Controls & Edit/Delete */}
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => adjustStock(p, -1)}
+                        disabled={p.stock <= 0}
+                        className="w-8 h-8 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 font-black text-xs border border-zinc-200 dark:border-zinc-700 active:scale-90 transition-all disabled:opacity-30 disabled:pointer-events-none flex items-center justify-center cursor-pointer"
+                        title="-1"
+                      >
+                        -
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => adjustStock(p, 1)}
+                        className="w-8 h-8 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 font-black text-xs border border-zinc-200 dark:border-zinc-700 active:scale-90 transition-all flex items-center justify-center cursor-pointer"
+                        title="+1"
+                      >
+                        +
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => openItemModal(p)}
+                        className="p-1.5 text-zinc-400 hover:text-blue-500 dark:hover:text-blue-400 rounded-lg active:scale-90 transition-all cursor-pointer ml-1"
+                        title="수정"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDeletingProduct(p);
+                          setDeleteModalOpen(true);
+                        }}
+                        className="p-1.5 text-zinc-400 hover:text-rose-500 dark:hover:text-rose-400 rounded-lg active:scale-90 transition-all cursor-pointer"
+                        title="삭제"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
                   </div>
                 );
@@ -888,61 +833,7 @@ export default function InventoryPage() {
         </div>
       )}
 
-      {/* 2. Order Qty Modal */}
-      {orderModalOpen && orderingProduct && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-md z-[200] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-[420px] rounded-[2.5rem] shadow-2xl p-8 space-y-6">
-            <div className="flex justify-between items-center">
-              <h3 className="text-xl font-black text-primary dark:text-white tracking-tighter">품목 출고 (Order)</h3>
-              <button onClick={() => setOrderModalOpen(false)}>
-                <X className="w-5 h-5 text-on-surface-variant/40" />
-              </button>
-            </div>
-
-            <div className="bg-zinc-100 dark:bg-zinc-800 p-4 rounded-2xl flex items-center gap-3">
-              <div className="w-10 h-10 bg-zinc-200 dark:bg-zinc-700 rounded-xl flex items-center justify-center text-zinc-900 dark:text-white">
-                <ShoppingCart className="w-5 h-5" />
-              </div>
-              <div>
-                <p className="font-bold text-sm text-zinc-900 dark:text-white">{orderingProduct.name}</p>
-                <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mt-0.5">현재 재고: {orderingProduct.stock}</p>
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <label className="text-[10px] font-black uppercase text-zinc-500 dark:text-zinc-400 ml-1">출고량 입력</label>
-              <input
-                type="number"
-                min="1"
-                max={orderingProduct.stock}
-                value={orderQty || ""}
-                onChange={(e) => setOrderQty(Number(e.target.value))}
-                placeholder="출고할 수량을 적어주세요."
-                className="w-full px-4 py-4 bg-zinc-100 dark:bg-zinc-800 text-center font-black text-2xl rounded-2xl outline-none focus:ring-2 focus:ring-zinc-900/20 dark:focus:ring-white/20 text-zinc-900 dark:text-white"
-              />
-            </div>
-
-            <div className="flex gap-4 pt-2">
-              <button
-                type="button"
-                onClick={() => setOrderModalOpen(false)}
-                className="flex-1 py-4 border border-zinc-200 dark:border-zinc-800 rounded-2xl font-black text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all cursor-pointer"
-              >
-                취소
-              </button>
-              <button
-                type="button"
-                onClick={handleOrder}
-                className="flex-1 py-4 bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200 text-white rounded-2xl font-black text-sm shadow-md active:scale-95 transition-all cursor-pointer"
-              >
-                출고 실행
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 3. Delete Confirm Modal */}
+      {/* 2. Delete Confirm Modal */}
       {deleteModalOpen && deletingProduct && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-md z-[300] flex items-center justify-center p-4">
           <div className="bg-white dark:bg-zinc-900 w-full max-w-[400px] rounded-[2.5rem] shadow-2xl p-8 space-y-6 text-center border border-zinc-200 dark:border-zinc-800">
