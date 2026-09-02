@@ -302,7 +302,7 @@ export default function InventoryPage() {
       </div>
 
       {/* Dynamic Location Categories Tabs (Fixed 5-item ratio, stacked from left, scrollable when >5) */}
-      <div className="flex items-center gap-2 sm:gap-2.5 w-full overflow-x-auto no-scrollbar scroll-smooth py-0.5 mb-4 sm:mb-6 shrink-0 justify-start">
+      <div className="flex items-center gap-2 sm:gap-2.5 w-full overflow-x-auto no-scrollbar scroll-smooth py-1 px-0.5 -mx-0.5 mb-4 sm:mb-6 shrink-0 justify-start">
         {categoriesList.map((c) => (
           <button
             key={c}
@@ -310,7 +310,7 @@ export default function InventoryPage() {
             onClick={() => setSelectedCategory(c)}
             className={`w-[calc((100%-32px)/5)] sm:w-[calc((100%-40px)/5)] min-w-[calc((100%-32px)/5)] sm:min-w-[calc((100%-40px)/5)] shrink-0 py-2.5 px-1 sm:px-2 rounded-2xl text-[11px] sm:text-xs font-bold text-center truncate transition-all duration-200 cursor-pointer select-none active:scale-95 ${
               activeCategory === c
-                ? "bg-blue-600 text-white shadow-sm shadow-blue-600/30 font-black scale-[1.02]"
+                ? "bg-blue-600 text-white border border-blue-600 shadow-md shadow-blue-600/30 font-black"
                 : "bg-white dark:bg-zinc-900 border border-zinc-200/90 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:border-zinc-300 dark:hover:border-zinc-700 hover:text-zinc-900 dark:hover:text-white shadow-xs"
             }`}
             title={c === "all" ? "전체보기" : c}
