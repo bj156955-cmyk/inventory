@@ -24,11 +24,12 @@ export default function InventoryPage() {
   const [itemModalOpen, setItemModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   
-  // Product Form states (Name, Location, Type, Quantity)
+  // Product Form states (Name, Location, Type, Quantity, Unit)
   const [formName, setFormName] = useState("");
   const [formCategory, setFormCategory] = useState("");
   const [formType, setFormType] = useState("");
   const [formStock, setFormStock] = useState(1);
+  const [formUnit, setFormUnit] = useState("개");
   const [formPrice, setFormPrice] = useState(0);
 
   // Item modification logs state
@@ -57,6 +58,7 @@ export default function InventoryPage() {
         category: String(p.category || ""),
         sku: p.sku ? String(p.sku) : null,
         item_type: parsedType,
+        unit: p.unit ? String(p.unit) : "개",
         stock_quantity: stockNum,
         stock: stockNum,
         target_quantity: targetNum,
@@ -301,6 +303,7 @@ export default function InventoryPage() {
       setFormCategory(product.category);
       setFormType(product.item_type || "");
       setFormStock(product.stock);
+      setFormUnit(product.unit || "개");
       setFormPrice(product.price || 0);
       fetchItemLogs(product.name, product.category);
     } else {
@@ -309,6 +312,7 @@ export default function InventoryPage() {
       setFormCategory(activeCategory !== "all" ? activeCategory : "");
       setFormType("");
       setFormStock(1);
+      setFormUnit("개");
       setFormPrice(0);
       setItemLogs([]);
     }
@@ -325,11 +329,13 @@ export default function InventoryPage() {
 
     const userShort = user.email ? user.email.split("@")[0].toUpperCase() : "USER";
     const skuVal = formType.trim() ? `${formType.trim()}_${Date.now().toString(36)}` : null;
+    const unitVal = formUnit.trim() || "개";
 
-    const payload = {
+    const payload: Record<string, unknown> = {
       name: formName.trim(),
       category: formCategory.trim(),
       sku: skuVal,
+      unit: unitVal,
       stock_quantity: formStock,
       target_quantity: formStock,
       price: formPrice || 0,
@@ -348,7 +354,13 @@ export default function InventoryPage() {
         const delta = newStock - oldStock;
 
         // Update DB
-        const { error } = await supabase.from("products").update(payload).eq("id", editingProduct.id);
+        let { error } = await supabase.from("products").update(payload).eq("id", editingProduct.id);
+        if (error && error.message?.includes("unit")) {
+          // Fallback if 'unit' column doesn't exist in Supabase table
+          delete payload.unit;
+          const retry = await supabase.from("products").update(payload).eq("id", editingProduct.id);
+          error = retry.error;
+        }
         if (error) throw error;
         
         // Log ONLY when stock quantity changes - tagged with [장소] [품목명]
@@ -389,6 +401,11 @@ export default function InventoryPage() {
         } else {
           // Insert new item
           let { error } = await supabase.from("products").insert([payload]);
+          if (error && error.message?.includes("unit")) {
+            delete payload.unit;
+            const retry = await supabase.from("products").insert([payload]);
+            error = retry.error;
+          }
           if (error && error.message?.includes("sku")) {
             payload.sku = null;
             const retry = await supabase.from("products").insert([payload]);
@@ -561,7 +578,7 @@ export default function InventoryPage() {
                             }`}>
                               {p.stock}
                             </span>
-                            <span className="text-xs font-bold text-zinc-400 dark:text-zinc-500">개</span>
+                            <span className="text-xs font-bold text-zinc-400 dark:text-zinc-500">{p.unit || "개"}</span>
                           </div>
                         </td>
                       </tr>
@@ -636,7 +653,7 @@ export default function InventoryPage() {
                       }`}>
                         {p.stock}
                       </span>
-                      <span className="text-xs font-bold text-zinc-400 dark:text-zinc-500">개</span>
+                      <span className="text-xs font-bold text-zinc-400 dark:text-zinc-500">{p.unit || "개"}</span>
                     </div>
                   </div>
                 );
@@ -669,7 +686,7 @@ export default function InventoryPage() {
               </button>
             </div>
             
-            {/* Form Fields: Name, Location & Type (2-Col Grid), Quantity */}
+            {/* Form Fields: Name, Location & Type (2-Col Grid), Quantity & Unit */}
             <form onSubmit={saveProduct} className="space-y-3.5">
               
               {/* 1. Name (이름) */}
@@ -682,7 +699,6 @@ export default function InventoryPage() {
                   required
                   value={formName}
                   onChange={(e) => setFormName(e.target.value)}
-                  placeholder="품목명을 입력하세요"
                   className="w-full px-3.5 py-2.5 bg-zinc-100 dark:bg-zinc-800/90 border border-zinc-200 dark:border-zinc-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/20 text-sm font-semibold text-zinc-900 dark:text-white transition-all"
                 />
               </div>
@@ -699,7 +715,6 @@ export default function InventoryPage() {
                     required
                     value={formCategory}
                     onChange={(e) => setFormCategory(e.target.value)}
-                    placeholder="예: 연구동"
                     className="w-full px-3.5 py-2.5 bg-zinc-100 dark:bg-zinc-800/90 border border-zinc-200 dark:border-zinc-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/20 text-sm font-semibold text-zinc-900 dark:text-white transition-all"
                   />
                   {existingLocations.length > 0 && (
@@ -731,7 +746,6 @@ export default function InventoryPage() {
                     type="text"
                     value={formType}
                     onChange={(e) => setFormType(e.target.value)}
-                    placeholder="예: 소모품"
                     className="w-full px-3.5 py-2.5 bg-zinc-100 dark:bg-zinc-800/90 border border-zinc-200 dark:border-zinc-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/20 text-sm font-semibold text-zinc-900 dark:text-white transition-all"
                   />
                   {existingTypes.length > 0 && (
@@ -755,36 +769,52 @@ export default function InventoryPage() {
                 </div>
               </div>
 
-              {/* 4. Quantity (수량) */}
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[11px] font-black uppercase text-zinc-500 dark:text-zinc-400 tracking-wider">
-                  수량 <span className="text-rose-500">*</span>
-                </label>
-                <div className="flex items-center gap-2 w-full">
-                  <button
-                    type="button"
-                    onClick={() => setFormStock((prev) => Math.max(0, prev - 1))}
-                    className="w-10 h-10 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 font-black text-base border border-zinc-200 dark:border-zinc-700 active:scale-95 transition-all flex items-center justify-center cursor-pointer shrink-0"
-                    title="-1"
-                  >
-                    -
-                  </button>
+              {/* 4. Quantity (수량) & Unit (단위) */}
+              <div className="grid grid-cols-12 gap-2.5">
+                {/* Quantity */}
+                <div className="col-span-8 flex flex-col gap-1.5">
+                  <label className="text-[11px] font-black uppercase text-zinc-500 dark:text-zinc-400 tracking-wider">
+                    수량 <span className="text-rose-500">*</span>
+                  </label>
+                  <div className="flex items-center gap-1.5 w-full">
+                    <button
+                      type="button"
+                      onClick={() => setFormStock((prev) => Math.max(0, prev - 1))}
+                      className="w-10 h-10 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 font-black text-base border border-zinc-200 dark:border-zinc-700 active:scale-95 transition-all flex items-center justify-center cursor-pointer shrink-0"
+                      title="-1"
+                    >
+                      -
+                    </button>
+                    <input
+                      type="number"
+                      required
+                      min={0}
+                      value={formStock}
+                      onChange={(e) => setFormStock(Math.max(0, Number(e.target.value)))}
+                      className="flex-1 min-w-0 w-full py-2 px-2 bg-zinc-100 dark:bg-zinc-800/90 border border-zinc-200 dark:border-zinc-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/20 text-center font-black text-sm sm:text-base text-zinc-900 dark:text-white tabular-nums"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setFormStock((prev) => prev + 1)}
+                      className="w-10 h-10 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 font-black text-base border border-zinc-200 dark:border-zinc-700 active:scale-95 transition-all flex items-center justify-center cursor-pointer shrink-0"
+                      title="+1"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+
+                {/* Unit */}
+                <div className="col-span-4 flex flex-col gap-1.5">
+                  <label className="text-[11px] font-black uppercase text-zinc-500 dark:text-zinc-400 tracking-wider">
+                    단위
+                  </label>
                   <input
-                    type="number"
-                    required
-                    min={0}
-                    value={formStock}
-                    onChange={(e) => setFormStock(Math.max(0, Number(e.target.value)))}
-                    className="flex-1 min-w-0 w-full py-2 px-3 bg-zinc-100 dark:bg-zinc-800/90 border border-zinc-200 dark:border-zinc-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/20 text-center font-black text-sm sm:text-base text-zinc-900 dark:text-white tabular-nums"
+                    type="text"
+                    value={formUnit}
+                    onChange={(e) => setFormUnit(e.target.value)}
+                    className="w-full py-2 px-3 bg-zinc-100 dark:bg-zinc-800/90 border border-zinc-200 dark:border-zinc-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/20 text-center font-bold text-sm text-zinc-900 dark:text-white transition-all h-10"
                   />
-                  <button
-                    type="button"
-                    onClick={() => setFormStock((prev) => prev + 1)}
-                    className="w-10 h-10 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 font-black text-base border border-zinc-200 dark:border-zinc-700 active:scale-95 transition-all flex items-center justify-center cursor-pointer shrink-0"
-                    title="+1"
-                  >
-                    +
-                  </button>
                 </div>
               </div>
 

@@ -4,6 +4,7 @@ export interface Product {
   sku?: string | null;
   category: string;
   item_type?: string | null;
+  unit?: string | null;
   stock_quantity?: number;
   stock: number;
   target_quantity?: number;
