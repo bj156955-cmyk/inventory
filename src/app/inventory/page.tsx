@@ -538,47 +538,50 @@ export default function InventoryPage() {
                         onClick={() => openItemModal(p)}
                         className="hover:bg-zinc-50 dark:hover:bg-zinc-800/40 active:bg-zinc-100 dark:active:bg-zinc-800/70 transition-colors cursor-pointer select-none"
                       >
-                        <td className="px-8 py-5">
-                          <div className="font-bold text-sm text-zinc-900 dark:text-white flex items-center gap-2 flex-wrap">
-                            <span className="font-extrabold text-base">{p.name}</span>
+                        <td className="px-8 py-4">
+                          <div className="flex flex-col gap-1.5 min-w-0">
+                            {/* Product Name */}
+                            <span className="font-extrabold text-base text-zinc-900 dark:text-white leading-snug break-words">
+                              {p.name}
+                            </span>
 
-                            {/* Location Badges */}
-                            {p.locations && p.locations.length > 0 ? (
-                              p.locations.map((loc) => (
-                                <span
-                                  key={loc}
-                                  className="px-2.5 py-0.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 rounded-md text-[10px] font-bold border border-zinc-200/60 dark:border-zinc-700/60"
-                                >
-                                  {loc}
+                            {/* Location & Type Badges */}
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              {p.locations && p.locations.length > 0 ? (
+                                p.locations.map((loc) => (
+                                  <span
+                                    key={loc}
+                                    className="px-2 py-0.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 rounded-md text-[10px] font-bold border border-zinc-200/60 dark:border-zinc-700/60 shrink-0"
+                                  >
+                                    {loc}
+                                  </span>
+                                ))
+                              ) : (
+                                <span className="px-2 py-0.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 rounded-md text-[10px] font-bold border border-zinc-200/60 dark:border-zinc-700/60 shrink-0">
+                                  {p.category || "기타"}
                                 </span>
-                              ))
-                            ) : (
-                              <span className="px-2.5 py-0.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 rounded-md text-[10px] font-bold border border-zinc-200/60 dark:border-zinc-700/60">
-                                {p.category || "기타"}
-                              </span>
-                            )}
+                              )}
 
-                            {/* Type Badge */}
-                            {p.item_type && (
-                              <span className="px-2 py-0.5 bg-blue-500/10 dark:bg-blue-500/15 text-blue-600 dark:text-blue-400 rounded-md text-[9px] font-black border border-blue-500/20">
-                                {p.item_type}
-                              </span>
-                            )}
+                              {p.item_type && (
+                                <span className="px-2 py-0.5 bg-blue-500/10 dark:bg-blue-500/15 text-blue-600 dark:text-blue-400 rounded-md text-[9px] font-black border border-blue-500/20 shrink-0">
+                                  {p.item_type}
+                                </span>
+                              )}
 
-                            {/* Status Badge (No '정상', only '품절' or '부족') */}
-                            {isOut ? (
-                              <span className="px-2 py-0.5 bg-rose-500/15 border border-rose-500/30 text-rose-400 text-[9px] font-black rounded-md">
-                                품절
-                              </span>
-                            ) : isLow ? (
-                              <span className="px-2 py-0.5 bg-amber-500/15 border border-amber-500/30 text-amber-400 text-[9px] font-black rounded-md">
-                                부족
-                              </span>
-                            ) : null}
+                              {isOut ? (
+                                <span className="px-1.5 py-0.5 bg-rose-500/15 border border-rose-500/30 text-rose-400 text-[9px] font-black rounded-md shrink-0">
+                                  품절
+                                </span>
+                              ) : isLow ? (
+                                <span className="px-1.5 py-0.5 bg-amber-500/15 border border-amber-500/30 text-amber-400 text-[9px] font-black rounded-md shrink-0">
+                                  부족
+                                </span>
+                              ) : null}
+                            </div>
                           </div>
                         </td>
 
-                        <td className="px-8 py-5 text-right">
+                        <td className="px-8 py-4 text-right">
                           <div className="flex items-baseline justify-end gap-1">
                             <span className={`text-lg font-black tabular-nums ${
                               isOut 
@@ -612,14 +615,14 @@ export default function InventoryPage() {
                     onClick={() => openItemModal(p)}
                     className="bg-white dark:bg-zinc-900 px-4 py-3.5 sm:px-5 sm:py-4 rounded-2xl border border-zinc-200/90 dark:border-zinc-800/90 shadow-xs flex items-center justify-between gap-3 hover:border-zinc-400 dark:hover:border-zinc-700 active:scale-[0.99] active:bg-zinc-50 dark:active:bg-zinc-800/60 transition-all cursor-pointer select-none"
                   >
-                    {/* Left: Product Name, Category/Type Badges */}
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <h4 className="font-extrabold text-sm sm:text-base text-zinc-900 dark:text-white truncate">
-                          {p.name}
-                        </h4>
+                    {/* Left: Product Name & Category Badges */}
+                    <div className="min-w-0 flex-1 flex flex-col gap-1.5">
+                      <h4 className="font-extrabold text-sm sm:text-base text-zinc-900 dark:text-white leading-snug break-words">
+                        {p.name}
+                      </h4>
 
-                        {/* Location Badges */}
+                      {/* Location & Type Badges */}
+                      <div className="flex items-center gap-1.5 flex-wrap">
                         {p.locations && p.locations.length > 0 ? (
                           p.locations.map((loc) => (
                             <span
@@ -635,14 +638,12 @@ export default function InventoryPage() {
                           </span>
                         )}
 
-                        {/* Type Badge */}
                         {p.item_type && (
                           <span className="text-[10px] bg-blue-500/10 dark:bg-blue-500/15 text-blue-600 dark:text-blue-400 font-black px-2 py-0.5 rounded-md border border-blue-500/20 shrink-0">
                             {p.item_type}
                           </span>
                         )}
 
-                        {/* Status Badge (No '정상', only '품절' or '부족') */}
                         {isOut ? (
                           <span className="px-1.5 py-0.5 bg-rose-500/15 border border-rose-500/30 text-rose-400 text-[9px] font-black rounded-md shrink-0">
                             품절
