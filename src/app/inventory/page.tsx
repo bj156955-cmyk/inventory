@@ -251,8 +251,8 @@ export default function InventoryPage() {
     }
   }, [products, activeCategory, search]);
 
-  // Fetch activity logs for a specific product
-  const fetchItemLogs = useCallback(async (productName: string) => {
+  // Fetch activity logs for a specific product and optional location
+  const fetchItemLogs = useCallback(async (productName: string, categoryName?: string) => {
     if (!productName) {
       setItemLogs([]);
       return;
@@ -260,12 +260,25 @@ export default function InventoryPage() {
     setLoadingLogs(true);
     try {
       const cleanName = productName.trim();
-      const { data, error } = await supabase
-        .from("activities")
-        .select("*")
-        .or(`message.ilike.%[${cleanName}]%,message.ilike.%${cleanName}%`)
-        .order("created_at", { ascending: false })
-        .limit(15);
+      const cleanCat = categoryName?.trim();
+
+      let query = supabase.from("activities").select("*");
+
+      if (cleanCat && activeCategory !== "all") {
+        // Isolate logs to this specific location AND item name
+        query = query
+          .ilike("message", `%[${cleanCat}]%[${cleanName}]%`)
+          .order("created_at", { ascending: false })
+          .limit(15);
+      } else {
+        // "all" tab: fetch all location logs for this item name
+        query = query
+          .or(`message.ilike.%[${cleanName}]%,message.ilike.%${cleanName}%`)
+          .order("created_at", { ascending: false })
+          .limit(15);
+      }
+
+      const { data, error } = await query;
 
       if (!error && data) {
         setItemLogs(data as Activity[]);
@@ -278,7 +291,7 @@ export default function InventoryPage() {
     } finally {
       setLoadingLogs(false);
     }
-  }, []);
+  }, [activeCategory]);
 
   // 5. Open Form Modal for Create/Update
   const openItemModal = (product: Product | null = null) => {
@@ -289,11 +302,11 @@ export default function InventoryPage() {
       setFormType(product.item_type || "");
       setFormStock(product.stock);
       setFormPrice(product.price || 0);
-      fetchItemLogs(product.name);
+      fetchItemLogs(product.name, product.category);
     } else {
       setEditingProduct(null);
       setFormName("");
-      setFormCategory("");
+      setFormCategory(activeCategory !== "all" ? activeCategory : "");
       setFormType("");
       setFormStock(1);
       setFormPrice(0);
@@ -302,7 +315,7 @@ export default function InventoryPage() {
     setItemModalOpen(true);
   };
 
-  // 6. Save Product (Insert or Update)
+  // 6. Save Product (Insert, Update, or Merge duplicate in same location)
   const saveProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) {
@@ -311,7 +324,7 @@ export default function InventoryPage() {
     }
 
     const userShort = user.email ? user.email.split("@")[0].toUpperCase() : "USER";
-    const skuVal = formType ? `${formType}_${Date.now().toString(36)}` : null;
+    const skuVal = formType.trim() ? `${formType.trim()}_${Date.now().toString(36)}` : null;
 
     const payload = {
       name: formName.trim(),
@@ -338,37 +351,61 @@ export default function InventoryPage() {
         const { error } = await supabase.from("products").update(payload).eq("id", editingProduct.id);
         if (error) throw error;
         
-        // Log ONLY when stock quantity changes
+        // Log ONLY when stock quantity changes - tagged with [장소] [품목명]
         if (delta !== 0) {
           const sign = delta > 0 ? `+${delta}` : `${delta}`;
-          const changeText = activeCategory === "all" 
-            ? `${newCat || oldCat || "연구동"} 재고 ${sign}` 
-            : `재고 ${sign}`;
-          await logActivity("UPDATE", `[${newName || oldName}] ${changeText}`);
+          const currentCat = newCat || oldCat || "기타";
+          await logActivity("UPDATE", `[${currentCat}] [${newName || oldName}] 재고 ${sign}`);
         }
       } else {
-        // Insert
-        let { error } = await supabase.from("products").insert([payload]);
-        if (error && error.message?.includes("sku")) {
-          // If SKU constraint error, retry with null
-          payload.sku = null;
-          const retry = await supabase.from("products").insert([payload]);
-          error = retry.error;
-        }
-        if (error) {
-          const lowerMsg = error.message?.toLowerCase() || "";
-          if (error.code === "23505" || lowerMsg.includes("duplicate key") || lowerMsg.includes("unique")) {
-            if (lowerMsg.includes("name") || lowerMsg.includes("products_name_key")) {
-              alert(`이미 '${formName}' 이름의 품목이 등록되어 있습니다.\n\n동일한 품목을 다른 장소에 별도로 등록하시려면 품목명에 장소를 함께 기재해 주세요.\n(예: ${formName} (${formCategory}))`);
-              return;
-            }
+        // Auto-merge if product with same name + location + type already exists
+        const { data: existingRows } = await supabase
+          .from("products")
+          .select("*")
+          .eq("name", formName.trim())
+          .eq("category", formCategory.trim());
+
+        const matched = existingRows?.find((r) => {
+          const existingType = r.sku ? r.sku.split("_")[0] : "";
+          return formType.trim() === existingType || (!formType.trim() && !existingType);
+        }) || (existingRows && existingRows.length === 1 ? existingRows[0] : null);
+
+        if (matched) {
+          // Merge: Add stock to existing product instead of creating duplicate box
+          const newTotalStock = (matched.stock_quantity || 0) + formStock;
+          const { error } = await supabase
+            .from("products")
+            .update({
+              stock_quantity: newTotalStock,
+              target_quantity: newTotalStock,
+              updated_by: userShort,
+              updated_at: new Date().toISOString()
+            })
+            .eq("id", matched.id);
+
+          if (error) throw error;
+
+          await logActivity("UPDATE", `[${formCategory.trim()}] [${formName.trim()}] 재고 +${formStock}`);
+        } else {
+          // Insert new item
+          let { error } = await supabase.from("products").insert([payload]);
+          if (error && error.message?.includes("sku")) {
+            payload.sku = null;
+            const retry = await supabase.from("products").insert([payload]);
+            error = retry.error;
           }
-          throw error;
+          if (error) {
+            const lowerMsg = error.message?.toLowerCase() || "";
+            if (error.code === "23505" || lowerMsg.includes("duplicate key") || lowerMsg.includes("unique")) {
+              if (lowerMsg.includes("name") || lowerMsg.includes("products_name_key")) {
+                alert(`이미 '${formName}' 이름의 품목이 등록되어 있습니다.\n\n동일한 품목을 다른 장소에 별도로 등록하시려면 품목명에 장소를 함께 기재해 주세요.\n(예: ${formName} (${formCategory}))`);
+                return;
+              }
+            }
+            throw error;
+          }
+          await logActivity("CREATE", `[${formCategory.trim()}] [${formName.trim()}] 재고 +${formStock}`);
         }
-        const changeText = activeCategory === "all" 
-          ? `${formCategory.trim() || "연구동"} 재고 +${formStock}` 
-          : `재고 +${formStock}`;
-        await logActivity("CREATE", `[${formName.trim()}] ${changeText}`);
       }
       setItemModalOpen(false);
     } catch (err: unknown) {
@@ -774,9 +811,18 @@ export default function InventoryPage() {
                         .slice(0, 3)
                         .map((log) => {
                           let displayMsg = log.message;
-                          const match = displayMsg.match(/^\[.*?\]\s*(.*)$/);
-                          if (match && match[1]) {
-                            displayMsg = match[1];
+
+                          // Format: [장소] [품목] 재고 +N
+                          const locItemMatch = displayMsg.match(/^\[(.*?)\]\s*\[(.*?)\]\s*(.*)$/);
+                          if (locItemMatch) {
+                            const loc = locItemMatch[1];
+                            const change = locItemMatch[3];
+                            displayMsg = activeCategory === "all" ? `${loc} ${change}` : change;
+                          } else {
+                            const singleMatch = displayMsg.match(/^\[.*?\]\s*(.*)$/);
+                            if (singleMatch && singleMatch[1]) {
+                              displayMsg = singleMatch[1];
+                            }
                           }
 
                           // Convert older "수량 (5개 → 6개)" format to clean delta
