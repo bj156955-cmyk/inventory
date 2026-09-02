@@ -263,59 +263,57 @@ export default function InventoryPage() {
   return (
     <div className="flex-1 p-3 sm:p-6 md:p-8 space-y-3 sm:space-y-4 flex flex-col min-h-0 bg-zinc-50 dark:bg-zinc-950">
       
-      {/* Search & Categories Slim Bar */}
-      <div className="flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center justify-between shrink-0 bg-white dark:bg-zinc-900 p-2.5 sm:p-3 rounded-2xl sm:rounded-3xl shadow-sm border border-zinc-200 dark:border-zinc-800">
-        
-        {/* Categories Chips */}
-        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 max-w-full">
-          {categories.map((c) => (
-            <button
-              key={c}
-              onClick={() => setSelectedCategory(c)}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all duration-200 cursor-pointer ${
-                selectedCategory === c
-                  ? "bg-blue-600 text-white shadow-sm shadow-blue-600/30 font-black scale-105"
-                  : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700 hover:text-zinc-900 dark:hover:text-white"
-              }`}
-            >
-              {c === "all" ? "전체 보기" : c}
-            </button>
-          ))}
+      {/* Top Search Bar & Circular Action Buttons (No Outer Box) */}
+      <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+        {/* Standalone Search Input */}
+        <div className="relative flex-1">
+          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 dark:text-zinc-500" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="품목 이름, 카테고리 검색..."
+            className="w-full pl-10 pr-4 py-2.5 sm:py-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl text-xs sm:text-sm font-semibold outline-none focus:ring-2 focus:ring-blue-500/20 shadow-xs text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 transition-all"
+          />
         </div>
 
-        {/* Search & Actions */}
-        <div className="flex items-center gap-2 shrink-0">
-          <div className="relative flex-1 sm:w-56">
-            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="품목 검색..."
-              className="w-full pl-8 pr-3 py-1.5 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-blue-500/20 text-zinc-900 dark:text-white"
-            />
-          </div>
+        {/* Circular Plus Button */}
+        <button
+          onClick={() => openItemModal(null)}
+          className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center shadow-md shadow-blue-600/30 transition-all active:scale-90 cursor-pointer shrink-0"
+          title="새 품목 등록"
+        >
+          <Plus className="w-5 h-5" />
+        </button>
 
-          <button
-            onClick={() => openItemModal(null)}
-            className="flex items-center justify-center gap-1.5 px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold text-xs shadow-sm shadow-blue-600/30 transition-all active:scale-95 cursor-pointer shrink-0"
-            title="새 품목 등록"
-          >
-            <Plus className="w-4 h-4" />
-            <span className="hidden sm:inline">새 품목</span>
-          </button>
+        {/* Circular Refresh Button */}
+        <button
+          onClick={() => {
+            setLoading(true);
+            fetchData();
+          }}
+          className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white flex items-center justify-center shadow-xs transition-all active:scale-90 cursor-pointer shrink-0"
+          title="새로고침"
+        >
+          <RefreshCw className="w-4 h-4" />
+        </button>
+      </div>
 
+      {/* Standalone Categories Chips Bar */}
+      <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 max-w-full shrink-0">
+        {categories.map((c) => (
           <button
-            onClick={() => {
-              setLoading(true);
-              fetchData();
-            }}
-            className="p-2 bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white rounded-xl transition-all cursor-pointer active:scale-95 shrink-0"
-            title="새로고침"
+            key={c}
+            onClick={() => setSelectedCategory(c)}
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all duration-200 cursor-pointer ${
+              selectedCategory === c
+                ? "bg-blue-600 text-white shadow-sm shadow-blue-600/30 font-black scale-105"
+                : "bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white shadow-xs"
+            }`}
           >
-            <RefreshCw className="w-4 h-4" />
+            {c === "all" ? "전체 보기" : c}
           </button>
-        </div>
+        ))}
       </div>
 
       {/* Product List Section */}
