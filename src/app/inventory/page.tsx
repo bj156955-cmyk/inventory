@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
-import { Product } from "@/types";
+import { Product, Activity } from "@/types";
 import { useAuth } from "@/context/AuthContext";
 import { 
   Plus, 
@@ -25,12 +25,15 @@ export default function InventoryPage() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   
   // Product Form states (Name, Location, Type, Quantity)
-  // Product Form states (Name, Location, Type, Quantity)
   const [formName, setFormName] = useState("");
   const [formCategory, setFormCategory] = useState("");
   const [formType, setFormType] = useState("");
   const [formStock, setFormStock] = useState(1);
   const [formPrice, setFormPrice] = useState(0);
+
+  // Item modification logs state
+  const [itemLogs, setItemLogs] = useState<Activity[]>([]);
+  const [loadingLogs, setLoadingLogs] = useState(false);
 
   // Delete confirm modal states
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -248,6 +251,35 @@ export default function InventoryPage() {
     }
   }, [products, activeCategory, search]);
 
+  // Fetch activity logs for a specific product
+  const fetchItemLogs = useCallback(async (productName: string) => {
+    if (!productName) {
+      setItemLogs([]);
+      return;
+    }
+    setLoadingLogs(true);
+    try {
+      const cleanName = productName.trim();
+      const { data, error } = await supabase
+        .from("activities")
+        .select("*")
+        .or(`message.ilike.%[${cleanName}]%,message.ilike.%${cleanName}%`)
+        .order("created_at", { ascending: false })
+        .limit(15);
+
+      if (!error && data) {
+        setItemLogs(data as Activity[]);
+      } else {
+        setItemLogs([]);
+      }
+    } catch (err) {
+      console.error("Error fetching item logs:", err);
+      setItemLogs([]);
+    } finally {
+      setLoadingLogs(false);
+    }
+  }, []);
+
   // 5. Open Form Modal for Create/Update
   const openItemModal = (product: Product | null = null) => {
     if (product) {
@@ -257,6 +289,7 @@ export default function InventoryPage() {
       setFormType(product.item_type || "");
       setFormStock(product.stock);
       setFormPrice(product.price || 0);
+      fetchItemLogs(product.name);
     } else {
       setEditingProduct(null);
       setFormName("");
@@ -264,6 +297,7 @@ export default function InventoryPage() {
       setFormType("");
       setFormStock(1);
       setFormPrice(0);
+      setItemLogs([]);
     }
     setItemModalOpen(true);
   };
@@ -292,10 +326,30 @@ export default function InventoryPage() {
 
     try {
       if (editingProduct) {
-        // Update
+        // Detailed change tracking: what changed
+        const changes: string[] = [];
+        const oldName = (editingProduct.name || "").trim();
+        const newName = formName.trim();
+        const oldCat = (editingProduct.category || "").trim();
+        const newCat = formCategory.trim();
+        const oldType = (editingProduct.item_type || "").trim();
+        const newType = formType.trim();
+        const oldStock = editingProduct.stock;
+        const newStock = formStock;
+
+        if (oldName !== newName) changes.push(`이름 (${oldName} → ${newName})`);
+        if (oldCat !== newCat) changes.push(`위치 (${oldCat || "미정"} → ${newCat})`);
+        if (oldType !== newType) changes.push(`유형 (${oldType || "미정"} → ${newType || "없음"})`);
+        if (oldStock !== newStock) changes.push(`수량 (${oldStock}개 → ${newStock}개)`);
+
+        const changeDesc = changes.length > 0 ? changes.join(", ") : "정보 확인/저장";
+        const logMsg = `[${newName}] ${changeDesc}`;
+
+        // Update DB
         const { error } = await supabase.from("products").update(payload).eq("id", editingProduct.id);
         if (error) throw error;
-        await logActivity("UPDATE", `${formName} 품목 정보를 수정했습니다.`);
+        
+        await logActivity("UPDATE", logMsg);
       } else {
         // Insert
         let { error } = await supabase.from("products").insert([payload]);
@@ -315,7 +369,10 @@ export default function InventoryPage() {
           }
           throw error;
         }
-        await logActivity("CREATE", `${formName} 품목을 새로 추가했습니다.`);
+        await logActivity(
+          "CREATE", 
+          `[${formName.trim()}] 신규 등록 (위치: ${formCategory.trim()}, 수량: ${formStock}개${formType.trim() ? `, 유형: ${formType.trim()}` : ""})`
+        );
       }
       setItemModalOpen(false);
     } catch (err: unknown) {
@@ -559,7 +616,7 @@ export default function InventoryPage() {
       {/* 1. Item Form Modal (NEW/EDIT) */}
       {itemModalOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[200] flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-white dark:bg-zinc-900 w-full max-w-[480px] rounded-[2.5rem] shadow-2xl p-7 sm:p-9 space-y-6 border border-zinc-200 dark:border-zinc-800">
+          <div className="bg-white dark:bg-zinc-900 w-full max-w-[480px] max-h-[92vh] overflow-y-auto custom-scrollbar rounded-[2.5rem] shadow-2xl p-6 sm:p-8 space-y-5 border border-zinc-200 dark:border-zinc-800">
             {/* Modal Header */}
             <div className="flex justify-between items-center pb-2 border-b border-zinc-100 dark:border-zinc-800/80">
               <div>
@@ -691,6 +748,85 @@ export default function InventoryPage() {
                   </button>
                 </div>
               </div>
+
+              {/* 5. Item Modification History / Change Logs (수정 이력) */}
+              {editingProduct && (
+                <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800/80 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[11px] font-black uppercase text-zinc-500 dark:text-zinc-400 tracking-wider flex items-center gap-1.5">
+                      <span>수정 이력</span>
+                      {itemLogs.length > 0 && (
+                        <span className="px-1.5 py-0.2 bg-zinc-200 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 text-[10px] font-bold rounded-full">
+                          {itemLogs.length}
+                        </span>
+                      )}
+                    </label>
+                    {editingProduct.updated_at && (
+                      <span className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500">
+                        최근: {new Date(editingProduct.updated_at).toLocaleDateString()}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="max-h-36 overflow-y-auto space-y-2 custom-scrollbar pr-0.5">
+                    {loadingLogs ? (
+                      <p className="text-xs text-zinc-400 py-3 text-center">이력을 불러오는 중...</p>
+                    ) : itemLogs.length > 0 ? (
+                      itemLogs.map((log) => {
+                        let displayMsg = log.message;
+                        const match = displayMsg.match(/^\[.*?\]\s*(.*)$/);
+                        if (match && match[1]) {
+                          displayMsg = match[1];
+                        }
+
+                        const formattedDate = (() => {
+                          try {
+                            const d = new Date(log.created_at);
+                            return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+                          } catch {
+                            return log.created_at;
+                          }
+                        })();
+
+                        return (
+                          <div
+                            key={log.id}
+                            className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200/70 dark:border-zinc-700/60 space-y-1 text-left"
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-blue-500/10 dark:bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                                  {log.user_email || "USER"}
+                                </span>
+                                <span className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500">
+                                  {formattedDate}
+                                </span>
+                              </div>
+                              <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-zinc-200/70 dark:bg-zinc-700/70 text-zinc-600 dark:text-zinc-400">
+                                {log.type === "UPDATE" ? "수정" : log.type === "CREATE" ? "등록" : log.type}
+                              </span>
+                            </div>
+                            <p className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 leading-relaxed break-words">
+                              {displayMsg}
+                            </p>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <div className="py-3 px-3 text-center rounded-xl bg-zinc-50 dark:bg-zinc-800/40 border border-dashed border-zinc-200 dark:border-zinc-800">
+                        <p className="text-xs font-semibold text-zinc-400 dark:text-zinc-500">
+                          기록된 수정 이력이 없습니다.
+                        </p>
+                        {editingProduct.updated_by && (
+                          <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1">
+                            마지막 작업자: {editingProduct.updated_by}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* Action Buttons */}
               {editingProduct ? (
