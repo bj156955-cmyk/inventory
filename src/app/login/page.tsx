@@ -73,7 +73,7 @@ export default function LoginPage() {
           </div>
           <div>
             <h2 className="text-2xl sm:text-3xl font-black font-headline tracking-tighter text-zinc-900 dark:text-white">
-              Atelier
+              Inventory
             </h2>
             <p className="text-zinc-400 dark:text-zinc-500 text-[10px] sm:text-xs font-semibold uppercase tracking-widest mt-1">
               {isSignUp ? "Create New Access" : "Warehouse & Collaboration"}
@@ -124,7 +124,7 @@ export default function LoginPage() {
             disabled={loading}
             className="w-full bg-blue-600 hover:bg-blue-500 text-white py-3.5 sm:py-4 rounded-2xl font-headline font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg shadow-blue-600/30 transition-all duration-200 active:scale-[0.98] disabled:opacity-50 cursor-pointer"
           >
-            <span>{loading ? "처리 중..." : isSignUp ? "계정 등록 신청" : "Atelier 입장"}</span>
+            <span>{loading ? "처리 중..." : isSignUp ? "계정 등록 신청" : "로그인"}</span>
             {!loading && <ArrowRight className="w-4 h-4" />}
           </button>
         </form>

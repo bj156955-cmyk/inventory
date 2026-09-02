@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { useTheme } from "@/context/ThemeContext";
 import { 
   Package, 
   Calendar, 
@@ -15,17 +16,21 @@ import {
   MoreHorizontal,
   X,
   ChevronRight,
-  ShieldCheck
+  ShieldCheck,
+  Sun,
+  Moon,
+  Laptop
 } from "lucide-react";
 
 export default function Sidebar() {
   const pathname = usePathname();
   const { user, signOut } = useAuth();
+  const { theme, setTheme, toggleTheme, resolvedTheme } = useTheme();
   const [moreSheetOpen, setMoreSheetOpen] = useState(false);
 
   const currentUserInitials = user?.email?.split("@")[0].toUpperCase() || "USER";
 
-  // 5 Core Mobile Tabs
+  // 4 Core Mobile Tabs
   const primaryTabs = [
     { name: "Inventory", shortName: "재고", href: "/inventory", icon: Package },
     { name: "Lab Space", shortName: "연구실", href: "/lab", icon: FlaskConical },
@@ -60,15 +65,15 @@ export default function Sidebar() {
   return (
     <>
       {/* Desktop Sidebar (Left Fixed) */}
-      <aside className="hidden md:flex flex-col items-center justify-between py-8 w-20 lg:w-24 bg-zinc-50 dark:bg-zinc-950 border-r border-zinc-200 dark:border-zinc-800/80 min-h-screen fixed top-0 left-0 z-50">
+      <aside className="hidden md:flex flex-col items-center justify-between py-8 w-20 lg:w-24 bg-white dark:bg-zinc-950 border-r border-zinc-200 dark:border-zinc-800 min-h-screen fixed top-0 left-0 z-50">
         <div className="flex flex-col items-center space-y-10 w-full">
           {/* Logo */}
           <Link 
             href="/inventory" 
-            className="w-12 h-12 bg-zinc-900 dark:bg-zinc-100 rounded-2xl flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 transition-all duration-300"
-            title="Atelier Home"
+            className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-600/30 hover:scale-105 active:scale-95 transition-all duration-300"
+            title="재고 관리 홈"
           >
-            <Package className="text-white dark:text-zinc-950 w-6 h-6" />
+            <Package className="text-white w-6 h-6" />
           </Link>
 
           {/* Navigation Links */}
@@ -83,13 +88,13 @@ export default function Sidebar() {
                   title={`${item.name} (${item.shortName})`}
                   className={`group relative flex flex-col items-center justify-center w-12 h-12 rounded-2xl transition-all duration-200 ${
                     isActive
-                      ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950 shadow-md scale-105"
-                      : "text-zinc-400 hover:bg-zinc-200/70 hover:text-zinc-900 dark:text-zinc-500 dark:hover:bg-zinc-800/70 dark:hover:text-white"
+                      ? "bg-blue-600 text-white shadow-md shadow-blue-600/30 scale-105"
+                      : "text-zinc-400 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-500 dark:hover:bg-zinc-800 dark:hover:text-white"
                   }`}
                 >
                   <Icon className="w-5 h-5" />
                   {isActive && (
-                    <span className="absolute -left-1 w-1.5 h-6 bg-zinc-900 dark:bg-zinc-100 rounded-r-full" />
+                    <span className="absolute -left-1 w-1.5 h-6 bg-blue-600 rounded-r-full" />
                   )}
                 </Link>
               );
@@ -97,18 +102,35 @@ export default function Sidebar() {
           </nav>
         </div>
 
-        {/* Desktop Logout */}
-        <button 
-          onClick={async () => {
-            if (window.confirm("Atelier에서 로그아웃하시겠습니까?")) {
-              await signOut();
-            }
-          }}
-          title="로그아웃 (Sign Out)" 
-          className="text-zinc-400 hover:text-zinc-900 hover:bg-zinc-200/70 dark:text-zinc-500 dark:hover:text-white dark:hover:bg-zinc-800/70 p-3 rounded-2xl transition-all duration-200 cursor-pointer active:scale-95"
-        >
-          <LogOut className="w-5 h-5" />
-        </button>
+        {/* Desktop Footer Actions: Theme Toggle & Logout */}
+        <div className="flex flex-col items-center space-y-3">
+          <button
+            type="button"
+            onClick={toggleTheme}
+            title={`테마 변경 (현재: ${theme === "system" ? "시스템" : theme === "dark" ? "다크" : "라이트"})`}
+            className="p-3 rounded-2xl text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 dark:text-zinc-500 dark:hover:text-white dark:hover:bg-zinc-800 transition-all duration-200 cursor-pointer active:scale-95"
+          >
+            {theme === "system" ? (
+              <Laptop className="w-5 h-5" />
+            ) : resolvedTheme === "dark" ? (
+              <Moon className="w-5 h-5 text-amber-300" />
+            ) : (
+              <Sun className="w-5 h-5 text-amber-500" />
+            )}
+          </button>
+
+          <button 
+            onClick={async () => {
+              if (window.confirm("로그아웃하시겠습니까?")) {
+                await signOut();
+              }
+            }}
+            title="로그아웃 (Sign Out)" 
+            className="text-zinc-400 hover:text-rose-500 hover:bg-rose-500/10 dark:text-zinc-500 dark:hover:text-rose-400 dark:hover:bg-rose-500/10 p-3 rounded-2xl transition-all duration-200 cursor-pointer active:scale-95"
+          >
+            <LogOut className="w-5 h-5" />
+          </button>
+        </div>
       </aside>
 
       {/* Mobile Bottom Bar Navigation (Clean 5-Tab Layout) */}
@@ -245,20 +267,65 @@ export default function Sidebar() {
               </div>
             </div>
 
+            {/* Theme Mode Selector Section */}
+            <div className="space-y-2">
+              <h4 className="text-[10px] font-black uppercase text-zinc-400 dark:text-zinc-500 tracking-wider px-1">
+                화면 테마 설정
+              </h4>
+              <div className="flex bg-zinc-100 dark:bg-zinc-800 p-1.5 rounded-2xl gap-1">
+                <button
+                  type="button"
+                  onClick={() => setTheme("light")}
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    theme === "light"
+                      ? "bg-white text-zinc-950 shadow-sm font-black"
+                      : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                  }`}
+                >
+                  <Sun className="w-4 h-4 text-amber-500" />
+                  <span>라이트</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTheme("dark")}
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    theme === "dark"
+                      ? "bg-zinc-900 text-white shadow-sm font-black"
+                      : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                  }`}
+                >
+                  <Moon className="w-4 h-4 text-amber-300" />
+                  <span>다크</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTheme("system")}
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    theme === "system"
+                      ? "bg-blue-600 text-white shadow-sm font-black"
+                      : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                  }`}
+                >
+                  <Laptop className="w-4 h-4" />
+                  <span>시스템</span>
+                </button>
+              </div>
+            </div>
+
             {/* Sign Out Button */}
             <div className="pt-2">
               <button
                 type="button"
                 onClick={async () => {
                   setMoreSheetOpen(false);
-                  if (window.confirm("Atelier에서 로그아웃하시겠습니까?")) {
+                  if (window.confirm("로그아웃하시겠습니까?")) {
                     await signOut();
                   }
                 }}
-                className="w-full flex items-center justify-center gap-2 py-3.5 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-white rounded-2xl font-bold text-xs transition-all active:scale-[0.98] cursor-pointer"
+                className="w-full flex items-center justify-center gap-2 py-3.5 bg-zinc-100 hover:bg-rose-500/10 dark:bg-zinc-800 dark:hover:bg-rose-500/10 text-zinc-600 hover:text-rose-500 dark:text-zinc-400 dark:hover:text-rose-400 rounded-2xl font-bold text-xs transition-all active:scale-[0.98] cursor-pointer"
               >
                 <LogOut className="w-4 h-4" />
-                <span>Atelier 로그아웃</span>
+                <span>로그아웃</span>
               </button>
             </div>
 

@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter, Manrope } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
+import { ThemeProvider } from "@/context/ThemeContext";
 import AppLayout from "@/components/AppLayout";
 
 const inter = Inter({
@@ -26,10 +27,24 @@ export const viewport: Viewport = {
   userScalable: false,
   viewportFit: "cover",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#faf9fd" },
-    { media: "(prefers-color-scheme: dark)", color: "#0b111e" },
+    { media: "(prefers-color-scheme: light)", color: "#f8f9fa" },
+    { media: "(prefers-color-scheme: dark)", color: "#09090b" },
   ],
 };
+
+const themeScript = `
+  try {
+    const stored = localStorage.getItem('atelier-theme') || 'dark';
+    const isDark = stored === 'dark' || (stored === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    if (isDark) {
+      document.documentElement.classList.add('dark');
+      document.documentElement.classList.remove('light');
+    } else {
+      document.documentElement.classList.remove('dark');
+      document.documentElement.classList.add('light');
+    }
+  } catch (e) {}
+`;
 
 export default function RootLayout({
   children,
@@ -37,11 +52,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ko" className={`${inter.variable} ${manrope.variable}`}>
-      <body className="font-sans antialiased bg-surface text-foreground min-h-screen">
-        <AuthProvider>
-          <AppLayout>{children}</AppLayout>
-        </AuthProvider>
+    <html lang="ko" suppressHydrationWarning className={`${inter.variable} ${manrope.variable} dark`}>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
+      <body className="font-sans antialiased bg-background text-foreground min-h-screen">
+        <ThemeProvider>
+          <AuthProvider>
+            <AppLayout>{children}</AppLayout>
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
