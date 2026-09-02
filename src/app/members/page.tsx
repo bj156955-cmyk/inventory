@@ -14,74 +14,16 @@ import {
   CircleDot
 } from "lucide-react";
 
-// Same color mapping function to maintain UI consistency
-const getColorForUser = (userName: string) => {
-  const name = (userName || "UNKNOWN").toUpperCase();
-  const colors = [
-    {
-      bg: "bg-blue-50/80 dark:bg-blue-950/20",
-      border: "border-blue-200/50 dark:border-blue-900/30",
-      text: "text-blue-700 dark:text-blue-300",
-      hoverBg: "hover:bg-blue-100/50 dark:hover:bg-blue-900/10",
-      badge: "bg-blue-50 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900/30 text-blue-700 dark:text-blue-300",
-      dot: "bg-blue-500",
-    },
-    {
-      bg: "bg-emerald-50/80 dark:bg-emerald-950/20",
-      border: "border-emerald-200/50 dark:border-emerald-900/30",
-      text: "text-emerald-700 dark:text-emerald-300",
-      hoverBg: "hover:bg-emerald-100/50 dark:hover:bg-emerald-900/10",
-      badge: "bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-900/30 text-emerald-700 dark:text-emerald-300",
-      dot: "bg-emerald-500",
-    },
-    {
-      bg: "bg-violet-50/80 dark:bg-violet-950/20",
-      border: "border-violet-200/50 dark:border-violet-900/30",
-      text: "text-violet-700 dark:text-violet-300",
-      hoverBg: "hover:bg-violet-100/50 dark:hover:bg-violet-900/10",
-      badge: "bg-violet-50 dark:bg-violet-950/40 border border-violet-100 dark:border-violet-900/30 text-violet-700 dark:text-violet-300",
-      dot: "bg-violet-500",
-    },
-    {
-      bg: "bg-amber-50/80 dark:bg-amber-950/20",
-      border: "border-amber-200/50 dark:border-amber-900/30",
-      text: "text-amber-700 dark:text-amber-300",
-      hoverBg: "hover:bg-amber-100/50 dark:hover:bg-amber-900/10",
-      badge: "bg-amber-50 dark:bg-amber-950/40 border border-amber-100 dark:border-amber-900/30 text-amber-700 dark:text-amber-300",
-      dot: "bg-amber-500",
-    },
-    {
-      bg: "bg-rose-50/80 dark:bg-rose-950/20",
-      border: "border-rose-200/50 dark:border-rose-900/30",
-      text: "text-rose-700 dark:text-rose-300",
-      hoverBg: "hover:bg-rose-100/50 dark:hover:bg-rose-900/10",
-      badge: "bg-rose-50 dark:bg-rose-950/40 border border-rose-100 dark:border-rose-900/30 text-rose-700 dark:text-rose-300",
-      dot: "bg-rose-500",
-    },
-    {
-      bg: "bg-cyan-50/80 dark:bg-cyan-950/20",
-      border: "border-cyan-200/50 dark:border-cyan-900/30",
-      text: "text-cyan-700 dark:text-cyan-300",
-      hoverBg: "hover:bg-cyan-100/50 dark:hover:bg-cyan-900/10",
-      badge: "bg-cyan-50 dark:bg-cyan-950/40 border border-cyan-100 dark:border-cyan-900/30 text-cyan-700 dark:text-cyan-300",
-      dot: "bg-cyan-500",
-    },
-    {
-      bg: "bg-fuchsia-50/80 dark:bg-fuchsia-950/20",
-      border: "border-fuchsia-200/50 dark:border-fuchsia-900/30",
-      text: "text-fuchsia-700 dark:text-fuchsia-300",
-      hoverBg: "hover:bg-fuchsia-100/50 dark:hover:bg-fuchsia-900/10",
-      badge: "bg-fuchsia-50 dark:bg-fuchsia-950/40 border border-fuchsia-100 dark:border-fuchsia-900/30 text-fuchsia-700 dark:text-fuchsia-300",
-      dot: "bg-fuchsia-500",
-    }
-  ];
-
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  const index = Math.abs(hash) % colors.length;
-  return colors[index];
+// Color mapping function (Monochrome Tech Minimal)
+const getColorForUser = (_userName?: string) => {
+  return {
+    bg: "bg-zinc-100 dark:bg-zinc-800",
+    border: "border-zinc-200 dark:border-zinc-700",
+    text: "text-zinc-900 dark:text-white",
+    hoverBg: "hover:bg-zinc-200/70 dark:hover:bg-zinc-700",
+    badge: "bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100",
+    dot: "bg-zinc-900 dark:bg-white",
+  };
 };
 
 const DEFAULT_MEMBERS = ["BJ", "YG", "MJ", "JS", "HS", "HM", "NY", "SH", "TH"];
@@ -250,16 +192,16 @@ export default function MembersPage() {
   };
 
   return (
-    <div className="flex-1 p-3 sm:p-6 md:p-8 space-y-3 sm:space-y-4 bg-surface dark:bg-slate-900 flex flex-col min-h-0">
+    <div className="flex-1 p-3 sm:p-6 md:p-8 space-y-3 sm:space-y-4 bg-zinc-50 dark:bg-zinc-950 flex flex-col min-h-0">
       
       {/* Main Grid */}
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-5 sm:gap-6 min-h-0">
         
         {/* Left 2 Columns: Directory Grid */}
-        <div className="lg:col-span-2 flex flex-col min-h-0 bg-white dark:bg-slate-800 rounded-[2rem] sm:rounded-[2.5rem] p-5 sm:p-6 shadow-md border border-black/[0.02] dark:border-white/[0.02] overflow-hidden">
-          <div className="flex justify-between items-center pb-3 sm:pb-4 border-b border-black/[0.02] dark:border-white/[0.02]">
-            <h3 className="text-base sm:text-lg font-black text-primary dark:text-white flex items-center gap-2">
-              <Users className="w-5 h-5 text-primary" />
+        <div className="lg:col-span-2 flex flex-col min-h-0 bg-white dark:bg-zinc-900 rounded-[2rem] sm:rounded-[2.5rem] p-5 sm:p-6 shadow-sm border border-zinc-200 dark:border-zinc-800 overflow-hidden">
+          <div className="flex justify-between items-center pb-3 sm:pb-4 border-b border-zinc-100 dark:border-zinc-800">
+            <h3 className="text-base sm:text-lg font-black text-zinc-900 dark:text-white flex items-center gap-2">
+              <Users className="w-5 h-5 text-zinc-900 dark:text-white" />
               <span>등록된 팀원 리스트 ({members.length}명)</span>
             </h3>
             <button
@@ -267,7 +209,7 @@ export default function MembersPage() {
                 setLoading(true);
                 fetchRegisteredMembers();
               }}
-              className="p-2 hover:bg-surface-container-low dark:hover:bg-slate-700 text-on-surface-variant dark:text-gray-400 rounded-xl transition-all cursor-pointer active:scale-95 shrink-0"
+              className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 dark:text-zinc-400 rounded-xl transition-all cursor-pointer active:scale-95 shrink-0"
               title="새로고침"
             >
               <RefreshCw className="w-4 h-4" />
@@ -276,7 +218,7 @@ export default function MembersPage() {
 
           {loading ? (
             <div className="flex-1 flex items-center justify-center min-h-[250px]">
-              <RefreshCw className="w-8 h-8 text-primary dark:text-blue-500 animate-spin" />
+              <RefreshCw className="w-8 h-8 text-zinc-400 animate-spin" />
             </div>
           ) : (
             <div className="flex-1 overflow-y-auto pr-1 mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 content-start custom-scrollbar">
@@ -288,7 +230,7 @@ export default function MembersPage() {
                 return (
                   <div 
                     key={member}
-                    className="w-full p-3.5 sm:p-4 bg-surface-container-low dark:bg-slate-900/60 rounded-[1.5rem] sm:rounded-[1.8rem] border border-black/[0.02] dark:border-white/[0.02] hover:border-black/[0.08] dark:hover:border-white/[0.08] hover:shadow-md transition-all duration-200 flex items-center justify-between group"
+                    className="w-full p-3.5 sm:p-4 bg-zinc-50 dark:bg-zinc-800/60 rounded-[1.5rem] sm:rounded-[1.8rem] border border-zinc-200/60 dark:border-zinc-700/60 hover:border-zinc-400 dark:hover:border-zinc-500 hover:shadow-sm transition-all duration-200 flex items-center justify-between group"
                   >
                     <div className="flex items-center gap-3 sm:gap-4 min-w-0">
                       {/* Avatar */}
@@ -299,19 +241,19 @@ export default function MembersPage() {
                       {/* Info */}
                       <div className="space-y-0.5 sm:space-y-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <span className="font-bold text-sm text-foreground dark:text-white truncate">{member}</span>
+                          <span className="font-bold text-sm text-zinc-900 dark:text-white truncate">{member}</span>
                           {isOnline ? (
-                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-emerald-50 dark:bg-emerald-950/20 text-[9px] font-black text-emerald-600 dark:text-emerald-400 rounded-md select-none shrink-0">
-                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-zinc-200 dark:bg-zinc-700 text-[9px] font-black text-zinc-900 dark:text-zinc-100 rounded-md select-none shrink-0">
+                              <span className="w-1.5 h-1.5 rounded-full bg-zinc-900 dark:bg-white animate-pulse" />
                               <span>ON</span>
                             </span>
                           ) : (
-                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 text-[9px] font-black text-slate-400 rounded-md select-none shrink-0">
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-zinc-100 dark:bg-zinc-800 text-[9px] font-black text-zinc-400 dark:text-zinc-500 rounded-md select-none shrink-0">
                               <span>OFF</span>
                             </span>
                           )}
                         </div>
-                        <div className="flex items-center gap-1 text-[10px] font-medium text-on-surface-variant/50 dark:text-gray-400 truncate">
+                        <div className="flex items-center gap-1 text-[10px] font-medium text-zinc-400 dark:text-zinc-500 truncate">
                           {isOnline ? (
                             <>
                               <Clock className="w-2.5 h-2.5 shrink-0" />
@@ -328,7 +270,7 @@ export default function MembersPage() {
                     {member !== "ADMIN" && (
                       <button 
                         onClick={() => handleDeleteMember(member)}
-                        className="p-1.5 sm:p-2 text-on-surface-variant/40 hover:text-red-500 dark:hover:text-red-400 rounded-xl hover:bg-white dark:hover:bg-slate-800 opacity-0 group-hover:opacity-100 transition-all cursor-pointer shrink-0"
+                        className="p-1.5 sm:p-2 text-zinc-400 hover:text-zinc-900 dark:hover:text-white rounded-xl hover:bg-zinc-200 dark:hover:bg-zinc-700 opacity-0 group-hover:opacity-100 transition-all cursor-pointer shrink-0"
                         title="팀원 삭제"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -342,17 +284,17 @@ export default function MembersPage() {
         </div>
 
         {/* Right 1 Column: Register Form */}
-        <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] p-6 shadow-md border border-black/[0.02] dark:border-white/[0.02] space-y-6 shrink-0 flex flex-col">
-          <div className="pb-4 border-b border-black/[0.02] dark:border-white/[0.02]">
-            <h3 className="text-lg font-black text-primary dark:text-white flex items-center gap-2">
-              <UserPlus className="w-5 h-5 text-primary" />
+        <div className="bg-white dark:bg-zinc-900 rounded-[2.5rem] p-6 shadow-sm border border-zinc-200 dark:border-zinc-800 space-y-6 shrink-0 flex flex-col">
+          <div className="pb-4 border-b border-zinc-100 dark:border-zinc-800">
+            <h3 className="text-lg font-black text-zinc-900 dark:text-white flex items-center gap-2">
+              <UserPlus className="w-5 h-5 text-zinc-900 dark:text-white" />
               <span>새 팀원 등록</span>
             </h3>
           </div>
 
           <form onSubmit={handleRegisterMember} className="space-y-4">
             <div className="flex flex-col gap-2">
-              <label className="text-[10px] font-black uppercase text-on-surface-variant/50 dark:text-gray-400 tracking-wider">
+              <label className="text-[10px] font-black uppercase text-zinc-500 dark:text-zinc-400 tracking-wider">
                 팀원 이니셜 / 이름
               </label>
               <input
@@ -361,17 +303,17 @@ export default function MembersPage() {
                 value={newMemberName}
                 onChange={(e) => setNewMemberName(e.target.value)}
                 placeholder="예: HONG, LJM (영문/이니셜 권장)"
-                className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-900 border border-black/[0.03] dark:border-white/[0.03] rounded-xl outline-none focus:ring-2 focus:ring-primary/20 text-sm font-semibold"
+                className="w-full px-4 py-3 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl outline-none focus:ring-2 focus:ring-zinc-900/10 dark:focus:ring-white/10 text-sm font-semibold text-zinc-900 dark:text-white"
               />
             </div>
 
             {newMemberName.trim() && (
-              <div className="p-4 bg-surface-container-low dark:bg-slate-900/60 rounded-2xl flex items-center justify-between border border-black/[0.02] dark:border-white/[0.02] animate-fadeIn">
+              <div className="p-4 bg-zinc-50 dark:bg-zinc-800/60 rounded-2xl flex items-center justify-between border border-zinc-200/60 dark:border-zinc-700/60 animate-fadeIn">
                 <div className="flex items-center gap-3">
                   <div className={`w-10 h-10 rounded-lg flex items-center justify-center font-headline font-black text-xs border ${getColorForUser(newMemberName).badge}`}>
                     {newMemberName.trim().toUpperCase()}
                   </div>
-                  <span className="text-xs font-bold text-foreground dark:text-gray-300">이 스타일로 자동 적용됩니다</span>
+                  <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300">이 스타일로 자동 적용됩니다</span>
                 </div>
                 <div className={`w-2.5 h-2.5 rounded-full ${getColorForUser(newMemberName).dot}`} />
               </div>
@@ -379,7 +321,7 @@ export default function MembersPage() {
 
             <button
               type="submit"
-              className="w-full py-4 bg-primary dark:bg-blue-600 text-white rounded-2xl font-black text-sm shadow-md hover:shadow-xl hover:scale-[1.01] active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-2"
+              className="w-full py-4 bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200 text-white rounded-2xl font-black text-sm shadow-md active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-2"
             >
               <CheckCircle2 className="w-4 h-4" />
               <span>명단에 등록</span>
@@ -387,18 +329,17 @@ export default function MembersPage() {
           </form>
 
           {/* Active Online Members & Guide Card */}
-          <div className="flex-1 p-5 bg-surface-container-low dark:bg-slate-900/60 rounded-[1.8rem] border border-black/[0.01] flex flex-col justify-between space-y-4 overflow-hidden">
+          <div className="flex-1 p-5 bg-zinc-50 dark:bg-zinc-800/60 rounded-[1.8rem] border border-zinc-200/60 dark:border-zinc-700/60 flex flex-col justify-between space-y-4 overflow-hidden">
             
             {/* Online Members List */}
             <div className="space-y-3 flex-1 overflow-y-auto custom-scrollbar">
-              <h4 className="text-xs font-black text-primary dark:text-blue-400 flex items-center gap-1.5 pb-2 border-b border-black/5 dark:border-white/5">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse animate-ping absolute" />
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse relative" />
+              <h4 className="text-xs font-black text-zinc-900 dark:text-white flex items-center gap-1.5 pb-2 border-b border-zinc-200/60 dark:border-zinc-700/60">
+                <span className="w-2 h-2 rounded-full bg-zinc-900 dark:bg-white animate-pulse" />
                 <span>현재 접속 중 ({Object.keys(onlineMembers).length}명)</span>
               </h4>
               
               {Object.keys(onlineMembers).length === 0 ? (
-                <div className="py-8 text-center text-[10px] text-on-surface-variant/40 dark:text-gray-500 font-bold">
+                <div className="py-8 text-center text-[10px] text-zinc-400 dark:text-zinc-500 font-bold">
                   현재 접속 중인 팀원이 없습니다.
                 </div>
               ) : (
@@ -409,15 +350,15 @@ export default function MembersPage() {
                     return (
                       <div 
                         key={onlineUser}
-                        className="flex items-center justify-between p-2 bg-white dark:bg-slate-800 rounded-xl border border-black/[0.01] dark:border-white/[0.01] shadow-sm"
+                        className="flex items-center justify-between p-2 bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200/60 dark:border-zinc-700/60 shadow-sm"
                       >
                         <div className="flex items-center gap-2">
                           <div className={`w-6 h-6 rounded-md flex items-center justify-center font-headline font-black text-[9px] border ${color.badge}`}>
                             {onlineUser}
                           </div>
-                          <span className="text-xs font-bold text-foreground dark:text-white">{onlineUser}</span>
+                          <span className="text-xs font-bold text-zinc-900 dark:text-white">{onlineUser}</span>
                         </div>
-                        <span className="text-[9px] font-black text-on-surface-variant/40 dark:text-gray-500">
+                        <span className="text-[9px] font-black text-zinc-400 dark:text-zinc-500">
                           {time} 접속
                         </span>
                       </div>
@@ -428,12 +369,12 @@ export default function MembersPage() {
             </div>
 
             {/* Guide Info (At the bottom) */}
-            <div className="space-y-1 pt-3 border-t border-black/5 dark:border-white/5 shrink-0">
-              <h4 className="text-[10px] font-black text-on-surface-variant/50 dark:text-gray-400 flex items-center gap-1">
-                <CircleDot className="w-3 h-3 text-primary" />
+            <div className="space-y-1 pt-3 border-t border-zinc-200/60 dark:border-zinc-700/60 shrink-0">
+              <h4 className="text-[10px] font-black text-zinc-500 dark:text-zinc-400 flex items-center gap-1">
+                <CircleDot className="w-3 h-3 text-zinc-900 dark:text-white" />
                 <span>실시간 접속 표시 정보</span>
               </h4>
-              <p className="text-[9px] leading-relaxed text-on-surface-variant/60 dark:text-gray-400 font-semibold">
+              <p className="text-[9px] leading-relaxed text-zinc-400 dark:text-zinc-500 font-semibold">
                 팀원들이 브라우저 탭을 열어 시스템에 머무는 동안, 웹소켓 Presence를 기반으로 실시간 정보가 공유됩니다.
               </p>
             </div>

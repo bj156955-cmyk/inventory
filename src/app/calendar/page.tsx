@@ -92,88 +92,26 @@ const FALLBACK_HOLIDAYS: { [key: string]: string } = {
   "2027-12-25": "성탄절",
 };
 
-const getColorForUser = (userName: string) => {
-  const name = (userName || "UNKNOWN").toUpperCase();
-  const colors = [
-    {
-      bg: "bg-blue-50/80 dark:bg-blue-950/20",
-      border: "border-blue-200/50 dark:border-blue-900/30",
-      text: "text-blue-700 dark:text-blue-300",
-      hoverBg: "hover:bg-blue-100/50 dark:hover:bg-blue-900/10",
-      badge: "bg-blue-50 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900/30 text-blue-700 dark:text-blue-300",
-      dot: "bg-blue-500",
-    },
-    {
-      bg: "bg-emerald-50/80 dark:bg-emerald-950/20",
-      border: "border-emerald-200/50 dark:border-emerald-900/30",
-      text: "text-emerald-700 dark:text-emerald-300",
-      hoverBg: "hover:bg-emerald-100/50 dark:hover:bg-emerald-900/10",
-      badge: "bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-900/30 text-emerald-700 dark:text-emerald-300",
-      dot: "bg-emerald-500",
-    },
-    {
-      bg: "bg-violet-50/80 dark:bg-violet-950/20",
-      border: "border-violet-200/50 dark:border-violet-900/30",
-      text: "text-violet-700 dark:text-violet-300",
-      hoverBg: "hover:bg-violet-100/50 dark:hover:bg-violet-900/10",
-      badge: "bg-violet-50 dark:bg-violet-950/40 border border-violet-100 dark:border-violet-900/30 text-violet-700 dark:text-violet-300",
-      dot: "bg-violet-500",
-    },
-    {
-      bg: "bg-amber-50/80 dark:bg-amber-950/20",
-      border: "border-amber-200/50 dark:border-amber-900/30",
-      text: "text-amber-700 dark:text-amber-300",
-      hoverBg: "hover:bg-amber-100/50 dark:hover:bg-amber-900/10",
-      badge: "bg-amber-50 dark:bg-amber-950/40 border border-amber-100 dark:border-amber-900/30 text-amber-700 dark:text-amber-300",
-      dot: "bg-amber-500",
-    },
-    {
-      bg: "bg-rose-50/80 dark:bg-rose-950/20",
-      border: "border-rose-200/50 dark:border-rose-900/30",
-      text: "text-rose-700 dark:text-rose-300",
-      hoverBg: "hover:bg-rose-100/50 dark:hover:bg-rose-900/10",
-      badge: "bg-rose-50 dark:bg-rose-950/40 border border-rose-100 dark:border-rose-900/30 text-rose-700 dark:text-rose-300",
-      dot: "bg-rose-500",
-    },
-    {
-      bg: "bg-cyan-50/80 dark:bg-cyan-950/20",
-      border: "border-cyan-200/50 dark:border-cyan-900/30",
-      text: "text-cyan-700 dark:text-cyan-300",
-      hoverBg: "hover:bg-cyan-100/50 dark:hover:bg-cyan-900/10",
-      badge: "bg-cyan-50 dark:bg-cyan-950/40 border border-cyan-100 dark:border-cyan-900/30 text-cyan-700 dark:text-cyan-300",
-      dot: "bg-cyan-500",
-    },
-    {
-      bg: "bg-fuchsia-50/80 dark:bg-fuchsia-950/20",
-      border: "border-fuchsia-200/50 dark:border-fuchsia-900/30",
-      text: "text-fuchsia-700 dark:text-fuchsia-300",
-      hoverBg: "hover:bg-fuchsia-100/50 dark:hover:bg-fuchsia-900/10",
-      badge: "bg-fuchsia-50 dark:bg-fuchsia-950/40 border border-fuchsia-100 dark:border-fuchsia-900/30 text-fuchsia-700 dark:text-fuchsia-300",
-      dot: "bg-fuchsia-500",
-    }
-  ];
-
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  const index = Math.abs(hash) % colors.length;
-  return colors[index];
+const getColorForUser = (_userName?: string) => {
+  return {
+    bg: "bg-zinc-100 dark:bg-zinc-800",
+    border: "border-zinc-200 dark:border-zinc-700",
+    text: "text-zinc-900 dark:text-zinc-100",
+    hoverBg: "hover:bg-zinc-200/70 dark:hover:bg-zinc-700/70",
+    badge: "bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100",
+    dot: "bg-zinc-900 dark:bg-white",
+  };
 };
 
-const getColorForEvent = (createdBy: string) => {
-  const members = (createdBy || "UNKNOWN").split(",").map(m => m.trim().toUpperCase()).filter(Boolean);
-  if (members.length > 1) {
-    return {
-      bg: "bg-slate-100/90 dark:bg-slate-800/60",
-      border: "border-slate-300/60 dark:border-slate-700/60",
-      text: "text-slate-800 dark:text-slate-200",
-      hoverBg: "hover:bg-slate-200/70 dark:hover:bg-slate-700/40",
-      badge: "bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200",
-      dot: "bg-slate-500",
-    };
-  }
-  return getColorForUser(members[0] || "UNKNOWN");
+const getColorForEvent = (_createdBy?: string) => {
+  return {
+    bg: "bg-zinc-100 dark:bg-zinc-800",
+    border: "border-zinc-200 dark:border-zinc-700",
+    text: "text-zinc-900 dark:text-zinc-100",
+    hoverBg: "hover:bg-zinc-200/70 dark:hover:bg-zinc-700/70",
+    badge: "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100",
+    dot: "bg-zinc-900 dark:bg-white",
+  };
 };
 
 export default function CalendarPage() {
@@ -467,24 +405,24 @@ export default function CalendarPage() {
 
 
   return (
-    <div className="flex-1 p-3 sm:p-6 md:p-8 space-y-3 sm:space-y-4 bg-surface dark:bg-slate-900 flex flex-col min-h-0">
+    <div className="flex-1 p-3 sm:p-6 md:p-8 space-y-3 sm:space-y-4 bg-zinc-50 dark:bg-zinc-950 flex flex-col min-h-0">
       
       {/* Slim Top Month & Actions Bar */}
-      <div className="flex items-center justify-between gap-2 shrink-0 bg-white dark:bg-slate-800/80 p-2.5 sm:p-3 rounded-2xl sm:rounded-3xl shadow-sm border border-black/[0.03] dark:border-white/[0.03]">
+      <div className="flex items-center justify-between gap-2 shrink-0 bg-white dark:bg-zinc-900 p-2.5 sm:p-3 rounded-2xl sm:rounded-3xl shadow-sm border border-zinc-200 dark:border-zinc-800">
         <div className="flex items-center gap-1 sm:gap-2">
           <button 
             onClick={handlePrevMonth}
-            className="p-1.5 sm:p-2 hover:bg-surface-container-low dark:hover:bg-slate-700 rounded-xl transition-all cursor-pointer text-on-surface-variant dark:text-gray-400 active:scale-95"
+            className="p-1.5 sm:p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl transition-all cursor-pointer text-zinc-500 dark:text-zinc-400 active:scale-95"
             title="이전 달"
           >
             <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
-          <span className="text-xs sm:text-base font-black text-primary dark:text-white px-2 uppercase tracking-wider">
+          <span className="text-xs sm:text-base font-black text-zinc-900 dark:text-white px-2 uppercase tracking-wider">
             {format(currentMonth, "yyyy. MMMM", { locale: ko })}
           </span>
           <button 
             onClick={handleNextMonth}
-            className="p-1.5 sm:p-2 hover:bg-surface-container-low dark:hover:bg-slate-700 rounded-xl transition-all cursor-pointer text-on-surface-variant dark:text-gray-400 active:scale-95"
+            className="p-1.5 sm:p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl transition-all cursor-pointer text-zinc-500 dark:text-zinc-400 active:scale-95"
             title="다음 달"
           >
             <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -508,7 +446,7 @@ export default function CalendarPage() {
               setSelectedMembers([defaultUser]);
               setModalOpen(true);
             }}
-            className="flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 bg-primary dark:bg-blue-600 text-white rounded-xl font-bold text-xs shadow-sm active:scale-95 transition-all cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200 text-white rounded-xl font-bold text-xs shadow-sm active:scale-95 transition-all cursor-pointer"
             title="새 일정 등록"
           >
             <Plus className="w-4 h-4" />
@@ -519,7 +457,7 @@ export default function CalendarPage() {
               setLoading(true);
               fetchEvents();
             }}
-            className="p-1.5 sm:p-2 bg-surface-container-low dark:bg-slate-700/60 text-on-surface-variant/60 dark:text-gray-400 hover:text-primary dark:hover:text-white rounded-xl transition-all cursor-pointer active:scale-95 shrink-0"
+            className="p-1.5 sm:p-2 bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white rounded-xl transition-all cursor-pointer active:scale-95 shrink-0"
             title="새로고침"
           >
             <RefreshCw className="w-4 h-4" />
@@ -532,14 +470,14 @@ export default function CalendarPage() {
       <div className="flex-1 flex flex-col lg:flex-row gap-5 sm:gap-6 min-h-[400px]">
         
         {/* Left Column: Calendar Grid */}
-        <div className="flex-1 bg-white dark:bg-slate-800 rounded-[2rem] sm:rounded-[2.5rem] shadow-md border border-black/[0.02] dark:border-white/[0.02] overflow-hidden flex flex-col min-h-[360px]">
+        <div className="flex-1 bg-white dark:bg-zinc-900 rounded-[2rem] sm:rounded-[2.5rem] shadow-sm border border-zinc-200 dark:border-zinc-800 overflow-hidden flex flex-col min-h-[360px]">
           {/* Days of Week Header */}
-          <div className="grid grid-cols-7 border-b border-black/[0.02] dark:border-white/[0.02] bg-surface-container-low/50 dark:bg-slate-700/50">
+          <div className="grid grid-cols-7 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-800/60">
             {["일", "월", "화", "수", "목", "금", "토"].map((day, idx) => (
               <div 
                 key={day} 
                 className={`py-2.5 sm:py-4 text-center text-[10px] sm:text-xs font-black uppercase tracking-widest ${
-                  idx === 0 ? "text-red-500" : idx === 6 ? "text-blue-500" : "text-on-surface-variant dark:text-gray-300"
+                  idx === 0 ? "text-zinc-500 dark:text-zinc-400" : idx === 6 ? "text-zinc-600 dark:text-zinc-300" : "text-zinc-700 dark:text-zinc-200"
                 }`}
               >
                 {day}
@@ -550,10 +488,10 @@ export default function CalendarPage() {
           {/* Days Grid */}
           {loading ? (
             <div className="flex-1 flex items-center justify-center">
-              <RefreshCw className="w-8 h-8 text-primary dark:text-blue-500 animate-spin" />
+              <RefreshCw className="w-8 h-8 text-zinc-400 animate-spin" />
             </div>
           ) : (
-            <div className="flex-1 grid grid-cols-7 grid-rows-6 divide-x divide-y divide-black/[0.02] dark:divide-white/[0.02] border-t border-black/[0.02] dark:border-white/[0.02]">
+            <div className="flex-1 grid grid-cols-7 grid-rows-6 divide-x divide-y divide-zinc-200/60 dark:divide-zinc-800/60 border-t border-zinc-200/60 dark:border-zinc-800/60">
               {days.map((day) => {
                 const dayStr = format(day, "yyyy-MM-dd");
                 const dayEvents = events.filter((e) => {
@@ -580,7 +518,6 @@ export default function CalendarPage() {
                 const isCurrentMonth = day.getMonth() === currentMonth.getMonth();
                 const isToday = isSameDay(day, new Date());
                 const holidayName = holidays[dayStr];
-                const isSunday = day.getDay() === 0;
                 const isHoliday = !!holidayName;
                 const isSelectedInDrag = (() => {
                   if (!dragStart || !dragEnd) return false;
@@ -601,29 +538,27 @@ export default function CalendarPage() {
                     onClick={() => handleDayClick(day)}
                     className={`pt-2 pb-1.5 flex flex-col space-y-1.5 h-full min-h-[70px] overflow-hidden cursor-pointer select-none transition-all ${
                       isSelectedInDrag 
-                        ? "bg-blue-100/60 dark:bg-blue-900/30 ring-2 ring-blue-400/60 dark:ring-blue-600/50" 
+                        ? "bg-zinc-200/70 dark:bg-zinc-800 ring-2 ring-zinc-400 dark:ring-zinc-600" 
                         : isActive
-                        ? "bg-primary/5 dark:bg-blue-500/10 ring-2 ring-primary dark:ring-blue-500"
-                        : "hover:bg-surface-container-lowest/50 dark:hover:bg-slate-700/20"
+                        ? "bg-zinc-100 dark:bg-zinc-800 ring-2 ring-zinc-900 dark:ring-white"
+                        : "hover:bg-zinc-50 dark:hover:bg-zinc-800/40"
                     } ${
-                      isCurrentMonth ? "text-primary dark:text-white" : "text-on-surface-variant/30 dark:text-gray-600"
+                      isCurrentMonth ? "text-zinc-900 dark:text-white" : "text-zinc-400 dark:text-zinc-600"
                     }`}
                   >
                     {/* Day Header */}
                     <div className="flex justify-between items-center px-2">
                       <span className={`text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full ${
                         isToday 
-                          ? "bg-primary text-white dark:bg-blue-600" 
-                          : isSunday || isHoliday
-                          ? "text-red-500" 
-                          : day.getDay() === 6 
-                          ? "text-blue-500" 
+                          ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-950 font-black" 
+                          : isHoliday
+                          ? "text-zinc-900 dark:text-white font-extrabold" 
                           : ""
                       }`}>
                         {format(day, "d")}
                       </span>
                       {dayEvents.length > 0 && (
-                        <span className="text-[9px] font-black px-1.5 py-0.5 bg-primary/5 dark:bg-blue-500/10 text-primary dark:text-blue-400 rounded-md">
+                        <span className="text-[9px] font-black px-1.5 py-0.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 rounded-md border border-zinc-200/60 dark:border-zinc-700/60">
                           {dayEvents.length}
                         </span>
                       )}
@@ -632,8 +567,8 @@ export default function CalendarPage() {
                     {/* Day Events List (Desktop Only) */}
                     <div className="hidden md:flex flex-1 flex-col gap-1 overflow-y-auto custom-scrollbar px-0">
                       {isHoliday && (
-                        <div className="mx-2 px-2 py-0.5 bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/30 text-[9px] font-black text-red-600 dark:text-red-400 rounded-md truncate select-none flex items-center gap-1 shrink-0">
-                          <span>🎈</span> {holidayName}
+                        <div className="mx-2 px-2 py-0.5 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-[9px] font-black text-zinc-700 dark:text-zinc-300 rounded-md truncate select-none flex items-center gap-1 shrink-0">
+                          <span>•</span> {holidayName}
                         </div>
                       )}
                       {dayEvents.slice(0, isHoliday ? 2 : 3).map((event) => {
@@ -669,7 +604,7 @@ export default function CalendarPage() {
                         );
                       })}
                       {dayEvents.length > (isHoliday ? 2 : 3) && (
-                        <div className="text-[8px] font-black text-on-surface-variant/40 dark:text-gray-500 text-center uppercase tracking-wider mx-2">
+                        <div className="text-[8px] font-black text-zinc-400 dark:text-zinc-500 text-center uppercase tracking-wider mx-2">
                           + {dayEvents.length - (isHoliday ? 2 : 3)} more
                         </div>
                       )}
@@ -687,7 +622,7 @@ export default function CalendarPage() {
                         );
                       })}
                       {dayEvents.length > 3 && (
-                        <span className="w-1 h-1 bg-slate-400 rounded-full shrink-0" />
+                        <span className="w-1 h-1 bg-zinc-400 rounded-full shrink-0" />
                       )}
                     </div>
                   </div>
@@ -698,9 +633,9 @@ export default function CalendarPage() {
         </div>
 
         {/* Right Column: Selected Day's Agenda Detail */}
-        <div className="w-full lg:w-[320px] bg-white dark:bg-slate-800 rounded-[2.5rem] p-6 shadow-md border border-black/[0.02] dark:border-white/[0.02] flex flex-col shrink-0">
-          <div className="flex justify-between items-center pb-3 border-b border-black/[0.02] dark:border-white/[0.02] shrink-0">
-            <h3 className="text-sm font-black text-primary dark:text-white">
+        <div className="w-full lg:w-[320px] bg-white dark:bg-zinc-900 rounded-[2.5rem] p-6 shadow-sm border border-zinc-200 dark:border-zinc-800 flex flex-col shrink-0">
+          <div className="flex justify-between items-center pb-3 border-b border-zinc-100 dark:border-zinc-800 shrink-0">
+            <h3 className="text-sm font-black text-zinc-900 dark:text-white">
               📅 {format(activeDay, "M월 d일 (E)", { locale: ko })}
             </h3>
             <button
@@ -717,7 +652,7 @@ export default function CalendarPage() {
                 setSelectedMembers([defaultUser]);
                 setModalOpen(true);
               }}
-              className="p-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg flex items-center justify-center font-bold shadow-sm transition-all cursor-pointer"
+              className="p-1.5 bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200 text-white rounded-lg flex items-center justify-center font-bold shadow-sm transition-all cursor-pointer active:scale-95"
               title="새 일정 추가"
             >
               <Plus className="w-3.5 h-3.5" />
@@ -739,7 +674,7 @@ export default function CalendarPage() {
 
               if (activeDayEvents.length === 0) {
                 return (
-                  <div className="h-full flex flex-col items-center justify-center text-center p-6 text-on-surface-variant/40 dark:text-gray-500">
+                  <div className="h-full flex flex-col items-center justify-center text-center p-6 text-zinc-400 dark:text-zinc-500">
                     <Calendar className="w-10 h-10 mb-2 opacity-30" />
                     <span className="text-[11px] font-bold">이날은 등록된 일정이 없습니다.</span>
                   </div>
@@ -787,24 +722,24 @@ export default function CalendarPage() {
 
       {/* Add / Edit / View Modal */}
       {modalOpen && selectedDate && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-md z-[200] flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-[480px] rounded-[2.5rem] shadow-2xl p-8 md:p-10 space-y-6">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-md z-[200] flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-white dark:bg-zinc-900 w-full max-w-[480px] rounded-[2.5rem] shadow-2xl p-8 md:p-10 space-y-6 border border-zinc-200 dark:border-zinc-800">
             
             {/* Modal Header */}
             <div className="flex justify-between items-center">
-              <h3 className="text-2xl font-black text-primary dark:text-white tracking-tighter">
+              <h3 className="text-2xl font-black text-zinc-900 dark:text-white tracking-tighter">
                 {selectedEvent ? "일정 관리" : "새 일정 등록"}
               </h3>
               <button 
                 onClick={() => setModalOpen(false)}
-                className="p-1 hover:bg-surface-container-low dark:hover:bg-slate-800 rounded-full"
+                className="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full"
               >
-                <X className="w-5 h-5 text-on-surface-variant/40" />
+                <X className="w-5 h-5 text-zinc-400" />
               </button>
             </div>
 
             {/* Selected Date Indicator */}
-            <div className="text-xs font-black uppercase text-on-surface-variant/60 dark:text-gray-400 tracking-widest bg-surface-container-low dark:bg-slate-800/80 px-4 py-2 rounded-xl inline-block">
+            <div className="text-xs font-black uppercase text-zinc-600 dark:text-zinc-400 tracking-widest bg-zinc-100 dark:bg-zinc-800 px-4 py-2 rounded-xl inline-block border border-zinc-200 dark:border-zinc-700">
               📅 {format(selectedDate, "yyyy년 MM월 dd일", { locale: ko })}
             </div>
 
@@ -812,29 +747,28 @@ export default function CalendarPage() {
             <form onSubmit={handleSaveEvent} className="space-y-4">
               {/* Title */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-black uppercase text-on-surface-variant/50 dark:text-gray-400 tracking-wider">일정 제목</label>
+                <label className="text-[10px] font-black uppercase text-zinc-500 dark:text-zinc-400 tracking-wider">일정 제목</label>
                 <input
                   type="text"
                   required
                   value={formTitle}
                   onChange={(e) => setFormTitle(e.target.value)}
                   placeholder="예: 전체 회의, 자재 입고 예정일"
-                  className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-800 border border-black/[0.03] dark:border-white/[0.03] rounded-xl outline-none focus:ring-2 focus:ring-primary/20 dark:focus:ring-blue-500/20 text-sm font-medium"
+                  className="w-full px-4 py-3 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl outline-none focus:ring-2 focus:ring-zinc-900/20 dark:focus:ring-white/20 text-sm font-medium text-zinc-900 dark:text-white"
                 />
               </div>
 
               {/* Target Member (Color preview & Multi-select) */}
               <div className="flex flex-col gap-2">
-                <label className="text-[10px] font-black uppercase text-on-surface-variant/50 dark:text-gray-400 tracking-wider flex items-center gap-1">
+                <label className="text-[10px] font-black uppercase text-zinc-500 dark:text-zinc-400 tracking-wider flex items-center gap-1">
                   <User className="w-3 h-3" />
                   <span>대상 팀원 (중복 선택 가능)</span>
                 </label>
                 
                 {/* Selected/Available Members Grid */}
-                <div className="flex flex-wrap gap-2 p-3 bg-surface-container-low dark:bg-slate-800 rounded-xl border border-black/[0.03] dark:border-white/[0.03]">
+                <div className="flex flex-wrap gap-2 p-3 bg-zinc-50 dark:bg-zinc-800/80 rounded-xl border border-zinc-200 dark:border-zinc-700">
                   {allMembers.map((member) => {
                     const isSelected = selectedMembers.includes(member);
-                    const color = getColorForUser(member);
                     return (
                       <button
                         key={member}
@@ -850,11 +784,11 @@ export default function CalendarPage() {
                         }}
                         className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border cursor-pointer ${
                           isSelected 
-                            ? `${color.bg} ${color.border} ${color.text} shadow-sm scale-105` 
-                            : "bg-white dark:bg-slate-900 border-black/5 dark:border-white/5 text-on-surface-variant/60 dark:text-gray-400 opacity-60 hover:opacity-100"
+                            ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-950 border-transparent shadow-sm scale-105" 
+                            : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
                         }`}
                       >
-                        <span className={`w-1.5 h-1.5 rounded-full ${isSelected ? color.dot : "bg-gray-400"}`} />
+                        <span className={`w-1.5 h-1.5 rounded-full ${isSelected ? "bg-white dark:bg-zinc-950" : "bg-zinc-400"}`} />
                         {member}
                       </button>
                     );
@@ -865,23 +799,23 @@ export default function CalendarPage() {
               {/* Date Range */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-black uppercase text-on-surface-variant/50 dark:text-gray-400 tracking-wider">시작일</label>
+                  <label className="text-[10px] font-black uppercase text-zinc-500 dark:text-zinc-400 tracking-wider">시작일</label>
                   <input
                     type="date"
                     required
                     value={formStartDate}
                     onChange={(e) => setFormStartDate(e.target.value)}
-                    className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-800 border border-black/[0.03] dark:border-white/[0.03] rounded-xl outline-none focus:ring-2 focus:ring-primary/20 text-xs font-semibold text-center"
+                    className="w-full px-4 py-3 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl outline-none focus:ring-2 focus:ring-zinc-900/20 text-xs font-semibold text-center text-zinc-900 dark:text-white"
                   />
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-black uppercase text-on-surface-variant/50 dark:text-gray-400 tracking-wider">종료일</label>
+                  <label className="text-[10px] font-black uppercase text-zinc-500 dark:text-zinc-400 tracking-wider">종료일</label>
                   <input
                     type="date"
                     required
                     value={formEndDate}
                     onChange={(e) => setFormEndDate(e.target.value)}
-                    className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-800 border border-black/[0.03] dark:border-white/[0.03] rounded-xl outline-none focus:ring-2 focus:ring-primary/20 text-xs font-semibold text-center"
+                    className="w-full px-4 py-3 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl outline-none focus:ring-2 focus:ring-zinc-900/20 text-xs font-semibold text-center text-zinc-900 dark:text-white"
                   />
                 </div>
               </div>
@@ -889,7 +823,7 @@ export default function CalendarPage() {
               {/* Time Range */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-black uppercase text-on-surface-variant/50 dark:text-gray-400 tracking-wider flex items-center gap-1">
+                  <label className="text-[10px] font-black uppercase text-zinc-500 dark:text-zinc-400 tracking-wider flex items-center gap-1">
                     <Clock className="w-3 h-3" />
                     <span>시작 시간</span>
                   </label>
@@ -898,11 +832,11 @@ export default function CalendarPage() {
                     required
                     value={formStartTime}
                     onChange={(e) => setFormStartTime(e.target.value)}
-                    className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-800 border border-black/[0.03] dark:border-white/[0.03] rounded-xl outline-none focus:ring-2 focus:ring-primary/20 text-sm font-semibold text-center"
+                    className="w-full px-4 py-3 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl outline-none focus:ring-2 focus:ring-zinc-900/20 text-sm font-semibold text-center text-zinc-900 dark:text-white"
                   />
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-black uppercase text-on-surface-variant/50 dark:text-gray-400 tracking-wider flex items-center gap-1">
+                  <label className="text-[10px] font-black uppercase text-zinc-500 dark:text-zinc-400 tracking-wider flex items-center gap-1">
                     <Clock className="w-3 h-3" />
                     <span>종료 시간</span>
                   </label>
@@ -911,14 +845,14 @@ export default function CalendarPage() {
                     required
                     value={formEndTime}
                     onChange={(e) => setFormEndTime(e.target.value)}
-                    className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-800 border border-black/[0.03] dark:border-white/[0.03] rounded-xl outline-none focus:ring-2 focus:ring-primary/20 text-sm font-semibold text-center"
+                    className="w-full px-4 py-3 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl outline-none focus:ring-2 focus:ring-zinc-900/20 text-sm font-semibold text-center text-zinc-900 dark:text-white"
                   />
                 </div>
               </div>
 
               {/* Description */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-black uppercase text-on-surface-variant/50 dark:text-gray-400 tracking-wider flex items-center gap-1">
+                <label className="text-[10px] font-black uppercase text-zinc-500 dark:text-zinc-400 tracking-wider flex items-center gap-1">
                   <FileText className="w-3 h-3" />
                   <span>일정 상세 정보</span>
                 </label>
@@ -926,7 +860,7 @@ export default function CalendarPage() {
                   value={formDesc}
                   onChange={(e) => setFormDesc(e.target.value)}
                   placeholder="회의 내용, 전달사항 등을 작성해 주세요."
-                  className="w-full h-24 px-4 py-3 bg-surface-container-low dark:bg-slate-800 border border-black/[0.03] dark:border-white/[0.03] rounded-xl outline-none focus:ring-2 focus:ring-primary/20 text-xs font-semibold resize-none"
+                  className="w-full h-24 px-4 py-3 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl outline-none focus:ring-2 focus:ring-zinc-900/20 text-xs font-semibold resize-none text-zinc-900 dark:text-white"
                 />
               </div>
 
@@ -936,7 +870,7 @@ export default function CalendarPage() {
                   <button
                     type="button"
                     onClick={handleDeleteEvent}
-                    className="p-4 bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 rounded-2xl font-black text-sm hover:shadow transition-all cursor-pointer flex items-center justify-center"
+                    className="p-4 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white rounded-2xl font-black text-sm hover:shadow transition-all cursor-pointer flex items-center justify-center border border-zinc-200 dark:border-zinc-700"
                     title="일정 삭제"
                   >
                     <Trash2 className="w-5 h-5" />
@@ -945,13 +879,13 @@ export default function CalendarPage() {
                 <button
                   type="button"
                   onClick={() => setModalOpen(false)}
-                  className="flex-1 py-4 border border-black/5 dark:border-white/5 rounded-2xl font-black text-sm text-primary dark:text-gray-300 hover:bg-surface-container-low dark:hover:bg-slate-800 transition-all cursor-pointer"
+                  className="flex-1 py-4 border border-zinc-200 dark:border-zinc-700 rounded-2xl font-black text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all cursor-pointer"
                 >
                   닫기
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-4 bg-primary dark:bg-blue-600 text-white rounded-2xl font-black text-sm shadow-md hover:shadow-xl active:scale-95 transition-all cursor-pointer"
+                  className="flex-1 py-4 bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200 text-white rounded-2xl font-black text-sm shadow-md active:scale-95 transition-all cursor-pointer"
                 >
                   저장
                 </button>

@@ -51,32 +51,32 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="flex flex-col md:flex-row min-h-[100dvh] w-full bg-surface dark:bg-slate-950">
+    <div className="flex flex-col md:flex-row min-h-[100dvh] w-full bg-zinc-50 dark:bg-zinc-950">
       {/* Mobile Top App Bar */}
-      <header className="md:hidden sticky top-0 left-0 w-full bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border-b border-black/[0.05] dark:border-white/[0.05] px-4 py-2.5 pt-[max(0.6rem,env(safe-area-inset-top))] flex items-center justify-between z-40 shadow-sm select-none">
+      <header className="md:hidden sticky top-0 left-0 w-full bg-white/95 dark:bg-zinc-950/95 backdrop-blur-xl border-b border-zinc-200/80 dark:border-zinc-800/80 px-4 py-2.5 pt-[max(0.6rem,env(safe-area-inset-top))] flex items-center justify-between z-40 shadow-sm select-none">
         <Link href="/inventory" className="flex items-center gap-2 active:scale-95 transition-transform">
-          <div className="w-7 h-7 bg-primary rounded-xl flex items-center justify-center shadow-sm">
-            <Package className="w-4 h-4 text-white" />
+          <div className="w-7 h-7 bg-zinc-900 dark:bg-white rounded-xl flex items-center justify-center shadow-sm">
+            <Package className="w-4 h-4 text-white dark:text-zinc-950" />
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="font-headline font-black text-sm tracking-tight text-primary dark:text-blue-400">Atelier</span>
-            <span className="text-on-surface-variant/30 text-xs">/</span>
-            <span className="font-bold text-xs text-foreground dark:text-gray-200">{getPageTitle()}</span>
+            <span className="font-headline font-black text-sm tracking-tight text-zinc-900 dark:text-white">Atelier</span>
+            <span className="text-zinc-300 dark:text-zinc-700 text-xs">/</span>
+            <span className="font-bold text-xs text-zinc-600 dark:text-zinc-300">{getPageTitle()}</span>
           </div>
         </Link>
 
         <div className="flex items-center gap-2">
           <Link 
             href="/chat"
-            className="flex items-center gap-1.5 px-2.5 py-1 bg-surface-container-low dark:bg-slate-800 rounded-xl border border-black/[0.03] dark:border-white/[0.03] active:scale-95 transition-transform"
+            className="flex items-center gap-1.5 px-2.5 py-1 bg-zinc-100 dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 active:scale-95 transition-transform"
           >
-            <div className="w-5 h-5 rounded-lg bg-primary/10 dark:bg-blue-500/20 text-primary dark:text-blue-400 flex items-center justify-center font-headline font-black text-[9px]">
+            <div className="w-5 h-5 rounded-lg bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-white flex items-center justify-center font-headline font-black text-[9px]">
               {currentUserInitials.slice(0, 2)}
             </div>
-            <span className="text-[10px] font-extrabold text-foreground dark:text-white truncate max-w-[60px]">
+            <span className="text-[10px] font-extrabold text-zinc-900 dark:text-white truncate max-w-[60px]">
               {currentUserInitials}
             </span>
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="w-1.5 h-1.5 rounded-full bg-zinc-400 dark:bg-zinc-400 animate-pulse" />
           </Link>
         </div>
       </header>

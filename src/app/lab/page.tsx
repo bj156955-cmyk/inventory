@@ -19,74 +19,16 @@ import {
   Truck
 } from "lucide-react";
 
-// Color mapping for member badges
-const getColorForUser = (userName: string) => {
-  const name = (userName || "UNKNOWN").toUpperCase();
-  const colors = [
-    {
-      bg: "bg-blue-50/80 dark:bg-blue-950/20",
-      border: "border-blue-200/50 dark:border-blue-900/30",
-      text: "text-blue-700 dark:text-blue-300",
-      hoverBg: "hover:bg-blue-100/50 dark:hover:bg-blue-900/10",
-      badge: "bg-blue-50 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900/30 text-blue-700 dark:text-blue-300",
-      dot: "bg-blue-500",
-    },
-    {
-      bg: "bg-emerald-50/80 dark:bg-emerald-950/20",
-      border: "border-emerald-200/50 dark:border-emerald-900/30",
-      text: "text-emerald-700 dark:text-emerald-300",
-      hoverBg: "hover:bg-emerald-100/50 dark:hover:bg-emerald-900/10",
-      badge: "bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-900/30 text-emerald-700 dark:text-emerald-300",
-      dot: "bg-emerald-500",
-    },
-    {
-      bg: "bg-violet-50/80 dark:bg-violet-950/20",
-      border: "border-violet-200/50 dark:border-violet-900/30",
-      text: "text-violet-700 dark:text-violet-300",
-      hoverBg: "hover:bg-violet-100/50 dark:hover:bg-violet-900/10",
-      badge: "bg-violet-50 dark:bg-violet-950/40 border border-violet-100 dark:border-violet-900/30 text-violet-700 dark:text-violet-300",
-      dot: "bg-violet-500",
-    },
-    {
-      bg: "bg-amber-50/80 dark:bg-amber-950/20",
-      border: "border-amber-200/50 dark:border-amber-900/30",
-      text: "text-amber-700 dark:text-amber-300",
-      hoverBg: "hover:bg-amber-100/50 dark:hover:bg-amber-900/10",
-      badge: "bg-amber-50 dark:bg-amber-950/40 border border-amber-100 dark:border-amber-900/30 text-amber-700 dark:text-amber-300",
-      dot: "bg-amber-500",
-    },
-    {
-      bg: "bg-rose-50/80 dark:bg-rose-950/20",
-      border: "border-rose-200/50 dark:border-rose-900/30",
-      text: "text-rose-700 dark:text-rose-300",
-      hoverBg: "hover:bg-rose-100/50 dark:hover:bg-rose-900/10",
-      badge: "bg-rose-50 dark:bg-rose-950/40 border border-rose-100 dark:border-rose-900/30 text-rose-700 dark:text-rose-300",
-      dot: "bg-rose-500",
-    },
-    {
-      bg: "bg-cyan-50/80 dark:bg-cyan-950/20",
-      border: "border-cyan-200/50 dark:border-cyan-900/30",
-      text: "text-cyan-700 dark:text-cyan-300",
-      hoverBg: "hover:bg-cyan-100/50 dark:hover:bg-cyan-900/10",
-      badge: "bg-cyan-50 dark:bg-cyan-950/40 border border-cyan-100 dark:border-cyan-900/30 text-cyan-700 dark:text-cyan-300",
-      dot: "bg-cyan-500",
-    },
-    {
-      bg: "bg-fuchsia-50/80 dark:bg-fuchsia-950/20",
-      border: "border-fuchsia-200/50 dark:border-fuchsia-900/30",
-      text: "text-fuchsia-700 dark:text-fuchsia-300",
-      hoverBg: "hover:bg-fuchsia-100/50 dark:hover:bg-fuchsia-900/10",
-      badge: "bg-fuchsia-50 dark:bg-fuchsia-950/40 border border-fuchsia-100 dark:border-fuchsia-900/30 text-fuchsia-700 dark:text-fuchsia-300",
-      dot: "bg-fuchsia-500",
-    }
-  ];
-
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  const index = Math.abs(hash) % colors.length;
-  return colors[index];
+// Color mapping for member badges (Monochrome Tech Minimal)
+const getColorForUser = (_userName?: string) => {
+  return {
+    bg: "bg-zinc-100 dark:bg-zinc-800",
+    border: "border-zinc-200 dark:border-zinc-700",
+    text: "text-zinc-900 dark:text-white",
+    hoverBg: "hover:bg-zinc-200/70 dark:hover:bg-zinc-700",
+    badge: "bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100",
+    dot: "bg-zinc-900 dark:bg-white",
+  };
 };
 
 export default function LabPage() {
@@ -459,19 +401,19 @@ export default function LabPage() {
     <div className="flex-1 p-3 sm:p-6 md:p-8 space-y-3 sm:space-y-4 flex flex-col min-h-0 bg-surface dark:bg-slate-900">
       {loading ? (
         <div className="flex-1 flex items-center justify-center min-h-[300px]">
-          <RefreshCw className="w-8 h-8 text-primary dark:text-blue-500 animate-spin" />
+          <RefreshCw className="w-8 h-8 text-zinc-400 animate-spin" />
         </div>
       ) : (
         <div className="flex-1 flex flex-col space-y-4 min-h-0">
           {/* Mobile Segment Tab Bar (App-style) */}
-          <div className="lg:hidden flex bg-surface-container-low dark:bg-slate-800/90 p-1.5 rounded-2xl gap-1.5 shrink-0 select-none shadow-sm">
+          <div className="lg:hidden flex bg-zinc-100 dark:bg-zinc-800/90 p-1.5 rounded-2xl gap-1.5 shrink-0 select-none shadow-sm">
             <button
               type="button"
               onClick={() => setActiveMobileTab("orders")}
               className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer active:scale-95 ${
                 activeMobileTab === "orders"
-                  ? "bg-primary dark:bg-blue-600 text-white shadow-md font-black scale-[1.02]"
-                  : "text-on-surface-variant/70 dark:text-gray-400 hover:bg-black/5 dark:hover:bg-white/5"
+                  ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 shadow-md font-black scale-[1.02]"
+                  : "text-zinc-500 dark:text-zinc-400 hover:bg-zinc-200/50 dark:hover:bg-zinc-700/50"
               }`}
             >
               <ShoppingCart className="w-4 h-4" />
@@ -482,8 +424,8 @@ export default function LabPage() {
               onClick={() => setActiveMobileTab("cleaning")}
               className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer active:scale-95 ${
                 activeMobileTab === "cleaning"
-                  ? "bg-primary dark:bg-blue-600 text-white shadow-md font-black scale-[1.02]"
-                  : "text-on-surface-variant/70 dark:text-gray-400 hover:bg-black/5 dark:hover:bg-white/5"
+                  ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 shadow-md font-black scale-[1.02]"
+                  : "text-zinc-500 dark:text-zinc-400 hover:bg-zinc-200/50 dark:hover:bg-zinc-700/50"
               }`}
             >
               <Sparkles className="w-4 h-4" />
@@ -495,19 +437,19 @@ export default function LabPage() {
           <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-8 min-h-0">
 
             {/* Left Column: Item Orders Status */}
-            <div className={`bg-white dark:bg-slate-800 rounded-[2rem] sm:rounded-[2.5rem] p-5 sm:p-7 shadow-md border border-black/[0.02] dark:border-white/[0.02] flex-col min-h-[420px] overflow-hidden ${
+            <div className={`bg-white dark:bg-zinc-900 rounded-[2rem] sm:rounded-[2.5rem] p-5 sm:p-7 shadow-sm border border-zinc-200 dark:border-zinc-800 flex-col min-h-[420px] overflow-hidden ${
               activeMobileTab === "orders" ? "flex" : "hidden lg:flex"
             }`}>
               
-              <div className="flex justify-between items-center pb-3 border-b border-black/[0.03] dark:border-white/[0.03] shrink-0">
-                <h3 className="text-base sm:text-lg font-black text-primary dark:text-white flex items-center gap-2">
-                  <ShoppingCart className="w-5 h-5 text-blue-500" />
+              <div className="flex justify-between items-center pb-3 border-b border-zinc-100 dark:border-zinc-800 shrink-0">
+                <h3 className="text-base sm:text-lg font-black text-zinc-900 dark:text-white flex items-center gap-2">
+                  <ShoppingCart className="w-5 h-5 text-zinc-900 dark:text-white" />
                   <span>연구실 물품 주문 현황 ({visibleOrders.length}건)</span>
                 </h3>
               
               <button
                 onClick={() => setShowAddOrderInput(!showAddOrderInput)}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-xl font-bold text-xs shadow-sm transition-all cursor-pointer active:scale-95"
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200 text-white rounded-xl font-bold text-xs shadow-sm transition-all cursor-pointer active:scale-95"
                 title="물품 추가"
               >
                 <Plus className="w-4 h-4" />
@@ -522,19 +464,19 @@ export default function LabPage() {
                   e.preventDefault();
                   handleAddOrder(newItemName);
                 }}
-                className="flex gap-2 p-2.5 mt-3 bg-slate-50 dark:bg-slate-900/70 rounded-2xl border border-black/[0.03] dark:border-white/[0.03] shrink-0 animate-fade-in shadow-inner"
+                className="flex gap-2 p-2.5 mt-3 bg-zinc-50 dark:bg-zinc-800/80 rounded-2xl border border-zinc-200 dark:border-zinc-700 shrink-0 animate-fade-in shadow-inner"
               >
                 <input
                   type="text"
                   value={newItemName}
                   onChange={(e) => setNewItemName(e.target.value)}
                   placeholder="주문할 물품명을 입력하세요..."
-                  className="flex-1 bg-white dark:bg-slate-800 border border-black/10 dark:border-white/10 rounded-xl px-3 py-2 text-xs font-bold text-foreground outline-none focus:ring-2 focus:ring-blue-500/20"
+                  className="flex-1 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-bold text-zinc-900 dark:text-white outline-none focus:ring-2 focus:ring-zinc-900/10 dark:focus:ring-white/10"
                   autoFocus
                 />
                 <button
                   type="submit"
-                  className="px-3.5 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-xl text-xs font-black cursor-pointer shadow-sm transition-all active:scale-95"
+                  className="px-3.5 py-2 bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200 text-white rounded-xl text-xs font-black cursor-pointer shadow-sm transition-all active:scale-95"
                 >
                   추가
                 </button>
@@ -544,7 +486,7 @@ export default function LabPage() {
                     setShowAddOrderInput(false);
                     setNewItemName("");
                   }}
-                  className="px-3 py-2 bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-foreground dark:text-gray-200 rounded-xl text-xs font-black cursor-pointer transition-all"
+                  className="px-3 py-2 bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-700 dark:hover:bg-zinc-600 text-zinc-700 dark:text-zinc-200 rounded-xl text-xs font-black cursor-pointer transition-all"
                 >
                   취소
                 </button>
@@ -570,10 +512,10 @@ export default function LabPage() {
                       key={order.id} 
                       className={`group flex items-center justify-between p-3 sm:p-3.5 rounded-2xl border transition-all ${
                         hasReceived 
-                          ? "bg-slate-50/60 dark:bg-slate-900/30 border-black/[0.02] dark:border-white/[0.02] opacity-70" 
+                          ? "bg-zinc-100/50 dark:bg-zinc-800/30 border-zinc-200/50 dark:border-zinc-800/50 opacity-60" 
                           : hasOrdered 
-                          ? "bg-blue-50/50 dark:bg-blue-950/20 border-blue-100/60 dark:border-blue-900/30 shadow-sm" 
-                          : "bg-surface-container-low dark:bg-slate-900/60 border-black/[0.03] dark:border-white/[0.03]"
+                          ? "bg-zinc-100 dark:bg-zinc-800/80 border-zinc-300 dark:border-zinc-700 shadow-sm" 
+                          : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800"
                       }`}
                     >
                       <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
@@ -581,23 +523,23 @@ export default function LabPage() {
                           {order.requestedBy}
                         </span>
                         <div className="flex flex-col min-w-0">
-                          <span className={`text-xs sm:text-sm font-bold text-foreground dark:text-gray-200 truncate ${
-                            hasReceived ? "line-through text-on-surface-variant/40" : ""
+                          <span className={`text-xs sm:text-sm font-bold text-zinc-900 dark:text-zinc-100 truncate ${
+                            hasReceived ? "line-through text-zinc-400 dark:text-zinc-500" : ""
                           }`}>
                             {order.itemName}
                           </span>
-                          <span className="text-[9px] sm:text-[10px] text-on-surface-variant/60 dark:text-gray-400 font-medium flex items-center gap-1.5 mt-0.5 select-none">
+                          <span className="text-[9px] sm:text-[10px] text-zinc-500 dark:text-zinc-400 font-medium flex items-center gap-1.5 mt-0.5 select-none">
                             <span>요청: {order.requestedBy}</span>
                             {order.orderedBy && (
                               <>
                                 <span>•</span>
-                                <span className="text-amber-600 dark:text-amber-400 font-bold">주문: {order.orderedBy}</span>
+                                <span className="text-zinc-800 dark:text-zinc-200 font-bold">주문: {order.orderedBy}</span>
                               </>
                             )}
                             {order.receivedBy && (
                               <>
                                 <span>•</span>
-                                <span className="text-blue-600 dark:text-blue-400 font-bold">수령: {order.receivedBy}</span>
+                                <span className="text-zinc-900 dark:text-white font-bold">수령: {order.receivedBy}</span>
                               </>
                             )}
                           </span>
@@ -612,8 +554,8 @@ export default function LabPage() {
                           disabled={!hasRequested}
                           className={`px-2.5 py-1.5 rounded-xl transition-all flex items-center gap-1 border text-xs font-bold ${
                             hasRequested
-                              ? "bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 text-amber-600 dark:text-amber-300 border-amber-200 dark:border-amber-900/30 cursor-pointer shadow-sm active:scale-95"
-                              : "bg-emerald-50 text-emerald-500 dark:bg-emerald-950/20 dark:text-emerald-400 border-emerald-100 dark:border-emerald-900/20 opacity-50 cursor-not-allowed"
+                              ? "bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200 border-transparent cursor-pointer shadow-sm active:scale-95"
+                              : "bg-zinc-100 text-zinc-400 dark:bg-zinc-800 dark:text-zinc-500 border-zinc-200 dark:border-zinc-700 opacity-60 cursor-not-allowed"
                           }`}
                           title={hasRequested ? "물품 주문 완료 처리" : "주문 완료"}
                         >
@@ -628,10 +570,10 @@ export default function LabPage() {
                           disabled={!hasOrdered}
                           className={`px-2.5 py-1.5 rounded-xl transition-all flex items-center gap-1 border text-xs font-bold ${
                             hasOrdered
-                              ? "bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/40 text-blue-600 dark:text-blue-300 border-blue-200 dark:border-blue-900/30 cursor-pointer animate-pulse shadow-sm active:scale-95"
+                              ? "bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200 border-transparent cursor-pointer shadow-sm active:scale-95"
                               : hasReceived
-                              ? "bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500 border-slate-200 dark:border-slate-700 opacity-50 cursor-not-allowed"
-                              : "bg-slate-100 text-slate-300 dark:bg-slate-800 dark:text-slate-700 opacity-20 cursor-not-allowed"
+                              ? "bg-zinc-100 text-zinc-400 dark:bg-zinc-800 dark:text-zinc-500 border-zinc-200 dark:border-zinc-700 opacity-60 cursor-not-allowed"
+                              : "bg-zinc-100 text-zinc-300 dark:bg-zinc-800 dark:text-zinc-600 border-zinc-200 dark:border-zinc-800 opacity-30 cursor-not-allowed"
                           }`}
                           title={hasOrdered ? "수령 완료 처리" : hasReceived ? "수령 완료됨" : "수령 준비 대기"}
                         >
@@ -643,7 +585,7 @@ export default function LabPage() {
                         <button
                           type="button"
                           onClick={() => handleDeleteOrder(order.id)}
-                          className="text-on-surface-variant/40 dark:text-gray-500 hover:text-red-500 p-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/20 transition-all shrink-0 cursor-pointer"
+                          className="text-zinc-400 hover:text-zinc-900 dark:text-zinc-500 dark:hover:text-white p-1 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all shrink-0 cursor-pointer"
                           title="삭제"
                         >
                           <X className="w-4 h-4" />
@@ -656,27 +598,27 @@ export default function LabPage() {
             </div>
 
             {/* Caption */}
-            <div className="text-[10px] text-on-surface-variant/50 dark:text-gray-500 font-bold flex items-center justify-between shrink-0 pt-2.5 border-t border-black/[0.03] dark:border-white/[0.03] select-none">
+            <div className="text-[10px] text-zinc-400 dark:text-zinc-500 font-bold flex items-center justify-between shrink-0 pt-2.5 border-t border-zinc-100 dark:border-zinc-800 select-none">
               <span>※ 수령 완료 물품은 3일 후 자동 정리됩니다.</span>
             </div>
 
           </div>
 
           {/* Right Column: Cleaning & Waste Duties Table */}
-          <div className={`bg-white dark:bg-slate-800 rounded-[2rem] sm:rounded-[2.5rem] p-5 sm:p-7 shadow-md border border-black/[0.02] dark:border-white/[0.02] flex-col min-h-[420px] overflow-hidden ${
+          <div className={`bg-white dark:bg-zinc-900 rounded-[2rem] sm:rounded-[2.5rem] p-5 sm:p-7 shadow-sm border border-zinc-200 dark:border-zinc-800 flex-col min-h-[420px] overflow-hidden ${
             activeMobileTab === "cleaning" ? "flex" : "hidden lg:flex"
           }`}>
             
-            <div className="flex justify-between items-center pb-3 border-b border-black/[0.03] dark:border-white/[0.03] shrink-0">
-              <h3 className="text-base sm:text-lg font-black text-primary dark:text-white flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-amber-500" />
+            <div className="flex justify-between items-center pb-3 border-b border-zinc-100 dark:border-zinc-800 shrink-0">
+              <h3 className="text-base sm:text-lg font-black text-zinc-900 dark:text-white flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-zinc-900 dark:text-white" />
                 <span>주간 청소 당번 {getWeeklyDateRangeString()}</span>
               </h3>
               
               <div className="flex items-center gap-2 relative">
                 {showAddSelect && (
                   <select
-                    className="bg-white dark:bg-slate-700 border border-black/15 dark:border-white/15 rounded-xl px-2.5 py-1.5 text-xs outline-none font-bold text-foreground w-[130px] cursor-pointer absolute right-9 top-0 z-20 animate-fade-in shadow-xl"
+                    className="bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-xl px-2.5 py-1.5 text-xs outline-none font-bold text-zinc-900 dark:text-white w-[130px] cursor-pointer absolute right-9 top-0 z-20 animate-fade-in shadow-xl"
                     defaultValue=""
                     onChange={(e) => handleAddUser(e.target.value)}
                     onBlur={() => setTimeout(() => setShowAddSelect(false), 200)}
@@ -692,7 +634,7 @@ export default function LabPage() {
                 )}
                 <button
                   onClick={() => setShowAddSelect(!showAddSelect)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-xl font-bold text-xs shadow-sm transition-all cursor-pointer active:scale-95"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200 text-white rounded-xl font-bold text-xs shadow-sm transition-all cursor-pointer active:scale-95"
                   title="멤버 추가"
                 >
                   <Plus className="w-4 h-4" />
@@ -702,16 +644,16 @@ export default function LabPage() {
             </div>
 
             {/* Weekly Duties 3-Column Table with Drag Sorting */}
-            <div className="my-3 border border-black/[0.03] dark:border-white/[0.03] rounded-2xl overflow-hidden flex-1 flex flex-col">
+            <div className="my-3 border border-zinc-200 dark:border-zinc-800 rounded-2xl overflow-hidden flex-1 flex flex-col">
               <table className="w-full text-center border-collapse text-xs font-semibold table-fixed">
-                <thead className="sticky top-0 bg-slate-50 dark:bg-slate-700 text-on-surface-variant dark:text-gray-300 border-b border-black/[0.02] dark:border-white/[0.02] z-10 select-none">
+                <thead className="sticky top-0 bg-zinc-50 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border-b border-zinc-200 dark:border-zinc-800 z-10 select-none">
                   <tr>
-                    <th className="py-3 font-black w-[40%] bg-slate-50 dark:bg-slate-700">사용자</th>
-                    <th className="py-3 font-black w-[30%] bg-slate-50 dark:bg-slate-700">청소</th>
-                    <th className="py-3 font-black w-[30%] bg-slate-50 dark:bg-slate-700">폐기물</th>
+                    <th className="py-3 font-black w-[40%] bg-zinc-50 dark:bg-zinc-800">사용자</th>
+                    <th className="py-3 font-black w-[30%] bg-zinc-50 dark:bg-zinc-800">청소</th>
+                    <th className="py-3 font-black w-[30%] bg-zinc-50 dark:bg-zinc-800">폐기물</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-black/[0.02] dark:divide-white/[0.02]">
+                <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
                   {assignments.map((row, idx) => {
                     let rotatedIdx = (idx - shift) % N;
                     if (rotatedIdx < 0) rotatedIdx += N;
@@ -736,50 +678,24 @@ export default function LabPage() {
                         onDragEnd={() => {
                           setDraggedRowIdx(null);
                         }}
-                        className={`group hover:bg-slate-50/50 dark:hover:bg-slate-700/20 transition-all select-none ${
-                          draggedRowIdx === idx ? "opacity-30 bg-slate-100 dark:bg-slate-900" : ""
+                        className={`group hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 transition-all select-none ${
+                          draggedRowIdx === idx ? "opacity-30 bg-zinc-100 dark:bg-zinc-900" : ""
                         }`}
                       >
-                        <td className="py-2.5 border-r border-black/[0.02] dark:border-white/[0.02]">
+                        <td className="py-2.5 border-r border-zinc-200 dark:border-zinc-800">
                           <div className="flex items-center justify-between gap-1.5 px-3">
                             <div className="flex items-center gap-2 min-w-0">
                               {/* Desktop: Drag Grip */}
-                              <GripVertical className="hidden md:block w-4 h-4 text-on-surface-variant/30 shrink-0 cursor-grab active:cursor-grabbing" />
+                              <GripVertical className="hidden md:block w-4 h-4 text-zinc-400 dark:text-zinc-500 shrink-0 cursor-grab active:cursor-grabbing" />
                               
-                              {/* Mobile: Move Buttons */}
-                              <div className="flex md:hidden items-center gap-1 shrink-0 select-none">
-                                <button
-                                  type="button"
-                                  disabled={idx === 0}
-                                  onClick={() => handleRowDrop(idx, idx - 1)}
-                                  className={`w-5 h-5 flex items-center justify-center rounded text-[9px] font-black bg-slate-100 dark:bg-slate-700 active:scale-90 ${
-                                    idx === 0 ? "opacity-20 cursor-not-allowed" : "text-primary dark:text-blue-400 cursor-pointer"
-                                  }`}
-                                  title="위로 이동"
-                                >
-                                  ▲
-                                </button>
-                                <button
-                                  type="button"
-                                  disabled={idx === assignments.length - 1}
-                                  onClick={() => handleRowDrop(idx, idx + 1)}
-                                  className={`w-5 h-5 flex items-center justify-center rounded text-[9px] font-black bg-slate-100 dark:bg-slate-700 active:scale-90 ${
-                                    idx === assignments.length - 1 ? "opacity-20 cursor-not-allowed" : "text-primary dark:text-blue-400 cursor-pointer"
-                                  }`}
-                                  title="아래로 이동"
-                                >
-                                  ▼
-                                </button>
-                              </div>
-
-                              <span className="text-xs sm:text-sm text-foreground dark:text-white font-bold truncate">
+                              <span className="text-xs sm:text-sm text-zinc-900 dark:text-white font-bold truncate">
                                 {row.member}
                               </span>
                             </div>
                             <button
                               type="button"
                               onClick={() => handleRemoveUser(rotatedIdx)}
-                              className="text-on-surface-variant/40 dark:text-gray-500 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all p-1 shrink-0 cursor-pointer"
+                              className="text-zinc-400 hover:text-zinc-900 dark:text-zinc-500 dark:hover:text-white opacity-0 group-hover:opacity-100 transition-all p-1 shrink-0 cursor-pointer"
                               title="제거"
                             >
                               <X className="w-3.5 h-3.5" />
@@ -787,10 +703,10 @@ export default function LabPage() {
                           </div>
                         </td>
                         <td 
-                          className={`py-2.5 border-r border-black/[0.02] dark:border-white/[0.02] px-1 cursor-pointer select-none transition-all ${
+                          className={`py-2.5 border-r border-zinc-200 dark:border-zinc-800 px-1 cursor-pointer select-none transition-all ${
                             row.cleaning 
-                              ? "bg-blue-500 dark:bg-blue-600 hover:bg-blue-600 dark:hover:bg-blue-500 text-white font-black" 
-                              : "hover:bg-slate-50 dark:hover:bg-slate-700/20 text-transparent"
+                              ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 font-black" 
+                              : "hover:bg-zinc-100 dark:hover:bg-zinc-800/30 text-transparent"
                           }`}
                           onClick={() => handleToggleDuty(rotatedIdx, "cleaning")}
                         >
@@ -799,8 +715,8 @@ export default function LabPage() {
                         <td 
                           className={`py-2.5 px-1 cursor-pointer select-none transition-all ${
                             row.waste 
-                              ? "bg-blue-500 dark:bg-blue-600 hover:bg-blue-600 dark:hover:bg-blue-500 text-white font-black" 
-                              : "hover:bg-slate-50 dark:hover:bg-slate-700/20 text-transparent"
+                              ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 font-black" 
+                              : "hover:bg-zinc-100 dark:hover:bg-zinc-800/30 text-transparent"
                           }`}
                           onClick={() => handleToggleDuty(rotatedIdx, "waste")}
                         >
@@ -814,7 +730,7 @@ export default function LabPage() {
             </div>
 
             {/* Caption */}
-            <div className="text-[10px] text-on-surface-variant/50 dark:text-gray-500 font-bold flex items-center justify-between shrink-0 pt-2.5 border-t border-black/[0.03] dark:border-white/[0.03] select-none">
+            <div className="text-[10px] text-zinc-400 dark:text-zinc-500 font-bold flex items-center justify-between shrink-0 pt-2.5 border-t border-zinc-100 dark:border-zinc-800 select-none">
               <span>※ 드래그하여 순번을 정하고, 칸을 눌러 이번 주 당번을 지정합니다.</span>
               <span>+{shift}주차</span>
             </div>
