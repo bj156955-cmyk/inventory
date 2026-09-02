@@ -749,28 +749,23 @@ export default function InventoryPage() {
                 </div>
               </div>
 
-              {/* 5. Item Modification History / Change Logs (수정 이력) */}
+              {/* 5. Item Modification History / Change Logs (수정 이력: 박스 없이 연한 회색으로 간결 표시) */}
               {editingProduct && (
-                <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800/80 space-y-2">
+                <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800/80 space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <label className="text-[11px] font-black uppercase text-zinc-500 dark:text-zinc-400 tracking-wider flex items-center gap-1.5">
-                      <span>수정 이력</span>
-                      {itemLogs.length > 0 && (
-                        <span className="px-1.5 py-0.2 bg-zinc-200 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 text-[10px] font-bold rounded-full">
-                          {itemLogs.length}
-                        </span>
-                      )}
-                    </label>
+                    <span className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500">
+                      수정 이력
+                    </span>
                     {editingProduct.updated_at && (
-                      <span className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500">
+                      <span className="text-[10px] text-zinc-400 dark:text-zinc-500">
                         최근: {new Date(editingProduct.updated_at).toLocaleDateString()}
                       </span>
                     )}
                   </div>
 
-                  <div className="max-h-36 overflow-y-auto space-y-2 custom-scrollbar pr-0.5">
+                  <div className="max-h-32 overflow-y-auto space-y-1.5 custom-scrollbar pr-0.5">
                     {loadingLogs ? (
-                      <p className="text-xs text-zinc-400 py-3 text-center">이력을 불러오는 중...</p>
+                      <p className="text-[11px] text-zinc-400 dark:text-zinc-500 py-1">이력을 불러오는 중...</p>
                     ) : itemLogs.length > 0 ? (
                       itemLogs.map((log) => {
                         let displayMsg = log.message;
@@ -789,40 +784,22 @@ export default function InventoryPage() {
                         })();
 
                         return (
-                          <div
-                            key={log.id}
-                            className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200/70 dark:border-zinc-700/60 space-y-1 text-left"
-                          >
-                            <div className="flex items-center justify-between gap-2">
-                              <div className="flex items-center gap-1.5 flex-wrap">
-                                <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-blue-500/10 dark:bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/20">
-                                  {log.user_email || "USER"}
-                                </span>
-                                <span className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500">
-                                  {formattedDate}
-                                </span>
-                              </div>
-                              <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-zinc-200/70 dark:bg-zinc-700/70 text-zinc-600 dark:text-zinc-400">
-                                {log.type === "UPDATE" ? "수정" : log.type === "CREATE" ? "등록" : log.type}
+                          <div key={log.id} className="text-xs text-zinc-500 dark:text-zinc-400 leading-snug">
+                            <div className="flex items-baseline justify-between gap-2">
+                              <span className="text-zinc-600 dark:text-zinc-300 font-medium">
+                                {displayMsg}
+                              </span>
+                              <span className="text-[10px] text-zinc-400 dark:text-zinc-500 shrink-0 tabular-nums">
+                                {log.user_email || "USER"} • {formattedDate}
                               </span>
                             </div>
-                            <p className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 leading-relaxed break-words">
-                              {displayMsg}
-                            </p>
                           </div>
                         );
                       })
                     ) : (
-                      <div className="py-3 px-3 text-center rounded-xl bg-zinc-50 dark:bg-zinc-800/40 border border-dashed border-zinc-200 dark:border-zinc-800">
-                        <p className="text-xs font-semibold text-zinc-400 dark:text-zinc-500">
-                          기록된 수정 이력이 없습니다.
-                        </p>
-                        {editingProduct.updated_by && (
-                          <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1">
-                            마지막 작업자: {editingProduct.updated_by}
-                          </p>
-                        )}
-                      </div>
+                      <p className="text-[11px] text-zinc-400 dark:text-zinc-500 py-1">
+                        기록된 수정 이력이 없습니다.
+                      </p>
                     )}
                   </div>
                 </div>
