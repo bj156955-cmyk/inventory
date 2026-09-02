@@ -1,10 +1,9 @@
 "use client";
 
-import React, { useEffect, useState, useCallback, useMemo } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 import { 
-  Reservation, 
   CleaningAssignment, 
   CleaningState, 
   LabOrder, 
@@ -21,7 +20,7 @@ import {
   Truck
 } from "lucide-react";
 
-// Maintain UI consistency
+// Color mapping for member badges
 const getColorForUser = (userName: string) => {
   const name = (userName || "UNKNOWN").toUpperCase();
   const colors = [
@@ -91,34 +90,14 @@ const getColorForUser = (userName: string) => {
   return colors[index];
 };
 
-const DAYS = ["월", "화", "수", "목", "금"];
-const SLOTS = [
-  "09:00", "09:30", "10:00", "10:30", "11:00", "11:30", 
-  "12:00", "12:30", "13:00", "13:30", "14:00", "14:30", 
-  "15:00", "15:30", "16:00", "16:30", "17:00", "17:30", 
-  "18:00", "18:30", "19:00"
-];
-
 export default function LabPage() {
   const { user } = useAuth();
   const [mountTime] = useState(() => Date.now());
   const [members, setMembers] = useState<string[]>([]);
-  const [reservations, setReservations] = useState<Reservation[]>([]);
   const [cleaningState, setCleaningState] = useState<CleaningState | null>(null);
   const [draggedRowIdx, setDraggedRowIdx] = useState<number | null>(null);
   const [showAddSelect, setShowAddSelect] = useState(false);
   const [loading, setLoading] = useState(true);
-  
-  // Mobile day tab and reservation modal states
-  const getTodayDayString = () => {
-    const day = new Date().getDay();
-    if (day === 0 || day === 6) return "월";
-    return DAYS[day - 1];
-  };
-  const [selectedDayTab, setSelectedDayTab] = useState<string>(getTodayDayString());
-  const [mobileResModalOpen, setMobileResModalOpen] = useState(false);
-  const [mobileResTarget, setMobileResTarget] = useState<{ equipment: string, day: string, slot: string } | null>(null);
-  const [mobileResDuration, setMobileResDuration] = useState<number>(1);
   
   // Orders states
   const [orders, setOrders] = useState<LabOrder[]>([]);
@@ -126,17 +105,10 @@ export default function LabPage() {
   const [showAddOrderInput, setShowAddOrderInput] = useState(false);
   const [newItemName, setNewItemName] = useState("");
 
-  // Drag states
-  const [dragStart, setDragStart] = useState<number | null>(null);
-  const [dragEnd, setDragEnd] = useState<number | null>(null);
-  const [activeDrag, setActiveDrag] = useState<{ equipment: string; day: string } | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
-
   // Database record references
-  const [resDbId, setResDbId] = useState<string | null>(null);
   const [cleanDbId, setCleanDbId] = useState<string | null>(null);
 
-  // 1. Fetch initial lab workspace data (Members, Reservations, Cleaning duties, Orders)
+  // Fetch initial lab workspace data (Members, Cleaning duties, Orders)
   useEffect(() => {
     let ignore = false;
 
@@ -149,21 +121,6 @@ export default function LabPage() {
         if (memberError) throw memberError;
         if (memberData && !ignore) {
           setMembers((memberData as AllowedUser[]).map((d) => d.username.toUpperCase()));
-        }
-
-        const { data: resData, error: resError } = await supabase
-          .from("notices")
-          .select("*")
-          .eq("title", "__LAB_RESERVATIONS__")
-          .limit(1);
-        if (resError) throw resError;
-        if (!ignore) {
-          if (resData && resData.length > 0) {
-            setResDbId(resData[0].id);
-            setReservations(JSON.parse(resData[0].content) as Reservation[]);
-          } else {
-            setReservations([]);
-          }
         }
 
         const { data: cleanData, error: cleanError } = await supabase
@@ -217,221 +174,6 @@ export default function LabPage() {
     };
   }, []);
 
-  const saveReservationsState = useCallback(async (updated: Reservation[]) => {
-    try {
-      if (resDbId) {
-        await supabase
-          .from("notices")
-          .update({ content: JSON.stringify(updated) })
-          .eq("id", resDbId);
-      } else {
-        const { data } = await supabase
-          .from("notices")
-          .insert([{
-            title: "__LAB_RESERVATIONS__",
-            content: JSON.stringify(updated),
-            created_by: "SYSTEM"
-          }])
-          .select();
-        if (data && data.length > 0) setResDbId(data[0].id);
-      }
-    } catch (err) {
-      console.error("Error saving reservations:", err);
-    }
-  }, [resDbId]);
-
-  const commitDurationReservation = async (equipment: string, day: string, startSlot: string, durationSlots: number) => {
-    const startIdx = SLOTS.indexOf(startSlot);
-    const rangeSlots = SLOTS.slice(startIdx, startIdx + durationSlots);
-    const currentUserInitials = user?.email?.split("@")[0].toUpperCase() || "UNKNOWN";
-
-    const isBlocked = rangeSlots.some(slot => {
-      const res = reservations.find(r => r.equipment === equipment && r.day === day && r.slot === slot);
-      return res && res.user !== currentUserInitials;
-    });
-
-    if (isBlocked) {
-      alert("다른 사용자의 예약과 겹치는 구간이 있어 예약할 수 없습니다.");
-      return;
-    }
-
-    const existingSlots = reservations
-      .filter(r => r.equipment === equipment && r.day === day && r.user === currentUserInitials && !rangeSlots.includes(r.slot))
-      .map(r => r.slot);
-    
-    const mergedSlots = Array.from(new Set([...existingSlots, ...rangeSlots]));
-    const mergedIndices = mergedSlots.map(slot => SLOTS.indexOf(slot)).sort((a, b) => a - b);
-
-    let maxStreak = 0;
-    let currentStreak = 0;
-    let lastIdx = -999;
-    for (const idx of mergedIndices) {
-      if (idx === lastIdx + 1) {
-        currentStreak++;
-      } else {
-        currentStreak = 1;
-      }
-      maxStreak = Math.max(maxStreak, currentStreak);
-      lastIdx = idx;
-    }
-
-    if (maxStreak > 4) {
-      alert("예약은 최대 연속 2시간(4칸)까지만 가능합니다.");
-      return;
-    }
-
-    let updated = [...reservations];
-    rangeSlots.forEach((slot) => {
-      updated = updated.filter(r => !(
-        r.equipment === equipment && 
-        r.day === day && 
-        r.slot === slot
-      ));
-      updated.push({
-        equipment,
-        day,
-        slot,
-        user: currentUserInitials
-      });
-    });
-
-    setReservations(updated);
-    await saveReservationsState(updated);
-    setMobileResModalOpen(false);
-  };
-
-  // Global mouseup listener for cell drag selection
-  useEffect(() => {
-    const handleGlobalMouseUp = async () => {
-      if (isDragging && activeDrag && dragStart !== null && dragEnd !== null) {
-        setIsDragging(false);
-        const currentUserInitials = user?.email?.split("@")[0].toUpperCase() || "UNKNOWN";
-
-        if (dragStart === dragEnd) {
-          // Tap/Click on a single slot
-          const slot = SLOTS[dragStart];
-          const existingRes = reservations.find(r => r.equipment === activeDrag.equipment && r.day === activeDrag.day && r.slot === slot);
-          if (existingRes) {
-            if (existingRes.user === currentUserInitials) {
-              if (window.confirm("이 예약을 취소하시겠습니까?")) {
-                const updated = reservations.filter(r => !(
-                  r.equipment === activeDrag.equipment &&
-                  r.day === activeDrag.day &&
-                  r.slot === slot
-                ));
-                setReservations(updated);
-                await saveReservationsState(updated);
-              }
-            }
-          } else {
-            // Open Duration select modal
-            setMobileResTarget({ equipment: activeDrag.equipment, day: activeDrag.day, slot });
-            setMobileResDuration(1);
-            setMobileResModalOpen(true);
-          }
-        } else {
-          // Drag-select a range
-          const minIdx = Math.min(dragStart, dragEnd);
-          const maxIdx = Math.max(dragStart, dragEnd);
-          const rangeSlots = SLOTS.slice(minIdx, maxIdx + 1);
-
-          const myReservationsInRange = rangeSlots.filter(slot => {
-            const res = reservations.find(r => r.equipment === activeDrag.equipment && r.day === activeDrag.day && r.slot === slot);
-            return res && res.user === currentUserInitials;
-          });
-
-          const othersReservationsInRange = rangeSlots.filter(slot => {
-            const res = reservations.find(r => r.equipment === activeDrag.equipment && r.day === activeDrag.day && r.slot === slot);
-            return res && res.user !== currentUserInitials;
-          });
-
-          let updated = [...reservations];
-
-          if (myReservationsInRange.length === rangeSlots.length) {
-            updated = updated.filter(r => !(
-              r.equipment === activeDrag.equipment && 
-              r.day === activeDrag.day && 
-              rangeSlots.includes(r.slot)
-            ));
-          } else {
-            const existingSlots = reservations
-              .filter(r => r.equipment === activeDrag.equipment && r.day === activeDrag.day && r.user === currentUserInitials)
-              .map(r => r.slot);
-            
-            const mergedSlots = Array.from(new Set([...existingSlots, ...rangeSlots]));
-            const mergedIndices = mergedSlots.map(slot => SLOTS.indexOf(slot)).sort((a, b) => a - b);
-
-            let maxStreak = 0;
-            let currentStreak = 0;
-            let lastIdx = -999;
-            for (const idx of mergedIndices) {
-              if (idx === lastIdx + 1) {
-                currentStreak++;
-              } else {
-                currentStreak = 1;
-              }
-              maxStreak = Math.max(maxStreak, currentStreak);
-              lastIdx = idx;
-            }
-
-            if (maxStreak > 4) {
-              alert("예약은 최대 연속 2시간(4칸)까지만 가능합니다.");
-              setActiveDrag(null);
-              setDragStart(null);
-              setDragEnd(null);
-              return;
-            }
-
-            rangeSlots.forEach((slot) => {
-              const isReservedByOther = othersReservationsInRange.includes(slot);
-              if (!isReservedByOther) {
-                updated = updated.filter(r => !(
-                  r.equipment === activeDrag.equipment && 
-                  r.day === activeDrag.day && 
-                  r.slot === slot
-                ));
-                updated.push({
-                  equipment: activeDrag.equipment,
-                  day: activeDrag.day,
-                  slot,
-                  user: currentUserInitials
-                });
-              }
-            });
-          }
-
-          setReservations(updated);
-          await saveReservationsState(updated);
-        }
-      }
-      setIsDragging(false);
-      setActiveDrag(null);
-      setDragStart(null);
-      setDragEnd(null);
-    };
-
-    window.addEventListener("mouseup", handleGlobalMouseUp);
-    return () => {
-      window.removeEventListener("mouseup", handleGlobalMouseUp);
-    };
-  }, [isDragging, activeDrag, dragStart, dragEnd, reservations, resDbId, user, saveReservationsState]);
-
-  // Drag mouse event handlers
-  const handleCellMouseDown = (equipment: string, day: string, slot: string) => {
-    setIsDragging(true);
-    const idx = SLOTS.indexOf(slot);
-    setDragStart(idx);
-    setDragEnd(idx);
-    setActiveDrag({ equipment, day });
-  };
-
-  const handleCellMouseEnter = (equipment: string, day: string, slot: string) => {
-    if (!isDragging || !activeDrag) return;
-    if (activeDrag.equipment !== equipment || activeDrag.day !== day) return;
-    const idx = SLOTS.indexOf(slot);
-    setDragEnd(idx);
-  };
-
   // Reference Monday: Monday, Jan 5, 2026
   const getWeekOffset = () => {
     const referenceDate = new Date("2026-01-05");
@@ -441,9 +183,7 @@ export default function LabPage() {
     return Math.floor(diff / oneWeek);
   };
 
-
-
-  // 4. Weekly Cleaning & Waste Duty Handlers (Live Editing & Rearranging)
+  // Weekly Cleaning & Waste Duty Handlers
   const saveCleaningState = async (newState: CleaningState) => {
     try {
       if (cleanDbId) {
@@ -463,76 +203,128 @@ export default function LabPage() {
         if (data && data.length > 0) setCleanDbId(data[0].id);
       }
     } catch (err) {
-      console.error("Error saving cleaning rota:", err);
+      console.error("Error saving cleaning duties:", err);
     }
   };
 
-  const handleToggleDuty = async (rotatedIdx: number, field: "cleaning" | "waste") => {
-    const newBase = [...baseAssignments];
-    newBase[rotatedIdx] = {
-      ...newBase[rotatedIdx],
-      [field]: !newBase[rotatedIdx][field]
+  const handleToggleDuty = async (indexInBase: number, type: "cleaning" | "waste") => {
+    const currentAssignments = cleaningState?.assignments || members.map((member, i) => {
+      const N = members.length;
+      const cleaning = i < Math.min(3, N);
+      const s = Math.max(1, Math.floor(N / 2));
+      const wasteIdx = (i - s + N) % N;
+      const waste = wasteIdx < Math.min(2, N);
+      return { member, cleaning, waste };
+    });
+
+    const updated = currentAssignments.map((item, i) => {
+      if (i === indexInBase) {
+        return {
+          ...item,
+          [type]: !item[type]
+        };
+      }
+      return item;
+    });
+
+    const newState: CleaningState = {
+      baseWeek: cleaningState?.baseWeek || 0,
+      assignments: updated
     };
-    
-    const currentWeek = getWeekOffset();
-    const newState = {
-      assignments: newBase,
-      baseWeek: currentWeek
-    };
-    
+
     setCleaningState(newState);
     await saveCleaningState(newState);
   };
 
-  const handleRemoveUser = async (rotatedIdx: number) => {
-    const newBase = baseAssignments.filter((_, idx) => idx !== rotatedIdx);
-    const currentWeek = getWeekOffset();
-    const newState = {
-      assignments: newBase,
-      baseWeek: currentWeek
-    };
-    
-    setCleaningState(newState);
-    await saveCleaningState(newState);
-  };
+  const handleAddUser = async (newMember: string) => {
+    if (!newMember) return;
+    const currentAssignments = cleaningState?.assignments || members.map((member, i) => {
+      const N = members.length;
+      const cleaning = i < Math.min(3, N);
+      const s = Math.max(1, Math.floor(N / 2));
+      const wasteIdx = (i - s + N) % N;
+      const waste = wasteIdx < Math.min(2, N);
+      return { member, cleaning, waste };
+    });
 
-  const handleAddUser = async (member: string) => {
-    if (!member) return;
-    if (baseAssignments.some(item => item.member === member)) return;
-    
-    const newBase = [
-      ...baseAssignments,
-      { member, cleaning: false, waste: false }
+    if (currentAssignments.some(item => item.member === newMember)) return;
+
+    const updated = [
+      ...currentAssignments,
+      { member: newMember, cleaning: false, waste: false }
     ];
-    
-    const currentWeek = getWeekOffset();
-    const newState = {
-      assignments: newBase,
-      baseWeek: currentWeek
+
+    const newState: CleaningState = {
+      baseWeek: cleaningState?.baseWeek || 0,
+      assignments: updated
     };
-    
+
     setCleaningState(newState);
+    await saveCleaningState(newState);
     setShowAddSelect(false);
-    await saveCleaningState(newState);
   };
 
-  const handleRowDrop = async (srcIdx: number, destIdx: number) => {
-    const newBase = [...baseAssignments];
-    const draggedItem = newBase[srcIdx];
-    newBase.splice(srcIdx, 1);
-    newBase.splice(destIdx, 0, draggedItem);
-    
-    const currentWeek = getWeekOffset();
-    const newState = {
-      assignments: newBase,
-      baseWeek: currentWeek
+  const handleRemoveUser = async (indexInBase: number) => {
+    const currentAssignments = cleaningState?.assignments || members.map((member, i) => {
+      const N = members.length;
+      const cleaning = i < Math.min(3, N);
+      const s = Math.max(1, Math.floor(N / 2));
+      const wasteIdx = (i - s + N) % N;
+      const waste = wasteIdx < Math.min(2, N);
+      return { member, cleaning, waste };
+    });
+
+    const updated = currentAssignments.filter((_, i) => i !== indexInBase);
+
+    const newState: CleaningState = {
+      baseWeek: cleaningState?.baseWeek || 0,
+      assignments: updated
     };
-    
+
     setCleaningState(newState);
     await saveCleaningState(newState);
   };
 
-  // 5. Item Order Handlers (Live Sync)
+  const handleRowDrop = async (sourceIdx: number, targetIdx: number) => {
+    if (sourceIdx === targetIdx) return;
+    
+    const currentWeekOffset = getWeekOffset();
+    const baseWeek = cleaningState?.baseWeek || 0;
+    const shift = (currentWeekOffset - baseWeek);
+    const N = members.length;
+    
+    const baseAssignments = cleaningState?.assignments || members.map((member, i) => {
+      const cleaning = i < Math.min(3, N);
+      const s = Math.max(1, Math.floor(N / 2));
+      const wasteIdx = (i - s + N) % N;
+      const waste = wasteIdx < Math.min(2, N);
+      return { member, cleaning, waste };
+    });
+
+    const getRotatedIndex = (idx: number) => {
+      if (N === 0) return 0;
+      let r = (idx - shift) % N;
+      if (r < 0) r += N;
+      return r;
+    };
+
+    const sourceBaseIdx = getRotatedIndex(sourceIdx);
+    const targetBaseIdx = getRotatedIndex(targetIdx);
+
+    const updated = [...baseAssignments];
+    const [moved] = updated.splice(sourceBaseIdx, 1);
+    updated.splice(targetBaseIdx, 0, moved);
+
+    const newState: CleaningState = {
+      baseWeek: cleaningState?.baseWeek || 0,
+      assignments: updated
+    };
+
+    setCleaningState(newState);
+    await saveCleaningState(newState);
+  };
+
+  // Lab Orders Handlers
   const saveOrdersState = async (updatedOrders: LabOrder[]) => {
     try {
       if (orderDbId) {
@@ -552,46 +344,53 @@ export default function LabPage() {
         if (data && data.length > 0) setOrderDbId(data[0].id);
       }
     } catch (err) {
-      console.error("Error saving orders:", err);
+      console.error("Error saving lab orders:", err);
     }
   };
 
   const handleAddOrder = async (itemName: string) => {
-    if (!itemName.trim()) return;
-    const currentUserInitials = user?.email?.split("@")[0].toUpperCase() || "UNKNOWN";
-    
+    if (!itemName.trim() || !user) return;
+    const currentUserInitials = user.email?.split("@")[0].toUpperCase() || "UNKNOWN";
     const newOrder: LabOrder = {
-      id: Math.random().toString(36).substring(2, 9),
+      id: crypto.randomUUID(),
       itemName: itemName.trim(),
       requestedBy: currentUserInitials,
       status: "REQUESTED",
       createdAt: new Date().toISOString()
     };
-    
-    const updated = [...orders, newOrder];
+    const updated = [newOrder, ...orders];
     setOrders(updated);
     setNewItemName("");
     setShowAddOrderInput(false);
     await saveOrdersState(updated);
   };
 
-  const handleUpdateOrderStatus = async (orderId: string, newStatus: "ORDERED" | "RECEIVED") => {
-    const currentUserInitials = user?.email?.split("@")[0].toUpperCase() || "UNKNOWN";
-    
+  const handleUpdateOrderStatus = async (orderId: string, nextStatus: "ORDERED" | "RECEIVED") => {
+    if (!user) return;
+    const currentUserInitials = user.email?.split("@")[0].toUpperCase() || "UNKNOWN";
+    const nowStr = new Date().toISOString();
+
     const updated = orders.map(order => {
-      if (order.id === orderId) {
+      if (order.id !== orderId) return order;
+      if (nextStatus === "ORDERED") {
         return {
           ...order,
-          status: newStatus,
-          orderedAt: newStatus === "ORDERED" ? new Date().toISOString() : order.orderedAt,
-          orderedBy: newStatus === "ORDERED" ? currentUserInitials : order.orderedBy,
-          receivedAt: newStatus === "RECEIVED" ? new Date().toISOString() : order.receivedAt,
-          receivedBy: newStatus === "RECEIVED" ? currentUserInitials : order.receivedBy
+          status: "ORDERED" as const,
+          orderedAt: nowStr,
+          orderedBy: currentUserInitials
+        };
+      }
+      if (nextStatus === "RECEIVED") {
+        return {
+          ...order,
+          status: "RECEIVED" as const,
+          receivedAt: nowStr,
+          receivedBy: currentUserInitials
         };
       }
       return order;
     });
-    
+
     setOrders(updated);
     await saveOrdersState(updated);
   };
@@ -602,33 +401,28 @@ export default function LabPage() {
     await saveOrdersState(updated);
   };
 
-  const currentWeek = getWeekOffset();
-  const baseWeek = cleaningState?.baseWeek !== undefined ? cleaningState.baseWeek : currentWeek;
-  const shift = currentWeek - baseWeek;
+  // Compute calculated weekly cleaning duty assignments
+  const currentWeekOffset = getWeekOffset();
+  const baseWeek = cleaningState?.baseWeek || 0;
+  const shift = (currentWeekOffset - baseWeek);
+  const N = members.length;
   
-  // Resolve base assignments
-  const baseAssignments = cleaningState?.assignments && cleaningState.assignments.length > 0
-    ? cleaningState.assignments
-    : members.map((member, i) => {
-        const total = members.length;
-        // Default: first 3 members clean, middle shifted by total/2 get waste
-        const cleaning = i < Math.min(3, total);
-        const s = Math.max(1, Math.floor(total / 2));
-        const wasteIdx = (i - s + total) % total;
-        const waste = wasteIdx < Math.min(2, total);
-        
-        return { member, cleaning, waste };
-      });
+  const baseAssignments = cleaningState?.assignments || members.map((member, i) => {
+    const cleaning = i < Math.min(3, N);
+    const s = Math.max(1, Math.floor(N / 2));
+    const wasteIdx = (i - s + N) % N;
+    const waste = wasteIdx < Math.min(2, N);
+    return { member, cleaning, waste };
+  });
 
-  const N = baseAssignments.length;
-
-  const assignments = baseAssignments.map((item, i) => {
+  const assignments = members.map((_, i) => {
+    const item = baseAssignments[i] || { member: members[i] || "UNKNOWN", cleaning: false, waste: false };
     if (N === 0) return { member: item.member, cleaning: false, waste: false };
     
     let rotatedIdx = (i - shift) % N;
     if (rotatedIdx < 0) rotatedIdx += N;
     
-    const sourceItem = baseAssignments[rotatedIdx];
+    const sourceItem = baseAssignments[rotatedIdx] || { member: "UNKNOWN", cleaning: false, waste: false };
     return {
       member: item.member,
       cleaning: sourceItem.cleaning,
@@ -644,10 +438,6 @@ export default function LabPage() {
       return new Date(order.receivedAt).getTime() >= threeDaysAgo;
     });
   }, [orders, mountTime]);
-  // Find helper to search reservation state
-  const getReservedUser = (equipment: string, day: string, slot: string) => {
-    return reservations.find(r => r.equipment === equipment && r.day === day && r.slot === slot)?.user || "";
-  };
 
   // Get weekly date range string: (MM.DD ~ MM.DD)
   const getWeeklyDateRangeString = () => {
@@ -659,7 +449,7 @@ export default function LabPage() {
     monday.setDate(today.getDate() - daysToMonday);
     
     const sunday = new Date(monday);
-    sunday.setDate(monday.getDate() + 6);
+    sunday.setDate(sunday.getDate() + 6);
     
     const format = (d: Date) => `${d.getMonth() + 1}.${d.getDate()}`;
     return `(${format(monday)} ~ ${format(sunday)})`;
@@ -671,18 +461,18 @@ export default function LabPage() {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-3 sm:gap-4 shrink-0">
         <div>
-          <h2 className="text-2xl sm:text-3xl font-black font-headline text-primary dark:text-blue-400 tracking-tighter">
-            Atelier Lab Workspace
+          <h2 className="text-2xl sm:text-3xl font-black font-headline text-primary dark:text-blue-400 tracking-tighter flex items-center gap-2">
+            <FlaskConical className="w-7 h-7 text-primary dark:text-blue-400" />
+            <span>Atelier Lab Workspace</span>
           </h2>
           <p className="text-xs sm:text-sm text-on-surface-variant dark:text-gray-400 font-semibold mt-1">
-            실험실 벤치 예약, 연구 물품 주문, 주간 청소 당번을 실시간으로 관리합니다.
+            연구 물품 주문 현황과 주간 청소 당번을 실시간으로 관리합니다.
           </p>
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={() => {
               setLoading(true);
-              // Trigger reload
               window.location.reload();
             }}
             className="p-2.5 sm:p-3 bg-surface-container-low dark:bg-slate-800 text-on-surface-variant dark:text-gray-400 rounded-2xl hover:text-primary dark:hover:text-white transition-all cursor-pointer shadow-sm active:scale-95 shrink-0"
@@ -698,631 +488,331 @@ export default function LabPage() {
           <RefreshCw className="w-8 h-8 text-primary dark:text-blue-500 animate-spin" />
         </div>
       ) : (
-        <div className="space-y-6 sm:space-y-8 flex-1 overflow-y-auto pr-1 sm:pr-2 custom-scrollbar">
+        <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-8 min-h-0">
 
-          {/* Mobile Only: Day of Week Tabs */}
-          <div className="flex md:hidden bg-surface-container-low dark:bg-slate-800/80 p-1.5 rounded-2xl gap-1 shrink-0 select-none shadow-sm">
-            {DAYS.map((day) => {
-              const isActive = selectedDayTab === day;
-              return (
-                <button
-                  key={day}
-                  type="button"
-                  onClick={() => setSelectedDayTab(day)}
-                  className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer text-center ${
-                    isActive
-                      ? "bg-primary dark:bg-blue-600 text-white shadow-sm font-extrabold scale-[1.02]"
-                      : "text-on-surface-variant/70 dark:text-gray-400 hover:bg-black/5 dark:hover:bg-white/5"
-                  }`}
-                >
-                  {day}요일
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Top Section: Two Reservation Tables */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-6">
+          {/* Left Column: Item Orders Status */}
+          <div className="bg-white dark:bg-slate-800 rounded-[2rem] sm:rounded-[2.5rem] p-5 sm:p-7 shadow-md border border-black/[0.02] dark:border-white/[0.02] flex flex-col min-h-[420px] overflow-hidden">
             
-            {/* Table 1: Equipment A */}
-            <div className="bg-white dark:bg-slate-800 rounded-[2rem] sm:rounded-[2.5rem] p-5 sm:p-6 shadow-md border border-black/[0.02] dark:border-white/[0.02] flex flex-col h-full">
-              <div className="pb-3 border-b border-black/[0.02] dark:border-white/[0.02] shrink-0">
-                <h3 className="text-base font-black text-primary dark:text-white flex items-center gap-2">
-                  <FlaskConical className="w-5 h-5 text-emerald-500 animate-pulse" />
-                  <span>왼쪽 벤치 (Bench A)</span>
-                </h3>
-              </div>
-
-              {/* Scroll-free Scheduler */}
-              <div className="mt-4 border border-black/[0.03] dark:border-white/[0.03] rounded-2xl">
-                <table className="w-full table-fixed text-center border-collapse text-[11px] font-semibold">
-                  <thead className="sticky top-0 bg-slate-50 dark:bg-slate-700 text-on-surface-variant dark:text-gray-300 border-b border-black/[0.02] dark:border-white/[0.02] z-10">
-                    <tr>
-                      <th className="py-2 px-3 font-black bg-slate-100 dark:bg-slate-800/80 w-16">시간</th>
-                      {DAYS.map(day => {
-                        const isTabActive = day === selectedDayTab;
-                        return (
-                          <th 
-                            key={day} 
-                            className={`py-2 font-black ${
-                              isTabActive 
-                                ? "table-cell w-full md:w-[17.6%]" 
-                                : "hidden md:table-cell md:w-[17.6%]"
-                            }`}
-                          >
-                            {day}
-                          </th>
-                        );
-                      })}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-black/[0.02] dark:divide-white/[0.02]">
-                    {SLOTS.map((slot) => (
-                      <tr key={slot} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/20 transition-all">
-                        <td className="py-1.5 bg-slate-50/50 dark:bg-slate-800/40 text-[10px] font-black border-r border-black/[0.01] dark:border-white/[0.01] sticky left-0 z-0 select-none">
-                          {slot}
-                        </td>
-                        {DAYS.map((day) => {
-                          const userRes = getReservedUser("A", day, slot);
-                          const color = userRes ? getColorForUser(userRes) : null;
-                          const isSelectedInDrag = (() => {
-                            if (!isDragging || !activeDrag) return false;
-                            if (activeDrag.equipment !== "A" || activeDrag.day !== day) return false;
-                            if (dragStart === null || dragEnd === null) return false;
-                            const idx = SLOTS.indexOf(slot);
-                            const min = Math.min(dragStart, dragEnd);
-                            const max = Math.max(dragStart, dragEnd);
-                            return idx >= min && idx <= max;
-                          })();
-
-                          const isTabActive = day === selectedDayTab;
-
-                          return (
-                            <td 
-                              key={day}
-                              onMouseDown={() => handleCellMouseDown("A", day, slot)}
-                              onMouseEnter={() => handleCellMouseEnter("A", day, slot)}
-                              className={`py-1.5 px-0.5 border-r border-black/[0.01] dark:border-white/[0.01] cursor-pointer transition-all select-none ${
-                                isTabActive ? "table-cell" : "hidden md:table-cell"
-                              } ${
-                                userRes 
-                                  ? `${color?.bg} ${color?.text} hover:opacity-90` 
-                                  : isSelectedInDrag
-                                  ? "bg-blue-100/60 dark:bg-blue-900/30 ring-1 ring-blue-400"
-                                  : "hover:bg-primary/5 text-transparent hover:text-primary/30"
-                              }`}
-                            >
-                              <div className="py-0.5 rounded-lg flex items-center justify-center font-bold text-[10px]">
-                                {userRes ? userRes : "+"}
-                              </div>
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            {/* Table 2: Equipment B */}
-            <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] p-6 shadow-md border border-black/[0.02] dark:border-white/[0.02] flex flex-col h-full">
-              <div className="pb-3 border-b border-black/[0.02] dark:border-white/[0.02] shrink-0">
-                <h3 className="text-base font-black text-primary dark:text-white flex items-center gap-2">
-                  <FlaskConical className="w-5 h-5 text-blue-500 animate-pulse" />
-                  <span>오른쪽 벤치</span>
-                </h3>
-              </div>
-
-              {/* Scroll-free Scheduler */}
-              <div className="mt-4 border border-black/[0.03] dark:border-white/[0.03] rounded-2xl">
-                <table className="w-full table-fixed text-center border-collapse text-[11px] font-semibold">
-                  <thead className="sticky top-0 bg-slate-50 dark:bg-slate-700 text-on-surface-variant dark:text-gray-300 border-b border-black/[0.02] dark:border-white/[0.02] z-10">
-                    <tr>
-                      <th className="py-2 px-3 font-black bg-slate-100 dark:bg-slate-800/80 w-16">시간</th>
-                      {DAYS.map(day => {
-                        const isTabActive = day === selectedDayTab;
-                        return (
-                          <th 
-                            key={day} 
-                            className={`py-2 font-black ${
-                              isTabActive 
-                                ? "table-cell w-full md:w-[17.6%]" 
-                                : "hidden md:table-cell md:w-[17.6%]"
-                            }`}
-                          >
-                            {day}
-                          </th>
-                        );
-                      })}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-black/[0.02] dark:divide-white/[0.02]">
-                    {SLOTS.map((slot) => (
-                      <tr key={slot} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/20 transition-all">
-                        <td className="py-1.5 bg-slate-50/50 dark:bg-slate-800/40 text-[10px] font-black border-r border-black/[0.01] dark:border-white/[0.01] sticky left-0 z-0 select-none">
-                          {slot}
-                        </td>
-                        {DAYS.map((day) => {
-                          const userRes = getReservedUser("B", day, slot);
-                          const color = userRes ? getColorForUser(userRes) : null;
-                          const isSelectedInDrag = (() => {
-                            if (!isDragging || !activeDrag) return false;
-                            if (activeDrag.equipment !== "B" || activeDrag.day !== day) return false;
-                            if (dragStart === null || dragEnd === null) return false;
-                            const idx = SLOTS.indexOf(slot);
-                            const min = Math.min(dragStart, dragEnd);
-                            const max = Math.max(dragStart, dragEnd);
-                            return idx >= min && idx <= max;
-                          })();
-
-                          const isTabActive = day === selectedDayTab;
-
-                          return (
-                            <td 
-                              key={day}
-                              onMouseDown={() => handleCellMouseDown("B", day, slot)}
-                              onMouseEnter={() => handleCellMouseEnter("B", day, slot)}
-                              className={`py-1.5 px-0.5 border-r border-black/[0.01] dark:border-white/[0.01] cursor-pointer transition-all select-none ${
-                                isTabActive ? "table-cell" : "hidden md:table-cell"
-                              } ${
-                                userRes 
-                                  ? `${color?.bg} ${color?.text} hover:opacity-90` 
-                                  : isSelectedInDrag
-                                  ? "bg-blue-100/60 dark:bg-blue-900/30 ring-1 ring-blue-400"
-                                  : "hover:bg-primary/5 text-transparent hover:text-primary/30"
-                              }`}
-                            >
-                              <div className="py-0.5 rounded-lg flex items-center justify-center font-bold text-[10px]">
-                                {userRes ? userRes : "+"}
-                              </div>
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-          </div>
-
-          {/* Bottom Section: Left Orders, Right Cleaning Duty */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 shrink-0">
-
-            {/* Left Column: Item Orders Status */}
-            <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] p-6 shadow-md border border-black/[0.02] dark:border-white/[0.02] min-h-[340px] h-full flex flex-col justify-between overflow-hidden">
+            <div className="flex justify-between items-center pb-3 border-b border-black/[0.03] dark:border-white/[0.03] shrink-0">
+              <h3 className="text-base sm:text-lg font-black text-primary dark:text-white flex items-center gap-2">
+                <ShoppingCart className="w-5 h-5 text-blue-500" />
+                <span>연구실 물품 주문 현황 ({visibleOrders.length}건)</span>
+              </h3>
               
-              <div className="flex justify-between items-center pb-2 border-b border-black/[0.02] dark:border-white/[0.02] shrink-0">
-                <h3 className="text-sm font-black text-primary dark:text-white flex items-center gap-2">
-                  <ShoppingCart className="w-4.5 h-4.5 text-blue-500" />
-                  <span>연구실 물품 주문 현황</span>
-                </h3>
-                
+              <button
+                onClick={() => setShowAddOrderInput(!showAddOrderInput)}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-xl font-bold text-xs shadow-sm transition-all cursor-pointer active:scale-95"
+                title="물품 추가"
+              >
+                <Plus className="w-4 h-4" />
+                <span className="hidden sm:inline">물품 요청</span>
+              </button>
+            </div>
+
+            {/* Inline Addition Input Form */}
+            {showAddOrderInput && (
+              <form 
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleAddOrder(newItemName);
+                }}
+                className="flex gap-2 p-2.5 mt-3 bg-slate-50 dark:bg-slate-900/70 rounded-2xl border border-black/[0.03] dark:border-white/[0.03] shrink-0 animate-fade-in shadow-inner"
+              >
+                <input
+                  type="text"
+                  value={newItemName}
+                  onChange={(e) => setNewItemName(e.target.value)}
+                  placeholder="주문할 물품명을 입력하세요..."
+                  className="flex-1 bg-white dark:bg-slate-800 border border-black/10 dark:border-white/10 rounded-xl px-3 py-2 text-xs font-bold text-foreground outline-none focus:ring-2 focus:ring-blue-500/20"
+                  autoFocus
+                />
                 <button
-                  onClick={() => setShowAddOrderInput(!showAddOrderInput)}
-                  className="w-6 h-6 bg-blue-500 hover:bg-blue-600 text-white rounded-lg flex items-center justify-center font-bold shadow-sm transition-all cursor-pointer"
-                  title="물품 추가"
+                  type="submit"
+                  className="px-3.5 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-xl text-xs font-black cursor-pointer shadow-sm transition-all active:scale-95"
                 >
-                  <Plus className="w-3.5 h-3.5" />
+                  추가
                 </button>
-              </div>
-
-              {/* Inline Addition Input Form */}
-              {showAddOrderInput && (
-                <form 
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    handleAddOrder(newItemName);
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAddOrderInput(false);
+                    setNewItemName("");
                   }}
-                  className="flex gap-1.5 p-2 mt-3 bg-slate-50 dark:bg-slate-900/60 rounded-2xl border border-black/[0.01] dark:border-white/[0.01] shrink-0 animate-fade-in"
+                  className="px-3 py-2 bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-foreground dark:text-gray-200 rounded-xl text-xs font-black cursor-pointer transition-all"
                 >
-                  <input
-                    type="text"
-                    value={newItemName}
-                    onChange={(e) => setNewItemName(e.target.value)}
-                    placeholder="주문할 물품명을 입력하세요..."
-                    className="flex-1 bg-white dark:bg-slate-800 border border-black/10 dark:border-white/10 rounded-xl px-2.5 py-1.5 text-[10px] font-bold text-foreground outline-none focus:ring-1 focus:ring-blue-500"
-                    autoFocus
-                  />
-                  <button
-                    type="submit"
-                    className="px-2.5 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-xl text-[10px] font-black cursor-pointer shadow-sm transition-all"
-                  >
-                    추가
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowAddOrderInput(false);
-                      setNewItemName("");
-                    }}
-                    className="px-2.5 py-1.5 bg-slate-300 hover:bg-slate-400 dark:bg-slate-750 dark:hover:bg-slate-600 text-foreground dark:text-gray-200 rounded-xl text-[10px] font-black cursor-pointer transition-all"
-                  >
-                    취소
-                  </button>
-                </form>
-              )}
+                  취소
+                </button>
+              </form>
+            )}
 
-              {/* Orders List Container */}
-              <div className="flex-1 overflow-y-auto my-3 space-y-2 pr-1 custom-scrollbar min-h-[160px]">
-                {visibleOrders.length === 0 ? (
-                  <div className="h-full flex flex-col items-center justify-center text-on-surface-variant/30 dark:text-gray-600 select-none py-10">
-                    <ShoppingCart className="w-8 h-8 mx-auto opacity-30 mb-2" />
-                    <p className="text-xs font-black uppercase tracking-widest">주문 내역 없음</p>
-                    <p className="text-[9px] font-medium opacity-60 mt-1">우측 상단 + 버튼으로 새 주문을 등록하세요.</p>
-                  </div>
-                ) : (
-                  visibleOrders.map((order) => {
-                    const hasRequested = order.status === "REQUESTED";
-                    const hasOrdered = order.status === "ORDERED";
-                    const hasReceived = order.status === "RECEIVED";
-                    const color = getColorForUser(order.requestedBy);
+            {/* Orders List Container */}
+            <div className="flex-1 overflow-y-auto my-3 space-y-2.5 pr-1 custom-scrollbar min-h-[200px]">
+              {visibleOrders.length === 0 ? (
+                <div className="h-full min-h-[180px] flex flex-col items-center justify-center text-center p-6 text-on-surface-variant/40 dark:text-gray-500 space-y-2">
+                  <ShoppingCart className="w-10 h-10 opacity-20" />
+                  <span className="text-xs font-bold">현재 등록된 물품 주문 요청이 없습니다.</span>
+                </div>
+              ) : (
+                visibleOrders.map((order) => {
+                  const color = getColorForUser(order.requestedBy);
+                  const hasRequested = order.status === "REQUESTED";
+                  const hasOrdered = order.status === "ORDERED";
+                  const hasReceived = order.status === "RECEIVED";
 
-                    const statusClass = hasRequested
-                      ? "bg-amber-50/30 border-amber-200/40 dark:bg-amber-950/10 dark:border-amber-900/20"
-                      : hasOrdered
-                      ? "bg-blue-50/30 border-blue-200/40 dark:bg-blue-950/10 dark:border-blue-900/20"
-                      : "bg-slate-100/30 border-slate-200/10 dark:bg-slate-900/20 dark:border-slate-800/10 opacity-30";
-
-                    return (
-                      <div 
-                        key={order.id} 
-                        className={`flex items-center justify-between p-2.5 rounded-xl border transition-all group ${statusClass}`}
-                      >
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <span className={`w-5 h-5 rounded-md flex items-center justify-center font-headline font-black text-[8px] border ${color.badge} shrink-0`}>
-                            {order.requestedBy}
+                  return (
+                    <div 
+                      key={order.id} 
+                      className={`group flex items-center justify-between p-3 sm:p-3.5 rounded-2xl border transition-all ${
+                        hasReceived 
+                          ? "bg-slate-50/60 dark:bg-slate-900/30 border-black/[0.02] dark:border-white/[0.02] opacity-70" 
+                          : hasOrdered 
+                          ? "bg-blue-50/50 dark:bg-blue-950/20 border-blue-100/60 dark:border-blue-900/30 shadow-sm" 
+                          : "bg-surface-container-low dark:bg-slate-900/60 border-black/[0.03] dark:border-white/[0.03]"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                        <span className={`w-6 h-6 rounded-lg flex items-center justify-center font-headline font-black text-[9px] border shadow-inner ${color.badge} shrink-0`}>
+                          {order.requestedBy}
+                        </span>
+                        <div className="flex flex-col min-w-0">
+                          <span className={`text-xs sm:text-sm font-bold text-foreground dark:text-gray-200 truncate ${
+                            hasReceived ? "line-through text-on-surface-variant/40" : ""
+                          }`}>
+                            {order.itemName}
                           </span>
-                          <div className="flex flex-col min-w-0">
-                            <span className={`text-[10px] font-bold text-foreground dark:text-gray-200 truncate ${
-                              hasReceived ? "line-through text-on-surface-variant/40" : ""
-                            }`}>
-                              {order.itemName}
-                            </span>
-                            <span className="text-[8px] text-on-surface-variant/50 dark:text-gray-400 font-semibold flex items-center gap-1 mt-0.5 select-none">
-                              <span>요청: {order.requestedBy}</span>
-                              {order.orderedBy && (
-                                <>
-                                  <span>•</span>
-                                  <span className="text-amber-600 dark:text-amber-400">주문: {order.orderedBy}</span>
-                                </>
-                              )}
-                              {order.receivedBy && (
-                                <>
-                                  <span>•</span>
-                                  <span className="text-blue-600 dark:text-blue-400">수령: {order.receivedBy}</span>
-                                </>
-                              )}
-                            </span>
-                          </div>
-                        </div>
-                        
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          {/* Step 1: Cart (Order) Button */}
-                          <button
-                            type="button"
-                            onClick={() => handleUpdateOrderStatus(order.id, "ORDERED")}
-                            disabled={!hasRequested}
-                            className={`p-1.5 rounded-lg transition-all flex items-center justify-center border ${
-                              hasRequested
-                                ? "bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 text-amber-600 dark:text-amber-300 border-amber-200 dark:border-amber-900/30 cursor-pointer"
-                                : "bg-emerald-50 text-emerald-500 dark:bg-emerald-950/20 dark:text-emerald-400 border-emerald-100 dark:border-emerald-900/20 opacity-50 cursor-not-allowed"
-                            }`}
-                            title={hasRequested ? "물품 주문하기" : "주문 완료"}
-                          >
-                            <ShoppingCart className="w-3.5 h-3.5" />
-                          </button>
-
-                          {/* Step 2: Truck (Receive) Button */}
-                          <button
-                            type="button"
-                            onClick={() => handleUpdateOrderStatus(order.id, "RECEIVED")}
-                            disabled={!hasOrdered}
-                            className={`p-1.5 rounded-lg transition-all flex items-center justify-center border ${
-                              hasOrdered
-                                ? "bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/40 text-blue-600 dark:text-blue-300 border-blue-200 dark:border-blue-900/30 cursor-pointer animate-pulse"
-                                : hasReceived
-                                ? "bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500 border-slate-200 dark:border-slate-700 opacity-50 cursor-not-allowed"
-                                : "bg-slate-100 text-slate-300 dark:bg-slate-800 dark:text-slate-700 opacity-20 cursor-not-allowed"
-                            }`}
-                            title={hasOrdered ? "수령 완료 처리" : hasReceived ? "수령 완료됨" : "수령 준비 대기"}
-                          >
-                            <Truck className="w-3.5 h-3.5" />
-                          </button>
-
-                          {/* Delete (X) Button */}
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteOrder(order.id)}
-                            className="text-on-surface-variant/40 dark:text-gray-500 hover:text-red-500 opacity-0 group-hover:opacity-60 hover:!opacity-100 transition-all p-0.5 shrink-0 cursor-pointer"
-                            title="제거"
-                          >
-                            <X className="w-3.5 h-3.5" />
-                          </button>
+                          <span className="text-[9px] sm:text-[10px] text-on-surface-variant/60 dark:text-gray-400 font-medium flex items-center gap-1.5 mt-0.5 select-none">
+                            <span>요청: {order.requestedBy}</span>
+                            {order.orderedBy && (
+                              <>
+                                <span>•</span>
+                                <span className="text-amber-600 dark:text-amber-400 font-bold">주문: {order.orderedBy}</span>
+                              </>
+                            )}
+                            {order.receivedBy && (
+                              <>
+                                <span>•</span>
+                                <span className="text-blue-600 dark:text-blue-400 font-bold">수령: {order.receivedBy}</span>
+                              </>
+                            )}
+                          </span>
                         </div>
                       </div>
-                    );
-                  })
-                )}
-              </div>
+                      
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {/* Step 1: Cart (Order) Button */}
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateOrderStatus(order.id, "ORDERED")}
+                          disabled={!hasRequested}
+                          className={`px-2.5 py-1.5 rounded-xl transition-all flex items-center gap-1 border text-xs font-bold ${
+                            hasRequested
+                              ? "bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 text-amber-600 dark:text-amber-300 border-amber-200 dark:border-amber-900/30 cursor-pointer shadow-sm active:scale-95"
+                              : "bg-emerald-50 text-emerald-500 dark:bg-emerald-950/20 dark:text-emerald-400 border-emerald-100 dark:border-emerald-900/20 opacity-50 cursor-not-allowed"
+                          }`}
+                          title={hasRequested ? "물품 주문 완료 처리" : "주문 완료"}
+                        >
+                          <ShoppingCart className="w-3.5 h-3.5" />
+                          <span className="hidden sm:inline">{hasRequested ? "주문하기" : "주문완료"}</span>
+                        </button>
 
-              {/* Caption */}
-              <div className="text-[9px] text-on-surface-variant/50 dark:text-gray-500 font-bold flex items-center justify-between shrink-0 pt-2 border-t border-black/5 dark:border-white/5 select-none">
-                <span>※ 수령 완료 물품은 3일 후 자동 제거됩니다.</span>
-              </div>
+                        {/* Step 2: Truck (Receive) Button */}
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateOrderStatus(order.id, "RECEIVED")}
+                          disabled={!hasOrdered}
+                          className={`px-2.5 py-1.5 rounded-xl transition-all flex items-center gap-1 border text-xs font-bold ${
+                            hasOrdered
+                              ? "bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/40 text-blue-600 dark:text-blue-300 border-blue-200 dark:border-blue-900/30 cursor-pointer animate-pulse shadow-sm active:scale-95"
+                              : hasReceived
+                              ? "bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500 border-slate-200 dark:border-slate-700 opacity-50 cursor-not-allowed"
+                              : "bg-slate-100 text-slate-300 dark:bg-slate-800 dark:text-slate-700 opacity-20 cursor-not-allowed"
+                          }`}
+                          title={hasOrdered ? "수령 완료 처리" : hasReceived ? "수령 완료됨" : "수령 준비 대기"}
+                        >
+                          <Truck className="w-3.5 h-3.5" />
+                          <span className="hidden sm:inline">{hasReceived ? "수령됨" : "수령확인"}</span>
+                        </button>
 
+                        {/* Delete (X) Button */}
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteOrder(order.id)}
+                          className="text-on-surface-variant/40 dark:text-gray-500 hover:text-red-500 p-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/20 transition-all shrink-0 cursor-pointer"
+                          title="삭제"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
             </div>
 
-            {/* Right Column: Cleaning & Waste Duties Table */}
-            <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] p-6 shadow-md border border-black/[0.02] dark:border-white/[0.02] min-h-[340px] h-full flex flex-col justify-between overflow-hidden">
-              
-              <div className="flex justify-between items-center pb-2 border-b border-black/[0.02] dark:border-white/[0.02] shrink-0">
-                <h3 className="text-sm font-black text-primary dark:text-white flex items-center gap-2">
-                  <Sparkles className="w-4.5 h-4.5 text-amber-500" />
-                  <span>연구실 주간 청소 {getWeeklyDateRangeString()}</span>
-                </h3>
-                
-                <div className="flex items-center gap-1.5 relative">
-                  {showAddSelect && (
-                    <select
-                      className="bg-white dark:bg-slate-700 border border-black/15 dark:border-white/15 rounded-lg px-2 py-1 text-[10px] outline-none font-bold text-foreground w-[120px] cursor-pointer absolute right-8 top-0 z-20 animate-fade-in shadow-lg"
-                      defaultValue=""
-                      onChange={(e) => handleAddUser(e.target.value)}
-                      onBlur={() => setTimeout(() => setShowAddSelect(false), 200)}
-                    >
-                      <option value="" disabled>멤버 추가...</option>
-                      {members
-                        .filter(m => !baseAssignments.some(ba => ba.member === m))
-                        .map(m => (
-                          <option key={m} value={m}>{m}</option>
-                        ))
-                      }
-                    </select>
-                  )}
-                  <button
-                    onClick={() => setShowAddSelect(!showAddSelect)}
-                    className="w-6 h-6 bg-blue-500 hover:bg-blue-600 text-white rounded-lg flex items-center justify-center font-bold shadow-sm transition-all cursor-pointer"
-                    title="사용자 추가"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Weekly Duties 3-Column Table with Drag Sorting */}
-              <div className="my-3 border border-black/[0.03] dark:border-white/[0.03] rounded-2xl">
-                <table className="w-full text-center border-collapse text-[11px] font-semibold table-fixed">
-                  <thead className="sticky top-0 bg-slate-50 dark:bg-slate-700 text-on-surface-variant dark:text-gray-300 border-b border-black/[0.02] dark:border-white/[0.02] z-10 select-none">
-                    <tr>
-                      <th className="py-2.5 font-black w-[34%] bg-slate-50 dark:bg-slate-700">사용자</th>
-                      <th className="py-2.5 font-black w-[33%] bg-slate-50 dark:bg-slate-700">청소</th>
-                      <th className="py-2.5 font-black w-[33%] bg-slate-50 dark:bg-slate-700">폐기물</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-black/[0.02] dark:divide-white/[0.02]">
-                    {assignments.map((row, idx) => {
-                      let rotatedIdx = (idx - shift) % N;
-                      if (rotatedIdx < 0) rotatedIdx += N;
-                      
-                      return (
-                        <tr 
-                          key={row.member} 
-                          draggable={true}
-                          onDragStart={(e) => {
-                            setDraggedRowIdx(idx);
-                            e.dataTransfer.effectAllowed = "move";
-                          }}
-                          onDragOver={(e) => {
-                            e.preventDefault();
-                          }}
-                          onDrop={(e) => {
-                            e.preventDefault();
-                            if (draggedRowIdx !== null && draggedRowIdx !== idx) {
-                              handleRowDrop(draggedRowIdx, idx);
-                            }
-                          }}
-                          onDragEnd={() => {
-                            setDraggedRowIdx(null);
-                          }}
-                          className={`group hover:bg-slate-50/50 dark:hover:bg-slate-700/20 transition-all select-none ${
-                            draggedRowIdx === idx ? "opacity-30 bg-slate-100 dark:bg-slate-900" : ""
-                          }`}
-                        >
-                          <td className="py-2 border-r border-black/[0.01] dark:border-white/[0.01]">
-                            <div className="flex items-center justify-between gap-1.5 px-2">
-                              <div className="flex items-center gap-1.5 min-w-0">
-                                {/* Desktop: Drag Grip */}
-                                <GripVertical className="hidden md:block w-3.5 h-3.5 text-on-surface-variant/30 shrink-0 cursor-grab active:cursor-grabbing" />
-                                
-                                {/* Mobile: Move Buttons */}
-                                <div className="flex md:hidden items-center gap-1 shrink-0 select-none">
-                                  <button
-                                    type="button"
-                                    disabled={idx === 0}
-                                    onClick={() => handleRowDrop(idx, idx - 1)}
-                                    className={`w-5 h-5 flex items-center justify-center rounded text-[9px] font-black bg-slate-100 dark:bg-slate-700 active:scale-90 ${
-                                      idx === 0 ? "opacity-20 cursor-not-allowed" : "text-primary dark:text-blue-400 cursor-pointer"
-                                    }`}
-                                    title="위로 이동"
-                                  >
-                                    ▲
-                                  </button>
-                                  <button
-                                    type="button"
-                                    disabled={idx === assignments.length - 1}
-                                    onClick={() => handleRowDrop(idx, idx + 1)}
-                                    className={`w-5 h-5 flex items-center justify-center rounded text-[9px] font-black bg-slate-100 dark:bg-slate-700 active:scale-90 ${
-                                      idx === assignments.length - 1 ? "opacity-20 cursor-not-allowed" : "text-primary dark:text-blue-400 cursor-pointer"
-                                    }`}
-                                    title="아래로 이동"
-                                  >
-                                    ▼
-                                  </button>
-                                </div>
-
-                                <span className="text-xs text-foreground dark:text-white font-bold truncate">
-                                  {row.member}
-                                </span>
-                              </div>
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveUser(rotatedIdx)}
-                                className="text-on-surface-variant/40 dark:text-gray-500 hover:text-red-500 opacity-0 group-hover:opacity-60 hover:!opacity-100 transition-all p-1 shrink-0 cursor-pointer"
-                                title="제거"
-                              >
-                                <X className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          </td>
-                          <td 
-                            className={`py-2 border-r border-black/[0.01] dark:border-white/[0.01] px-1 cursor-pointer select-none transition-all ${
-                              row.cleaning 
-                                ? "bg-blue-500 dark:bg-blue-600 hover:bg-blue-600 dark:hover:bg-blue-500 text-white font-black" 
-                                : "hover:bg-slate-50 dark:hover:bg-slate-700/20 text-transparent"
-                            }`}
-                            onClick={() => handleToggleDuty(rotatedIdx, "cleaning")}
-                          >
-                            <span className="text-xs select-none">✓</span>
-                          </td>
-                          <td 
-                            className={`py-2 px-1 cursor-pointer select-none transition-all ${
-                              row.waste 
-                                ? "bg-blue-500 dark:bg-blue-600 hover:bg-blue-600 dark:hover:bg-blue-500 text-white font-black" 
-                                : "hover:bg-slate-50 dark:hover:bg-slate-700/20 text-transparent"
-                            }`}
-                            onClick={() => handleToggleDuty(rotatedIdx, "waste")}
-                          >
-                            <span className="text-xs select-none">✓</span>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Caption */}
-              <div className="text-[9px] text-on-surface-variant/50 dark:text-gray-500 font-bold flex items-center justify-between shrink-0 pt-2 border-t border-black/5 dark:border-white/5 select-none">
-                <span>※ 드래그하여 순번을 정하고, 빈 칸을 눌러 배출 주간 당번을 표시합니다.</span>
-                <span>offset: +{shift}주</span>
-              </div>
-
+            {/* Caption */}
+            <div className="text-[10px] text-on-surface-variant/50 dark:text-gray-500 font-bold flex items-center justify-between shrink-0 pt-2.5 border-t border-black/[0.03] dark:border-white/[0.03] select-none">
+              <span>※ 수령 완료 물품은 3일 후 자동 정리됩니다.</span>
             </div>
 
           </div>
 
-        </div>
-      )}
-
-      {/* Mobile/Tap Duration Select Reservation Modal */}
-      {mobileResModalOpen && mobileResTarget && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-md z-[200] flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-[400px] rounded-[2.5rem] shadow-2xl p-8 space-y-6">
+          {/* Right Column: Cleaning & Waste Duties Table */}
+          <div className="bg-white dark:bg-slate-800 rounded-[2rem] sm:rounded-[2.5rem] p-5 sm:p-7 shadow-md border border-black/[0.02] dark:border-white/[0.02] flex flex-col min-h-[420px] overflow-hidden">
             
-            <div className="flex justify-between items-center pb-2 border-b border-black/[0.02] dark:border-white/[0.02]">
-              <h3 className="text-lg font-black text-primary dark:text-white flex items-center gap-2">
-                <FlaskConical className="w-5 h-5 text-blue-500" />
-                <span>{mobileResTarget.equipment === "A" ? "왼쪽 벤치" : "오른쪽 벤치"} 예약</span>
+            <div className="flex justify-between items-center pb-3 border-b border-black/[0.03] dark:border-white/[0.03] shrink-0">
+              <h3 className="text-base sm:text-lg font-black text-primary dark:text-white flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-amber-500" />
+                <span>주간 청소 당번 {getWeeklyDateRangeString()}</span>
               </h3>
-              <button 
-                onClick={() => setMobileResModalOpen(false)}
-                className="p-1 hover:bg-surface-container-low dark:hover:bg-slate-800 rounded-full cursor-pointer"
-              >
-                <X className="w-5 h-5 text-on-surface-variant/40" />
-              </button>
+              
+              <div className="flex items-center gap-2 relative">
+                {showAddSelect && (
+                  <select
+                    className="bg-white dark:bg-slate-700 border border-black/15 dark:border-white/15 rounded-xl px-2.5 py-1.5 text-xs outline-none font-bold text-foreground w-[130px] cursor-pointer absolute right-9 top-0 z-20 animate-fade-in shadow-xl"
+                    defaultValue=""
+                    onChange={(e) => handleAddUser(e.target.value)}
+                    onBlur={() => setTimeout(() => setShowAddSelect(false), 200)}
+                  >
+                    <option value="" disabled>멤버 선택...</option>
+                    {members
+                      .filter(m => !baseAssignments.some(ba => ba.member === m))
+                      .map(m => (
+                        <option key={m} value={m}>{m}</option>
+                      ))
+                    }
+                  </select>
+                )}
+                <button
+                  onClick={() => setShowAddSelect(!showAddSelect)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-xl font-bold text-xs shadow-sm transition-all cursor-pointer active:scale-95"
+                  title="멤버 추가"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span className="hidden sm:inline">당번 추가</span>
+                </button>
+              </div>
             </div>
 
-            <div className="space-y-4">
-              <div className="bg-slate-50 dark:bg-slate-800/80 p-4 rounded-2xl border border-black/[0.02] dark:border-white/[0.02] space-y-2">
-                <div className="text-xs font-bold text-on-surface-variant/60 dark:text-gray-400">
-                  📅 예약 일시: <span className="text-foreground dark:text-white font-extrabold">{mobileResTarget.day}요일 {mobileResTarget.slot}</span>
-                </div>
-                <div className="text-xs font-bold text-on-surface-variant/60 dark:text-gray-400">
-                  👤 예약자: <span className="text-foreground dark:text-white font-extrabold">{user?.email?.split("@")[0].toUpperCase()}</span>
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <label className="text-[10px] font-black uppercase text-on-surface-variant/50 dark:text-gray-400 tracking-wider">이용 예정 시간</label>
-                <div className="grid grid-cols-1 gap-2">
-                  {(() => {
-                    const options = [];
-                    const startIdx = SLOTS.indexOf(mobileResTarget.slot);
-                    const currentUserInitials = user?.email?.split("@")[0].toUpperCase() || "UNKNOWN";
+            {/* Weekly Duties 3-Column Table with Drag Sorting */}
+            <div className="my-3 border border-black/[0.03] dark:border-white/[0.03] rounded-2xl overflow-hidden flex-1 flex flex-col">
+              <table className="w-full text-center border-collapse text-xs font-semibold table-fixed">
+                <thead className="sticky top-0 bg-slate-50 dark:bg-slate-700 text-on-surface-variant dark:text-gray-300 border-b border-black/[0.02] dark:border-white/[0.02] z-10 select-none">
+                  <tr>
+                    <th className="py-3 font-black w-[40%] bg-slate-50 dark:bg-slate-700">사용자</th>
+                    <th className="py-3 font-black w-[30%] bg-slate-50 dark:bg-slate-700">청소</th>
+                    <th className="py-3 font-black w-[30%] bg-slate-50 dark:bg-slate-700">폐기물</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-black/[0.02] dark:divide-white/[0.02]">
+                  {assignments.map((row, idx) => {
+                    let rotatedIdx = (idx - shift) % N;
+                    if (rotatedIdx < 0) rotatedIdx += N;
                     
-                    for (let len = 1; len <= 4; len++) {
-                      const endIdx = startIdx + len - 1;
-                      if (endIdx >= SLOTS.length) break;
-                      
-                      const targetSlots = SLOTS.slice(startIdx, endIdx + 1);
-                      const isBlocked = targetSlots.some(s => {
-                        const res = reservations.find(r => r.equipment === mobileResTarget.equipment && r.day === mobileResTarget.day && r.slot === s);
-                        return res && res.user !== currentUserInitials;
-                      });
-                      
-                      if (isBlocked) break;
-                      
-                      const getEndText = (slotStr: string) => {
-                        const [h, m] = slotStr.split(":").map(Number);
-                        let newM = m + 30;
-                        let newH = h;
-                        if (newM >= 60) {
-                          newM = 0;
-                          newH += 1;
-                        }
-                        return `${String(newH).padStart(2, "0")}:${String(newM).padStart(2, "0")}`;
-                      };
-                      
-                      const endText = getEndText(targetSlots[targetSlots.length - 1]);
-                      options.push({
-                        count: len,
-                        label: `${len * 30}분 (${mobileResTarget.slot} ~ ${endText})`
-                      });
-                    }
-
-                    if (options.length === 0) {
-                      return <p className="text-xs text-red-500 font-bold p-2">선택 가능한 시간대가 없습니다 (다음 슬롯에 이미 예약이 있음).</p>;
-                    }
-
-                    return options.map(opt => (
-                      <button
-                        key={opt.count}
-                        type="button"
-                        onClick={() => setMobileResDuration(opt.count)}
-                        className={`p-3 rounded-xl text-left text-xs font-bold transition-all border cursor-pointer ${
-                          mobileResDuration === opt.count
-                            ? "bg-blue-500 border-blue-500 text-white shadow-sm font-extrabold"
-                            : "bg-white dark:bg-slate-900 border-black/5 dark:border-white/5 text-on-surface-variant/70 dark:text-gray-400 hover:bg-slate-50 dark:hover:bg-slate-800"
+                    return (
+                      <tr 
+                        key={row.member} 
+                        draggable={true}
+                        onDragStart={(e) => {
+                          setDraggedRowIdx(idx);
+                          e.dataTransfer.effectAllowed = "move";
+                        }}
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                        }}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          if (draggedRowIdx !== null && draggedRowIdx !== idx) {
+                            handleRowDrop(draggedRowIdx, idx);
+                          }
+                        }}
+                        onDragEnd={() => {
+                          setDraggedRowIdx(null);
+                        }}
+                        className={`group hover:bg-slate-50/50 dark:hover:bg-slate-700/20 transition-all select-none ${
+                          draggedRowIdx === idx ? "opacity-30 bg-slate-100 dark:bg-slate-900" : ""
                         }`}
                       >
-                        {opt.label}
-                      </button>
-                    ));
-                  })()}
-                </div>
-              </div>
+                        <td className="py-2.5 border-r border-black/[0.02] dark:border-white/[0.02]">
+                          <div className="flex items-center justify-between gap-1.5 px-3">
+                            <div className="flex items-center gap-2 min-w-0">
+                              {/* Desktop: Drag Grip */}
+                              <GripVertical className="hidden md:block w-4 h-4 text-on-surface-variant/30 shrink-0 cursor-grab active:cursor-grabbing" />
+                              
+                              {/* Mobile: Move Buttons */}
+                              <div className="flex md:hidden items-center gap-1 shrink-0 select-none">
+                                <button
+                                  type="button"
+                                  disabled={idx === 0}
+                                  onClick={() => handleRowDrop(idx, idx - 1)}
+                                  className={`w-5 h-5 flex items-center justify-center rounded text-[9px] font-black bg-slate-100 dark:bg-slate-700 active:scale-90 ${
+                                    idx === 0 ? "opacity-20 cursor-not-allowed" : "text-primary dark:text-blue-400 cursor-pointer"
+                                  }`}
+                                  title="위로 이동"
+                                >
+                                  ▲
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={idx === assignments.length - 1}
+                                  onClick={() => handleRowDrop(idx, idx + 1)}
+                                  className={`w-5 h-5 flex items-center justify-center rounded text-[9px] font-black bg-slate-100 dark:bg-slate-700 active:scale-90 ${
+                                    idx === assignments.length - 1 ? "opacity-20 cursor-not-allowed" : "text-primary dark:text-blue-400 cursor-pointer"
+                                  }`}
+                                  title="아래로 이동"
+                                >
+                                  ▼
+                                </button>
+                              </div>
+
+                              <span className="text-xs sm:text-sm text-foreground dark:text-white font-bold truncate">
+                                {row.member}
+                              </span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveUser(rotatedIdx)}
+                              className="text-on-surface-variant/40 dark:text-gray-500 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all p-1 shrink-0 cursor-pointer"
+                              title="제거"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                        <td 
+                          className={`py-2.5 border-r border-black/[0.02] dark:border-white/[0.02] px-1 cursor-pointer select-none transition-all ${
+                            row.cleaning 
+                              ? "bg-blue-500 dark:bg-blue-600 hover:bg-blue-600 dark:hover:bg-blue-500 text-white font-black" 
+                              : "hover:bg-slate-50 dark:hover:bg-slate-700/20 text-transparent"
+                          }`}
+                          onClick={() => handleToggleDuty(rotatedIdx, "cleaning")}
+                        >
+                          <span className="text-xs select-none">✓</span>
+                        </td>
+                        <td 
+                          className={`py-2.5 px-1 cursor-pointer select-none transition-all ${
+                            row.waste 
+                              ? "bg-blue-500 dark:bg-blue-600 hover:bg-blue-600 dark:hover:bg-blue-500 text-white font-black" 
+                              : "hover:bg-slate-50 dark:hover:bg-slate-700/20 text-transparent"
+                          }`}
+                          onClick={() => handleToggleDuty(rotatedIdx, "waste")}
+                        >
+                          <span className="text-xs select-none">✓</span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
 
-            <div className="flex gap-4 pt-4 border-t border-black/5 dark:border-white/5">
-              <button
-                type="button"
-                onClick={() => setMobileResModalOpen(false)}
-                className="flex-1 py-3 border border-black/5 dark:border-white/5 rounded-2xl font-black text-sm text-primary dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all cursor-pointer"
-              >
-                취소
-              </button>
-              <button
-                type="button"
-                onClick={() => commitDurationReservation(mobileResTarget.equipment, mobileResTarget.day, mobileResTarget.slot, mobileResDuration)}
-                className="flex-1 py-3 bg-primary dark:bg-blue-600 text-white rounded-2xl font-black text-sm shadow-md hover:shadow-lg active:scale-95 transition-all cursor-pointer"
-              >
-                예약 완료
-              </button>
+            {/* Caption */}
+            <div className="text-[10px] text-on-surface-variant/50 dark:text-gray-500 font-bold flex items-center justify-between shrink-0 pt-2.5 border-t border-black/[0.03] dark:border-white/[0.03] select-none">
+              <span>※ 드래그하여 순번을 정하고, 칸을 눌러 이번 주 당번을 지정합니다.</span>
+              <span>+{shift}주차</span>
             </div>
 
           </div>
+
         </div>
       )}
 

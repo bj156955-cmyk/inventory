@@ -63,13 +63,6 @@ export interface PresencePayload {
   online_at?: string;
 }
 
-export interface Reservation {
-  equipment: string;
-  day: string;
-  slot: string;
-  user: string;
-}
-
 export interface CleaningAssignment {
   member: string;
   cleaning: boolean;
