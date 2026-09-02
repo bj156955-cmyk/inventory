@@ -26,10 +26,11 @@ export default function InventoryPage() {
   const [itemModalOpen, setItemModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   
-  // Product Form states
+  // Product Form states (Name, Location, Type, Quantity)
   const [formName, setFormName] = useState("");
   const [formCategory, setFormCategory] = useState("");
-  const [formStock, setFormStock] = useState(0);
+  const [formType, setFormType] = useState("");
+  const [formStock, setFormStock] = useState(1);
   const [formTarget, setFormTarget] = useState(0);
   const [formPrice, setFormPrice] = useState(0);
 
@@ -154,15 +155,17 @@ export default function InventoryPage() {
       setEditingProduct(product);
       setFormName(product.name);
       setFormCategory(product.category);
+      setFormType(product.item_type || "");
       setFormStock(product.stock);
-      setFormTarget(product.target);
-      setFormPrice(product.price);
+      setFormTarget(product.target || product.stock);
+      setFormPrice(product.price || 0);
     } else {
       setEditingProduct(null);
       setFormName("");
-      setFormCategory(selectedCategory !== "all" ? selectedCategory : "연구동");
-      setFormStock(0);
-      setFormTarget(0);
+      setFormCategory(activeCategory !== "all" ? activeCategory : "연구동");
+      setFormType("소모품");
+      setFormStock(1);
+      setFormTarget(1);
       setFormPrice(0);
     }
     setItemModalOpen(true);
@@ -173,12 +176,13 @@ export default function InventoryPage() {
     e.preventDefault();
     if (!user) return;
 
-    const payload = {
+    const payload: Record<string, unknown> = {
       name: formName,
       category: formCategory,
+      item_type: formType || null,
       stock: formStock,
-      target: formTarget,
-      price: formPrice,
+      target: formTarget || formStock,
+      price: formPrice || 0,
       edit_user: user.email?.split("@")[0].toUpperCase(),
       edit_date: new Date().toISOString()
     };
@@ -186,18 +190,29 @@ export default function InventoryPage() {
     try {
       if (editingProduct) {
         // Update
-        const { error } = await supabase.from("products").update(payload).eq("id", editingProduct.id);
+        let { error } = await supabase.from("products").update(payload).eq("id", editingProduct.id);
+        if (error && error.message?.includes("item_type")) {
+          delete payload.item_type;
+          const retry = await supabase.from("products").update(payload).eq("id", editingProduct.id);
+          error = retry.error;
+        }
         if (error) throw error;
         await logActivity("UPDATE", `${formName} 품목 정보를 수정했습니다.`);
       } else {
         // Insert
-        const { error } = await supabase.from("products").insert([payload]);
+        let { error } = await supabase.from("products").insert([payload]);
+        if (error && error.message?.includes("item_type")) {
+          delete payload.item_type;
+          const retry = await supabase.from("products").insert([payload]);
+          error = retry.error;
+        }
         if (error) throw error;
         await logActivity("CREATE", `${formName} 품목을 새로 추가했습니다.`);
       }
       setItemModalOpen(false);
     } catch (err) {
       console.error("Error saving product:", err);
+      alert("품목 저장 중 오류가 발생했습니다.");
     }
   };
 
@@ -382,9 +397,16 @@ export default function InventoryPage() {
                           </div>
                         </td>
                         <td className="px-8 py-5">
-                          <span className="px-3 py-1 bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 rounded-lg text-[10px] font-bold border border-zinc-200/60 dark:border-zinc-700/60">
-                            {p.category || "기타"}
-                          </span>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="px-3 py-1 bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 rounded-lg text-[10px] font-bold border border-zinc-200/60 dark:border-zinc-700/60">
+                              {p.category || "기타"}
+                            </span>
+                            {p.item_type && (
+                              <span className="px-2 py-0.5 bg-blue-500/10 dark:bg-blue-500/15 text-blue-600 dark:text-blue-400 rounded-md text-[9px] font-black border border-blue-500/20">
+                                {p.item_type}
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td className="px-8 py-5">
                           <div className="flex flex-col items-center">
@@ -486,13 +508,20 @@ export default function InventoryPage() {
                             </span>
                           )}
                         </div>
-                        <div className="flex flex-wrap gap-1.5 items-center mt-1">
+                        <div className="flex flex-wrap gap-1.5 items-center mt-1.5">
                           <span className="text-[10px] bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 font-bold px-2 py-0.5 rounded-md border border-zinc-200/60 dark:border-zinc-700/60">
                             {p.category || "기타"}
                           </span>
-                          <span className="text-[10px] text-zinc-500 dark:text-zinc-400 font-semibold">
-                            ₩{p.price.toLocaleString()}
-                          </span>
+                          {p.item_type && (
+                            <span className="text-[10px] bg-blue-500/10 dark:bg-blue-500/15 text-blue-600 dark:text-blue-400 font-black px-2 py-0.5 rounded-md border border-blue-500/20">
+                              {p.item_type}
+                            </span>
+                          )}
+                          {p.price > 0 && (
+                            <span className="text-[10px] text-zinc-500 dark:text-zinc-400 font-semibold">
+                              ₩{p.price.toLocaleString()}
+                            </span>
+                          )}
                         </div>
                       </div>
                       <div className="flex gap-1 shrink-0">
@@ -565,108 +594,151 @@ export default function InventoryPage() {
 
       {/* 1. Item Form Modal (NEW/EDIT) */}
       {itemModalOpen && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-md z-[200] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-zinc-900 w-full max-w-[500px] rounded-[2.5rem] shadow-2xl p-8 md:p-10 space-y-6 border border-zinc-200 dark:border-zinc-800">
-            <div className="flex justify-between items-center">
-              <h3 className="text-2xl font-black text-zinc-900 dark:text-white tracking-tighter">
-                {editingProduct ? "자재 정보 수정" : "새로운 자재 등록"}
-              </h3>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[200] flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-white dark:bg-zinc-900 w-full max-w-[480px] rounded-[2.5rem] shadow-2xl p-7 sm:p-9 space-y-6 border border-zinc-200 dark:border-zinc-800">
+            {/* Modal Header */}
+            <div className="flex justify-between items-center pb-2 border-b border-zinc-100 dark:border-zinc-800/80">
+              <div>
+                <h3 className="text-2xl sm:text-3xl font-black text-zinc-900 dark:text-white tracking-tight font-headline">
+                  Item
+                </h3>
+                <p className="text-xs font-semibold text-zinc-400 dark:text-zinc-500 mt-0.5">
+                  {editingProduct ? "품목 정보 수정" : "새로운 품목 등록"}
+                </p>
+              </div>
               <button 
+                type="button"
                 onClick={() => setItemModalOpen(false)}
-                className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full"
+                className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-400 hover:text-zinc-700 dark:hover:text-white rounded-full transition-colors cursor-pointer"
               >
-                <X className="w-5 h-5 text-zinc-400" />
+                <X className="w-5 h-5" />
               </button>
             </div>
             
+            {/* Form Fields: Name, Location, Type, Quantity */}
             <form onSubmit={saveProduct} className="space-y-4">
+              
+              {/* 1. Name (이름) */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-black uppercase text-zinc-500 dark:text-zinc-400 tracking-wider">Item Name</label>
+                <label className="text-[11px] font-black uppercase text-zinc-500 dark:text-zinc-400 tracking-wider">
+                  이름 <span className="text-rose-500">*</span>
+                </label>
                 <input
                   type="text"
                   required
                   value={formName}
                   onChange={(e) => setFormName(e.target.value)}
-                  placeholder="예: 자작나무 합판 (Birch Plywood)"
-                  className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-800 border border-black/[0.03] dark:border-white/[0.03] rounded-xl outline-none focus:ring-2 focus:ring-primary/20 dark:focus:ring-blue-500/20 text-sm font-medium"
+                  placeholder="품목 이름 입력 (예: 알루미늄 프로파일 2020)"
+                  className="w-full px-4 py-3.5 bg-zinc-100 dark:bg-zinc-800/90 border border-zinc-200 dark:border-zinc-700 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500/20 text-sm font-semibold text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 transition-all"
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-black uppercase text-zinc-500 dark:text-zinc-400 tracking-wider">위치 (Category)</label>
-                  <input
-                    type="text"
-                    required
-                    value={formCategory}
-                    onChange={(e) => setFormCategory(e.target.value)}
-                    placeholder="예: 연구동, 자생동, 박사님 방, 컨테이너"
-                    className="w-full px-4 py-3 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/20 text-sm font-medium text-zinc-900 dark:text-white"
-                  />
-                  <div className="flex gap-1 pt-1 flex-wrap">
-                    {modalSuggestedLocations.map((loc) => (
-                      <button
-                        key={loc}
-                        type="button"
-                        onClick={() => setFormCategory(loc)}
-                        className={`text-[10px] font-bold px-2 py-0.5 rounded-md border transition-all cursor-pointer ${
-                          formCategory === loc
-                            ? "bg-blue-600 text-white border-blue-600"
-                            : "bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700"
-                        }`}
-                      >
-                        {loc}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-black uppercase text-zinc-500 dark:text-zinc-400 tracking-wider">단가 (₩)</label>
-                  <input
-                    type="number"
-                    required
-                    value={formPrice}
-                    onChange={(e) => setFormPrice(Number(e.target.value))}
-                    placeholder="단가 입력"
-                    className="w-full px-4 py-3 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/20 text-sm font-medium text-zinc-900 dark:text-white"
-                  />
+              {/* 2. Location (위치) */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[11px] font-black uppercase text-zinc-500 dark:text-zinc-400 tracking-wider">
+                  위치 <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={formCategory}
+                  onChange={(e) => setFormCategory(e.target.value)}
+                  placeholder="보관 위치 (예: 연구동, 자생동, 박사님 방, 컨테이너)"
+                  className="w-full px-4 py-3.5 bg-zinc-100 dark:bg-zinc-800/90 border border-zinc-200 dark:border-zinc-700 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500/20 text-sm font-semibold text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 transition-all"
+                />
+                <div className="flex gap-1.5 pt-1 flex-wrap">
+                  {modalSuggestedLocations.map((loc) => (
+                    <button
+                      key={loc}
+                      type="button"
+                      onClick={() => setFormCategory(loc)}
+                      className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border transition-all cursor-pointer select-none active:scale-95 ${
+                        formCategory === loc
+                          ? "bg-blue-600 text-white border-blue-600 font-black shadow-xs"
+                          : "bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400 border-zinc-200/80 dark:border-zinc-700/80"
+                      }`}
+                    >
+                      {loc}
+                    </button>
+                  ))}
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-black uppercase text-zinc-500 dark:text-zinc-400 tracking-wider">현재 재고</label>
+              {/* 3. Type (유형) */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[11px] font-black uppercase text-zinc-500 dark:text-zinc-400 tracking-wider">
+                  유형
+                </label>
+                <input
+                  type="text"
+                  value={formType}
+                  onChange={(e) => setFormType(e.target.value)}
+                  placeholder="품목 유형 (예: 소모품, 시약, 공구, 원자재, 부품)"
+                  className="w-full px-4 py-3.5 bg-zinc-100 dark:bg-zinc-800/90 border border-zinc-200 dark:border-zinc-700 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500/20 text-sm font-semibold text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 transition-all"
+                />
+                <div className="flex gap-1.5 pt-1 flex-wrap">
+                  {["소모품", "시약", "공구", "원자재", "부품", "기타"].map((t) => (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => setFormType(t)}
+                      className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border transition-all cursor-pointer select-none active:scale-95 ${
+                        formType === t
+                          ? "bg-blue-600 text-white border-blue-600 font-black shadow-xs"
+                          : "bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400 border-zinc-200/80 dark:border-zinc-700/80"
+                      }`}
+                    >
+                      {t}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 4. Quantity (수량) */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[11px] font-black uppercase text-zinc-500 dark:text-zinc-400 tracking-wider">
+                  수량 <span className="text-rose-500">*</span>
+                </label>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setFormStock((prev) => Math.max(0, prev - 1))}
+                    className="w-12 h-12 rounded-2xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 font-black text-lg border border-zinc-200 dark:border-zinc-700 active:scale-95 transition-all flex items-center justify-center cursor-pointer shrink-0"
+                    title="-1"
+                  >
+                    -
+                  </button>
                   <input
                     type="number"
                     required
+                    min={0}
                     value={formStock}
-                    onChange={(e) => setFormStock(Number(e.target.value))}
-                    className="w-full px-4 py-3 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/20 text-sm font-medium text-zinc-900 dark:text-white"
+                    onChange={(e) => setFormStock(Math.max(0, Number(e.target.value)))}
+                    className="flex-1 py-3.5 px-4 bg-zinc-100 dark:bg-zinc-800/90 border border-zinc-200 dark:border-zinc-700 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500/20 text-center font-black text-base text-zinc-900 dark:text-white tabular-nums"
                   />
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-black uppercase text-zinc-500 dark:text-zinc-400 tracking-wider">목표 재고</label>
-                  <input
-                    type="number"
-                    required
-                    value={formTarget}
-                    onChange={(e) => setFormTarget(Number(e.target.value))}
-                    className="w-full px-4 py-3 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/20 text-sm font-medium text-zinc-900 dark:text-white"
-                  />
+                  <button
+                    type="button"
+                    onClick={() => setFormStock((prev) => prev + 1)}
+                    className="w-12 h-12 rounded-2xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 font-black text-lg border border-zinc-200 dark:border-zinc-700 active:scale-95 transition-all flex items-center justify-center cursor-pointer shrink-0"
+                    title="+1"
+                  >
+                    +
+                  </button>
                 </div>
               </div>
 
-              <div className="flex gap-4 pt-6">
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-4 border-t border-zinc-100 dark:border-zinc-800">
                 <button
                   type="button"
                   onClick={() => setItemModalOpen(false)}
-                  className="flex-1 py-4 border border-zinc-200 dark:border-zinc-700 rounded-2xl font-black text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all cursor-pointer"
+                  className="flex-1 py-3.5 border border-zinc-200 dark:border-zinc-700 rounded-2xl font-black text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all cursor-pointer"
                 >
                   취소
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-black text-sm shadow-md shadow-blue-600/30 active:scale-95 transition-all cursor-pointer"
+                  className="flex-1 py-3.5 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-black text-sm shadow-md shadow-blue-600/30 active:scale-95 transition-all cursor-pointer"
                 >
                   저장
                 </button>
