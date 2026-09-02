@@ -15,14 +15,13 @@ import {
   Check
 } from "lucide-react";
 
-export type SortOption = "name_asc" | "name_desc" | "stock_desc" | "stock_asc" | "recent";
+export type SortOption = "recent" | "oldest" | "name_asc" | "name_desc";
 
 const SORT_OPTIONS: { id: SortOption; label: string }[] = [
-  { id: "name_asc", label: "이름 가나다순" },
+  { id: "recent", label: "최신순" },
+  { id: "oldest", label: "오래된순" },
+  { id: "name_asc", label: "이름순" },
   { id: "name_desc", label: "이름 역순" },
-  { id: "stock_desc", label: "재고 많은순" },
-  { id: "stock_asc", label: "재고 적은순 (부족/품절 우선)" },
-  { id: "recent", label: "최근 수정/등록순" },
 ];
 
 export default function InventoryPage() {
@@ -37,12 +36,12 @@ export default function InventoryPage() {
     if (typeof window !== "undefined") {
       try {
         const saved = localStorage.getItem("inventory_sort_option") as SortOption | null;
-        if (saved && ["name_asc", "name_desc", "stock_desc", "stock_asc", "recent"].includes(saved)) {
+        if (saved && ["recent", "oldest", "name_asc", "name_desc"].includes(saved)) {
           return saved;
         }
       } catch {}
     }
-    return "name_asc";
+    return "recent";
   });
   const [sortMenuOpen, setSortMenuOpen] = useState(false);
 
@@ -84,14 +83,24 @@ export default function InventoryPage() {
 
       if (rawSku.includes(":::")) {
         const parts = rawSku.split(":::");
-        parsedType = parts[0] || "";
-        parsedUnit = parts[1] || "";
+        parsedType = parts[0] ? parts[0].trim() : "";
+        // Only consider parts[1] as unit if parts has at least 3 elements (type, unit, hash)
+        if (parts.length >= 3) {
+          parsedUnit = parts[1] ? parts[1].trim() : "";
+        } else {
+          parsedUnit = "";
+        }
       } else if (rawSku.includes("_")) {
         parsedType = rawSku.split("_")[0] || "";
         parsedUnit = "";
       } else {
         parsedType = rawSku || (p.item_type ? String(p.item_type) : "");
         parsedUnit = p.unit ? String(p.unit) : "";
+      }
+
+      // Filter out accidental hash / random strings from unit
+      if (/^[a-z0-9]{6,12}$/i.test(parsedUnit)) {
+        parsedUnit = "";
       }
 
       const stockNum = typeof p.stock_quantity === "number" ? p.stock_quantity : (typeof p.stock === "number" ? p.stock : 0);
@@ -231,22 +240,21 @@ export default function InventoryPage() {
 
     const applySort = (list: Product[]) => {
       return [...list].sort((a, b) => {
+        if (sortOption === "recent") {
+          const timeA = a.updated_at ? new Date(a.updated_at).getTime() : (a.edit_date ? new Date(a.edit_date).getTime() : 0);
+          const timeB = b.updated_at ? new Date(b.updated_at).getTime() : (b.edit_date ? new Date(b.edit_date).getTime() : 0);
+          return timeB - timeA;
+        }
+        if (sortOption === "oldest") {
+          const timeA = a.updated_at ? new Date(a.updated_at).getTime() : (a.edit_date ? new Date(a.edit_date).getTime() : 0);
+          const timeB = b.updated_at ? new Date(b.updated_at).getTime() : (b.edit_date ? new Date(b.edit_date).getTime() : 0);
+          return timeA - timeB;
+        }
         if (sortOption === "name_asc") {
           return a.name.localeCompare(b.name, "ko");
         }
         if (sortOption === "name_desc") {
           return b.name.localeCompare(a.name, "ko");
-        }
-        if (sortOption === "stock_desc") {
-          return b.stock - a.stock;
-        }
-        if (sortOption === "stock_asc") {
-          return a.stock - b.stock;
-        }
-        if (sortOption === "recent") {
-          const timeA = a.updated_at ? new Date(a.updated_at).getTime() : 0;
-          const timeB = b.updated_at ? new Date(b.updated_at).getTime() : 0;
-          return timeB - timeA;
         }
         return 0;
       });
@@ -417,9 +425,7 @@ export default function InventoryPage() {
     const userShort = user.email ? user.email.split("@")[0].toUpperCase() : "USER";
     const typeVal = formType.trim();
     const unitVal = formUnit.trim();
-    const skuVal = (typeVal || unitVal) 
-      ? `${typeVal}:::${unitVal}:::${Date.now().toString(36)}` 
-      : `:::${Date.now().toString(36)}`;
+    const skuVal = `${typeVal}:::${unitVal}:::${Date.now().toString(36)}`;
 
     const payload: Record<string, unknown> = {
       name: formName.trim(),
