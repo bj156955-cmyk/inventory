@@ -724,17 +724,27 @@ export default function LabPage() {
               </div>
             </div>
 
-            {/* Weekly Duties 3-Column Table with Touch & Drag Sorting */}
-            <div className="my-3 border border-zinc-200 dark:border-zinc-800 rounded-xl sm:rounded-2xl overflow-hidden shadow-2xs">
+            {/* Weekly Duties 3-Column Table with Apple Liquid Glass Style */}
+            <div className="my-3 border border-zinc-200/80 dark:border-zinc-800/80 rounded-2xl overflow-hidden shadow-2xs bg-white/40 dark:bg-zinc-950/40 backdrop-blur-md">
               <table className="w-full text-center border-collapse text-xs font-semibold table-fixed">
-                <thead className="sticky top-0 bg-zinc-50 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border-b border-zinc-200 dark:border-zinc-800 select-none">
+                <thead className="sticky top-0 bg-zinc-100/70 dark:bg-zinc-800/70 backdrop-blur-md text-zinc-500 dark:text-zinc-400 border-b border-zinc-200/80 dark:border-zinc-800/80 select-none">
                   <tr>
-                    <th className="py-2.5 sm:py-3 px-3 font-black w-[34%] bg-zinc-50 dark:bg-zinc-800 text-left">사용자</th>
-                    <th className="py-2.5 sm:py-3 px-2 font-black w-[33%] bg-zinc-50 dark:bg-zinc-800 text-center">청소</th>
-                    <th className="py-2.5 sm:py-3 px-2 font-black w-[33%] bg-zinc-50 dark:bg-zinc-800 text-center">폐기물</th>
+                    <th className="py-2.5 sm:py-3 px-3.5 font-black w-[36%] text-left">사용자</th>
+                    <th className="py-2.5 sm:py-3 px-2 font-black w-[32%] text-center">
+                      <span className="inline-flex items-center justify-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-xs" />
+                        <span>청소</span>
+                      </span>
+                    </th>
+                    <th className="py-2.5 sm:py-3 px-2 font-black w-[32%] text-center">
+                      <span className="inline-flex items-center justify-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-blue-500 shadow-xs" />
+                        <span>폐기물</span>
+                      </span>
+                    </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
+                <tbody className="divide-y divide-zinc-200/60 dark:divide-zinc-800/60">
                   {assignments.map((row, idx) => {
                     let rotatedIdx = (idx - shift) % N;
                     if (rotatedIdx < 0) rotatedIdx += N;
@@ -770,7 +780,7 @@ export default function LabPage() {
                         onTouchMove={handleTouchMove}
                         onTouchEnd={handleTouchEnd}
                         onTouchCancel={handleTouchEnd}
-                        className={`group transition-all duration-200 select-none ${
+                        className={`group transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] select-none ${
                           isFloating
                             ? "relative z-30"
                             : isTarget
@@ -781,80 +791,94 @@ export default function LabPage() {
                         }`}
                       >
                         {/* Column 1: Member Name */}
-                        <td className={`py-2.5 sm:py-3.5 border-r border-zinc-200 dark:border-zinc-800 text-left transition-all duration-200 ${
+                        <td className={`py-2 px-3 sm:px-3.5 border-r border-zinc-200/60 dark:border-zinc-800/60 text-left transition-all duration-300 ${
                           isFloating
-                            ? "bg-blue-600/15 dark:bg-blue-500/25 border-y-2 border-l-2 border-blue-500 rounded-l-xl shadow-lg shadow-blue-500/15"
+                            ? "bg-white/90 dark:bg-zinc-800/90 backdrop-blur-2xl border-y border-l border-blue-400/50 dark:border-blue-400/40 rounded-l-2xl shadow-[0_12px_28px_rgba(0,0,0,0.12),inset_0_1px_1px_rgba(255,255,255,0.8)]"
                             : isTarget
-                            ? "bg-blue-50/70 dark:bg-blue-950/50 border-t-2 border-t-blue-500"
+                            ? "bg-blue-500/10 dark:bg-blue-400/10 border-y border-l border-blue-400/30 rounded-l-2xl"
                             : isJustDropped
-                            ? "bg-emerald-500/15 dark:bg-emerald-400/20 border-y border-emerald-500/40"
-                            : "hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30"
+                            ? "bg-blue-500/10 dark:bg-blue-400/10 transition-colors duration-500"
+                            : "border-b border-zinc-100/80 dark:border-zinc-800/50 hover:bg-zinc-50/60 dark:hover:bg-zinc-800/30"
                         }`}>
-                          <div className={`flex items-center gap-2 px-2.5 sm:px-3 transition-all duration-200 ${
-                            isFloating ? "transform -translate-y-1.5 scale-[1.02]" : isTarget ? "transform translate-y-1 opacity-70" : isJustDropped ? "transform translate-y-0 scale-100" : ""
+                          <div className={`flex items-center gap-2.5 transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+                            isFloating ? "transform -translate-y-2 scale-[1.02]" : isTarget ? "transform translate-y-1 opacity-70" : ""
                           }`}>
                             <div 
                               style={{ touchAction: "none" }}
-                              className={`p-1 -m-1 cursor-grab active:cursor-grabbing transition-colors ${
-                                isFloating ? "text-blue-600 dark:text-blue-400 scale-110" : "text-zinc-400 hover:text-zinc-600 dark:text-zinc-500"
+                              className={`p-1.5 -m-1 cursor-grab active:cursor-grabbing rounded-lg transition-all ${
+                                isFloating 
+                                  ? "bg-blue-500/15 text-blue-600 dark:text-blue-400 scale-110" 
+                                  : "text-zinc-400 hover:text-zinc-600 dark:text-zinc-500 hover:bg-zinc-100/60 dark:hover:bg-zinc-800/60"
                               }`}
                               title="길게 눌러 이동"
                             >
                               <GripVertical className="w-3.5 h-3.5 shrink-0" />
                             </div>
-                            <span className={`text-xs sm:text-sm font-bold truncate transition-colors ${
-                              isFloating ? "text-blue-700 dark:text-blue-300 font-black" : "text-zinc-900 dark:text-white"
+                            <span className={`text-xs sm:text-sm font-extrabold tracking-tight truncate transition-colors ${
+                              isFloating ? "text-blue-600 dark:text-blue-400 font-black" : "text-zinc-800 dark:text-zinc-100"
                             }`}>
                               {row.member}
                             </span>
                           </div>
                         </td>
 
-                        {/* Column 2: Cleaning */}
+                        {/* Column 2: Cleaning (Pure Color Block, No Checkmark) */}
                         <td 
-                          className={`py-2.5 sm:py-3.5 border-r border-zinc-200 dark:border-zinc-800 px-2 cursor-pointer select-none transition-all duration-200 ${
+                          className={`py-2 px-2 border-r border-zinc-200/60 dark:border-zinc-800/60 cursor-pointer select-none transition-all duration-300 ${
                             isFloating
-                              ? "bg-blue-600/15 dark:bg-blue-500/25 border-y-2 border-blue-500 shadow-lg shadow-blue-500/15"
+                              ? "bg-white/90 dark:bg-zinc-800/90 backdrop-blur-2xl border-y border-blue-400/50 dark:border-blue-400/40 shadow-[0_12px_28px_rgba(0,0,0,0.12),inset_0_1px_1px_rgba(255,255,255,0.8)]"
                               : isTarget
-                              ? "bg-blue-50/70 dark:bg-blue-950/50 border-t-2 border-t-blue-500"
+                              ? "bg-blue-500/10 dark:bg-blue-400/10 border-y border-blue-400/30"
                               : isJustDropped
-                              ? "bg-emerald-500/15 dark:bg-emerald-400/20 border-y border-emerald-500/40"
-                              : row.cleaning
-                              ? "bg-emerald-500/20 text-emerald-500 dark:text-emerald-400 font-black"
-                              : "hover:bg-zinc-100 dark:hover:bg-zinc-800/30 text-transparent"
+                              ? "bg-blue-500/10 dark:bg-blue-400/10 transition-colors duration-500"
+                              : "border-b border-zinc-100/80 dark:border-zinc-800/50"
                           }`}
                           onClick={() => handleToggleDuty(rotatedIdx, "cleaning")}
                         >
-                          <div className={`transition-all duration-200 ${
-                            isFloating ? "transform -translate-y-1.5 scale-[1.02]" : isTarget ? "transform translate-y-1 opacity-70" : ""
+                          <div className={`flex items-center justify-center p-0.5 transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+                            isFloating ? "transform -translate-y-2 scale-[1.02]" : isTarget ? "transform translate-y-1 opacity-70" : ""
                           }`}>
-                            <span className={`text-sm font-black select-none ${row.cleaning ? "text-emerald-500 dark:text-emerald-400" : "text-transparent"}`}>
-                              ✓
-                            </span>
+                            {row.cleaning ? (
+                              <div 
+                                className="w-full h-8 sm:h-9 rounded-xl bg-gradient-to-b from-emerald-400 to-emerald-500 shadow-[0_3px_12px_rgba(16,185,129,0.35),inset_0_1px_1.5px_rgba(255,255,255,0.6)] transition-all duration-200 transform active:scale-90"
+                                title="청소 당번"
+                              />
+                            ) : (
+                              <div 
+                                className="w-full h-8 sm:h-9 rounded-xl bg-zinc-100/40 dark:bg-zinc-800/40 hover:bg-zinc-200/40 dark:hover:bg-zinc-700/40 transition-all duration-200 border border-transparent hover:border-zinc-200/60 dark:hover:border-zinc-700/60"
+                                title="청소 미지정"
+                              />
+                            )}
                           </div>
                         </td>
 
-                        {/* Column 3: Waste */}
+                        {/* Column 3: Waste (Pure Color Block, No Checkmark) */}
                         <td 
-                          className={`py-2.5 sm:py-3.5 px-2 cursor-pointer select-none transition-all duration-200 ${
+                          className={`py-2 px-2 cursor-pointer select-none transition-all duration-300 ${
                             isFloating
-                              ? "bg-blue-600/15 dark:bg-blue-500/25 border-y-2 border-r-2 border-blue-500 rounded-r-xl shadow-lg shadow-blue-500/15"
+                              ? "bg-white/90 dark:bg-zinc-800/90 backdrop-blur-2xl border-y border-r border-blue-400/50 dark:border-blue-400/40 rounded-r-2xl shadow-[0_12px_28px_rgba(0,0,0,0.12),inset_0_1px_1px_rgba(255,255,255,0.8)]"
                               : isTarget
-                              ? "bg-blue-50/70 dark:bg-blue-950/50 border-t-2 border-t-blue-500"
+                              ? "bg-blue-500/10 dark:bg-blue-400/10 border-y border-r border-blue-400/30 rounded-r-2xl"
                               : isJustDropped
-                              ? "bg-emerald-500/15 dark:bg-emerald-400/20 border-y border-emerald-500/40"
-                              : row.waste
-                              ? "bg-blue-500/20 text-blue-500 dark:text-blue-400 font-black"
-                              : "hover:bg-zinc-100 dark:hover:bg-zinc-800/30 text-transparent"
+                              ? "bg-blue-500/10 dark:bg-blue-400/10 transition-colors duration-500"
+                              : "border-b border-zinc-100/80 dark:border-zinc-800/50"
                           }`}
                           onClick={() => handleToggleDuty(rotatedIdx, "waste")}
                         >
-                          <div className={`transition-all duration-200 ${
-                            isFloating ? "transform -translate-y-1.5 scale-[1.02]" : isTarget ? "transform translate-y-1 opacity-70" : ""
+                          <div className={`flex items-center justify-center p-0.5 transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+                            isFloating ? "transform -translate-y-2 scale-[1.02]" : isTarget ? "transform translate-y-1 opacity-70" : ""
                           }`}>
-                            <span className={`text-sm font-black select-none ${row.waste ? "text-blue-500 dark:text-blue-400" : "text-transparent"}`}>
-                              ✓
-                            </span>
+                            {row.waste ? (
+                              <div 
+                                className="w-full h-8 sm:h-9 rounded-xl bg-gradient-to-b from-blue-400 to-blue-500 shadow-[0_3px_12px_rgba(59,130,246,0.35),inset_0_1px_1.5px_rgba(255,255,255,0.6)] transition-all duration-200 transform active:scale-90"
+                                title="폐기물 당번"
+                              />
+                            ) : (
+                              <div 
+                                className="w-full h-8 sm:h-9 rounded-xl bg-zinc-100/40 dark:bg-zinc-800/40 hover:bg-zinc-200/40 dark:hover:bg-zinc-700/40 transition-all duration-200 border border-transparent hover:border-zinc-200/60 dark:hover:border-zinc-700/60"
+                                title="폐기물 미지정"
+                              />
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -864,11 +888,11 @@ export default function LabPage() {
                   {/* Bottom '+' Button Row */}
                   <tr
                     onClick={() => setShowAddModal(true)}
-                    className="border-t border-dashed border-zinc-200 dark:border-zinc-800 hover:bg-blue-50/50 dark:hover:bg-blue-950/20 active:bg-blue-100/50 transition-all cursor-pointer group"
+                    className="hover:bg-blue-50/40 dark:hover:bg-blue-950/20 active:bg-blue-100/40 transition-all cursor-pointer group"
                   >
                     <td colSpan={3} className="py-3 px-3 text-center">
                       <div className="flex items-center justify-center gap-1.5 text-zinc-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 font-bold text-xs select-none">
-                        <div className="w-5 h-5 rounded-lg bg-zinc-100 dark:bg-zinc-800 group-hover:bg-blue-600 group-hover:text-white flex items-center justify-center transition-all shadow-2xs">
+                        <div className="w-5 h-5 rounded-lg bg-zinc-100/80 dark:bg-zinc-800/80 group-hover:bg-blue-600 group-hover:text-white flex items-center justify-center transition-all shadow-2xs border border-zinc-200/60 dark:border-zinc-700/60">
                           <Plus className="w-3.5 h-3.5" />
                         </div>
                         <span>당번 인원 추가 / 제외 설정</span>
