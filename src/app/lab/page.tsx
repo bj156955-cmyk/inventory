@@ -66,15 +66,17 @@ export default function LabPage() {
   const [mountTime] = useState(() => Date.now());
   const [members, setMembers] = useState<string[]>([]);
   const [cleaningState, setCleaningState] = useState<CleaningState | null>(null);
-  const [draggedRowIdx, setDraggedRowIdx] = useState<number | null>(null);
-  const [touchDraggingIdx, setTouchDraggingIdx] = useState<number | null>(null);
-  const [touchOverIdx, setTouchOverIdx] = useState<number | null>(null);
-  const [justDroppedIdx, setJustDroppedIdx] = useState<number | null>(null);
-  const touchTimerRef = React.useRef<NodeJS.Timeout | null>(null);
-  const touchStartPosRef = React.useRef<{ x: number; y: number } | null>(null);
-  const isDraggingRef = React.useRef<boolean>(false);
+  const [dragSourceIdx, setDragSourceIdx] = useState<number | null>(null);
+  const [dragTargetIdx, setDragTargetIdx] = useState<number | null>(null);
+  const [dragDeltaY, setDragDeltaY] = useState<number>(0);
+
   const dragSourceIdxRef = React.useRef<number | null>(null);
   const dragTargetIdxRef = React.useRef<number | null>(null);
+  const touchStartYRef = React.useRef<number>(0);
+  const touchStartXRef = React.useRef<number>(0);
+  const touchTimerRef = React.useRef<NodeJS.Timeout | null>(null);
+  const isDraggingRef = React.useRef<boolean>(false);
+  const [rowHeight, setRowHeight] = useState<number>(50);
   const [loading, setLoading] = useState(true);
   const [activeMobileTab, setActiveMobileTab] = useState<"orders" | "cleaning">("orders");
   const [showAddModal, setShowAddModal] = useState(false);
@@ -278,37 +280,51 @@ export default function LabPage() {
 
   const handleTouchStart = (idx: number, e: React.TouchEvent) => {
     const touch = e.touches[0];
-    touchStartPosRef.current = { x: touch.clientX, y: touch.clientY };
+    touchStartYRef.current = touch.clientY;
+    touchStartXRef.current = touch.clientX;
 
     if (touchTimerRef.current) {
       clearTimeout(touchTimerRef.current);
+    }
+
+    const currentTarget = e.currentTarget as HTMLElement;
+    const measuredHeight = currentTarget?.offsetHeight || rowHeight;
+    if (currentTarget?.offsetHeight && currentTarget.offsetHeight !== rowHeight) {
+      setRowHeight(currentTarget.offsetHeight);
     }
 
     touchTimerRef.current = setTimeout(() => {
       isDraggingRef.current = true;
       dragSourceIdxRef.current = idx;
       dragTargetIdxRef.current = idx;
-      setTouchDraggingIdx(idx);
-      setTouchOverIdx(idx);
+      setDragSourceIdx(idx);
+      setDragTargetIdx(idx);
+      setDragDeltaY(0);
 
       if (typeof window !== "undefined" && navigator.vibrate) {
-        try {
-          navigator.vibrate(50);
-        } catch {}
+        try { navigator.vibrate(40); } catch {}
       }
+
+      const H = measuredHeight;
+      const totalCount = baseAssignments.length;
 
       const onGlobalMove = (ev: TouchEvent) => {
         if (!isDraggingRef.current) return;
         if (ev.cancelable) ev.preventDefault();
 
-        const t = ev.touches[0];
-        const el = document.elementFromPoint(t.clientX, t.clientY);
-        const row = el?.closest("[data-row-idx]");
-        if (row) {
-          const overIdx = parseInt(row.getAttribute("data-row-idx") || "-1", 10);
-          if (overIdx >= 0 && overIdx !== dragTargetIdxRef.current) {
-            dragTargetIdxRef.current = overIdx;
-            setTouchOverIdx(overIdx);
+        const currentY = ev.touches[0].clientY;
+        const delta = currentY - touchStartYRef.current;
+        setDragDeltaY(delta);
+
+        const offsetSlots = Math.round(delta / H);
+        const source = dragSourceIdxRef.current ?? idx;
+        const newTarget = Math.max(0, Math.min(totalCount - 1, source + offsetSlots));
+
+        if (newTarget !== dragTargetIdxRef.current) {
+          dragTargetIdxRef.current = newTarget;
+          setDragTargetIdx(newTarget);
+          if (typeof window !== "undefined" && navigator.vibrate) {
+            try { navigator.vibrate(15); } catch {}
           }
         }
       };
@@ -323,26 +339,23 @@ export default function LabPage() {
           const tgt = dragTargetIdxRef.current;
           if (src !== null && tgt !== null && src !== tgt) {
             handleRowDrop(src, tgt);
-            setJustDroppedIdx(tgt);
-            setTimeout(() => setJustDroppedIdx(null), 500);
             if (typeof window !== "undefined" && navigator.vibrate) {
-              try {
-                navigator.vibrate(35);
-              } catch {}
+              try { navigator.vibrate(30); } catch {}
             }
           }
           isDraggingRef.current = false;
           dragSourceIdxRef.current = null;
           dragTargetIdxRef.current = null;
-          setTouchDraggingIdx(null);
-          setTouchOverIdx(null);
+          setDragSourceIdx(null);
+          setDragTargetIdx(null);
+          setDragDeltaY(0);
         }
       };
 
       window.addEventListener("touchmove", onGlobalMove, { passive: false });
       window.addEventListener("touchend", onGlobalEnd, { passive: false });
       window.addEventListener("touchcancel", onGlobalEnd, { passive: false });
-    }, 220);
+    }, 180);
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
@@ -351,15 +364,13 @@ export default function LabPage() {
       return;
     }
 
-    if (touchStartPosRef.current) {
-      const touch = e.touches[0];
-      const dx = Math.abs(touch.clientX - touchStartPosRef.current.x);
-      const dy = Math.abs(touch.clientY - touchStartPosRef.current.y);
-      if (dx > 12 || dy > 12) {
-        if (touchTimerRef.current) {
-          clearTimeout(touchTimerRef.current);
-          touchTimerRef.current = null;
-        }
+    const touch = e.touches[0];
+    const dx = Math.abs(touch.clientX - touchStartXRef.current);
+    const dy = Math.abs(touch.clientY - touchStartYRef.current);
+    if (dx > 10 || dy > 10) {
+      if (touchTimerRef.current) {
+        clearTimeout(touchTimerRef.current);
+        touchTimerRef.current = null;
       }
     }
   };
@@ -724,183 +735,164 @@ export default function LabPage() {
               </div>
             </div>
 
-            {/* Weekly Duties 3-Column Table with Apple Liquid Glass Style */}
+            {/* Weekly Duties 3-Column Table with Apple Real-Time Push Displacement Animation */}
             <div className="my-3 border border-zinc-200/80 dark:border-zinc-800/80 rounded-2xl overflow-hidden shadow-2xs bg-white/40 dark:bg-zinc-950/40 backdrop-blur-md">
-              <table className="w-full text-center border-collapse text-xs font-semibold table-fixed">
-                <thead className="sticky top-0 bg-zinc-100/70 dark:bg-zinc-800/70 backdrop-blur-md text-zinc-500 dark:text-zinc-400 border-b border-zinc-200/80 dark:border-zinc-800/80 select-none">
-                  <tr>
-                    <th className="py-2.5 sm:py-3 px-3.5 font-black w-[36%] text-left">사용자</th>
-                    <th className="py-2.5 sm:py-3 px-2 font-black w-[32%] text-center">
-                      <span className="inline-flex items-center justify-center gap-1.5">
-                        <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-xs" />
-                        <span>청소</span>
-                      </span>
-                    </th>
-                    <th className="py-2.5 sm:py-3 px-2 font-black w-[32%] text-center">
-                      <span className="inline-flex items-center justify-center gap-1.5">
-                        <span className="w-2 h-2 rounded-full bg-blue-500 shadow-xs" />
-                        <span>폐기물</span>
-                      </span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-zinc-200/60 dark:divide-zinc-800/60">
-                  {assignments.map((row, idx) => {
-                    let rotatedIdx = (idx - shift) % N;
-                    if (rotatedIdx < 0) rotatedIdx += N;
-                    
-                    const isFloating = draggedRowIdx === idx || touchDraggingIdx === idx;
-                    const isTarget = touchOverIdx === idx && touchDraggingIdx !== null && touchDraggingIdx !== idx;
-                    const isJustDropped = justDroppedIdx === idx;
+              
+              {/* Header */}
+              <div className="grid grid-cols-[36%_32%_32%] items-center py-2.5 px-3 bg-zinc-100/70 dark:bg-zinc-800/70 backdrop-blur-md text-zinc-500 dark:text-zinc-400 border-b border-zinc-200/80 dark:border-zinc-800/80 select-none text-xs font-black">
+                <div className="text-left pl-1">사용자</div>
+                <div className="text-center flex items-center justify-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-xs" />
+                  <span>청소</span>
+                </div>
+                <div className="text-center flex items-center justify-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-blue-500 shadow-xs" />
+                  <span>폐기물</span>
+                </div>
+              </div>
 
-                    return (
-                      <tr 
-                        key={row.member}
-                        data-row-idx={idx}
-                        draggable={true}
-                        onDragStart={(e) => {
-                          setDraggedRowIdx(idx);
-                          e.dataTransfer.effectAllowed = "move";
-                        }}
-                        onDragOver={(e) => {
-                          e.preventDefault();
-                        }}
-                        onDrop={(e) => {
-                          e.preventDefault();
-                          if (draggedRowIdx !== null && draggedRowIdx !== idx) {
-                            handleRowDrop(draggedRowIdx, idx);
-                            setJustDroppedIdx(idx);
-                            setTimeout(() => setJustDroppedIdx(null), 500);
-                          }
-                        }}
-                        onDragEnd={() => {
-                          setDraggedRowIdx(null);
-                        }}
-                        onTouchStart={(e) => handleTouchStart(idx, e)}
-                        onTouchMove={handleTouchMove}
-                        onTouchEnd={handleTouchEnd}
-                        onTouchCancel={handleTouchEnd}
-                        className={`group transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] select-none ${
-                          isFloating
-                            ? "relative z-30"
-                            : isTarget
-                            ? "relative z-20"
-                            : isJustDropped
-                            ? "relative z-10"
-                            : ""
-                        }`}
-                      >
-                        {/* Column 1: Member Name */}
-                        <td className={`py-2 px-3 sm:px-3.5 border-r border-zinc-200/60 dark:border-zinc-800/60 text-left transition-all duration-300 ${
-                          isFloating
-                            ? "bg-white/90 dark:bg-zinc-800/90 backdrop-blur-2xl border-y border-l border-blue-400/50 dark:border-blue-400/40 rounded-l-2xl shadow-[0_12px_28px_rgba(0,0,0,0.12),inset_0_1px_1px_rgba(255,255,255,0.8)]"
-                            : isTarget
-                            ? "bg-blue-500/10 dark:bg-blue-400/10 border-y border-l border-blue-400/30 rounded-l-2xl"
-                            : isJustDropped
-                            ? "bg-blue-500/10 dark:bg-blue-400/10 transition-colors duration-500"
-                            : "border-b border-zinc-100/80 dark:border-zinc-800/50 hover:bg-zinc-50/60 dark:hover:bg-zinc-800/30"
-                        }`}>
-                          <div className={`flex items-center gap-2.5 transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
-                            isFloating ? "transform -translate-y-2 scale-[1.02]" : isTarget ? "transform translate-y-1 opacity-70" : ""
-                          }`}>
-                            <div 
-                              style={{ touchAction: "none" }}
-                              className={`p-1.5 -m-1 cursor-grab active:cursor-grabbing rounded-lg transition-all ${
-                                isFloating 
-                                  ? "bg-blue-500/15 text-blue-600 dark:text-blue-400 scale-110" 
-                                  : "text-zinc-400 hover:text-zinc-600 dark:text-zinc-500 hover:bg-zinc-100/60 dark:hover:bg-zinc-800/60"
-                              }`}
-                              title="길게 눌러 이동"
-                            >
-                              <GripVertical className="w-3.5 h-3.5 shrink-0" />
-                            </div>
-                            <span className={`text-xs sm:text-sm font-extrabold tracking-tight truncate transition-colors ${
-                              isFloating ? "text-blue-600 dark:text-blue-400 font-black" : "text-zinc-800 dark:text-zinc-100"
-                            }`}>
-                              {row.member}
-                            </span>
-                          </div>
-                        </td>
+              {/* Rows with Real-Time Push Animation */}
+              <div className="relative divide-y divide-zinc-200/60 dark:divide-zinc-800/60">
+                {assignments.map((row, idx) => {
+                  let rotatedIdx = (idx - shift) % N;
+                  if (rotatedIdx < 0) rotatedIdx += N;
 
-                        {/* Column 2: Cleaning (Pure Color Block, No Checkmark) */}
-                        <td 
-                          className={`py-2 px-2 border-r border-zinc-200/60 dark:border-zinc-800/60 cursor-pointer select-none transition-all duration-300 ${
-                            isFloating
-                              ? "bg-white/90 dark:bg-zinc-800/90 backdrop-blur-2xl border-y border-blue-400/50 dark:border-blue-400/40 shadow-[0_12px_28px_rgba(0,0,0,0.12),inset_0_1px_1px_rgba(255,255,255,0.8)]"
-                              : isTarget
-                              ? "bg-blue-500/10 dark:bg-blue-400/10 border-y border-blue-400/30"
-                              : isJustDropped
-                              ? "bg-blue-500/10 dark:bg-blue-400/10 transition-colors duration-500"
-                              : "border-b border-zinc-100/80 dark:border-zinc-800/50"
+                  const isDraggingRow = dragSourceIdx === idx;
+                  const H = rowHeight || 50;
+                  
+                  // Calculate dynamic displacement offset (Apple-style push down/up)
+                  let shiftY = 0;
+                  if (dragSourceIdx !== null && dragTargetIdx !== null && !isDraggingRow) {
+                    if (dragSourceIdx < dragTargetIdx) {
+                      // Dragging downwards: items between source+1 and target shift UP
+                      if (idx > dragSourceIdx && idx <= dragTargetIdx) {
+                        shiftY = -H;
+                      }
+                    } else if (dragSourceIdx > dragTargetIdx) {
+                      // Dragging upwards: items between target and source-1 shift DOWN
+                      if (idx >= dragTargetIdx && idx < dragSourceIdx) {
+                        shiftY = H;
+                      }
+                    }
+                  }
+
+                  return (
+                    <div
+                      key={row.member}
+                      data-row-idx={idx}
+                      draggable={true}
+                      onDragStart={(e) => {
+                        setDragSourceIdx(idx);
+                        setDragTargetIdx(idx);
+                        e.dataTransfer.effectAllowed = "move";
+                      }}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        if (dragTargetIdx !== idx) {
+                          setDragTargetIdx(idx);
+                        }
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        if (dragSourceIdx !== null && dragSourceIdx !== idx) {
+                          handleRowDrop(dragSourceIdx, idx);
+                        }
+                        setDragSourceIdx(null);
+                        setDragTargetIdx(null);
+                      }}
+                      onDragEnd={() => {
+                        setDragSourceIdx(null);
+                        setDragTargetIdx(null);
+                      }}
+                      onTouchStart={(e) => handleTouchStart(idx, e)}
+                      onTouchMove={handleTouchMove}
+                      onTouchEnd={handleTouchEnd}
+                      onTouchCancel={handleTouchEnd}
+                      style={{
+                        transform: isDraggingRow
+                          ? `translateY(${dragDeltaY}px) scale(1.03)`
+                          : `translateY(${shiftY}px)`,
+                        zIndex: isDraggingRow ? 50 : 1,
+                        transition: isDraggingRow
+                          ? "none"
+                          : "transform 0.28s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.25s ease, background-color 0.2s ease",
+                      }}
+                      className={`grid grid-cols-[36%_32%_32%] items-center py-2 px-3 select-none will-change-transform ${
+                        isDraggingRow
+                          ? "bg-white/95 dark:bg-zinc-800/95 backdrop-blur-2xl shadow-[0_16px_36px_rgba(0,0,0,0.18),0_0_0_1px_rgba(255,255,255,0.9)_inset] rounded-2xl cursor-grabbing ring-1 ring-black/5"
+                          : "hover:bg-zinc-50/60 dark:hover:bg-zinc-800/30"
+                      }`}
+                    >
+                      {/* Column 1: Member Name */}
+                      <div className="flex items-center gap-2.5 min-w-0 pr-2">
+                        <div
+                          style={{ touchAction: "none" }}
+                          className={`p-1.5 -m-1 cursor-grab active:cursor-grabbing rounded-lg transition-all ${
+                            isDraggingRow
+                              ? "bg-blue-500/15 text-blue-600 dark:text-blue-400 scale-110"
+                              : "text-zinc-400 hover:text-zinc-600 dark:text-zinc-500 hover:bg-zinc-100/60 dark:hover:bg-zinc-800/60"
                           }`}
-                          onClick={() => handleToggleDuty(rotatedIdx, "cleaning")}
+                          title="길게 눌러 이동"
                         >
-                          <div className={`flex items-center justify-center p-0.5 transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
-                            isFloating ? "transform -translate-y-2 scale-[1.02]" : isTarget ? "transform translate-y-1 opacity-70" : ""
-                          }`}>
-                            {row.cleaning ? (
-                              <div 
-                                className="w-full h-8 sm:h-9 rounded-xl bg-gradient-to-b from-emerald-400 to-emerald-500 shadow-[0_3px_12px_rgba(16,185,129,0.35),inset_0_1px_1.5px_rgba(255,255,255,0.6)] transition-all duration-200 transform active:scale-90"
-                                title="청소 당번"
-                              />
-                            ) : (
-                              <div 
-                                className="w-full h-8 sm:h-9 rounded-xl bg-zinc-100/40 dark:bg-zinc-800/40 hover:bg-zinc-200/40 dark:hover:bg-zinc-700/40 transition-all duration-200 border border-transparent hover:border-zinc-200/60 dark:hover:border-zinc-700/60"
-                                title="청소 미지정"
-                              />
-                            )}
-                          </div>
-                        </td>
-
-                        {/* Column 3: Waste (Pure Color Block, No Checkmark) */}
-                        <td 
-                          className={`py-2 px-2 cursor-pointer select-none transition-all duration-300 ${
-                            isFloating
-                              ? "bg-white/90 dark:bg-zinc-800/90 backdrop-blur-2xl border-y border-r border-blue-400/50 dark:border-blue-400/40 rounded-r-2xl shadow-[0_12px_28px_rgba(0,0,0,0.12),inset_0_1px_1px_rgba(255,255,255,0.8)]"
-                              : isTarget
-                              ? "bg-blue-500/10 dark:bg-blue-400/10 border-y border-r border-blue-400/30 rounded-r-2xl"
-                              : isJustDropped
-                              ? "bg-blue-500/10 dark:bg-blue-400/10 transition-colors duration-500"
-                              : "border-b border-zinc-100/80 dark:border-zinc-800/50"
-                          }`}
-                          onClick={() => handleToggleDuty(rotatedIdx, "waste")}
-                        >
-                          <div className={`flex items-center justify-center p-0.5 transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
-                            isFloating ? "transform -translate-y-2 scale-[1.02]" : isTarget ? "transform translate-y-1 opacity-70" : ""
-                          }`}>
-                            {row.waste ? (
-                              <div 
-                                className="w-full h-8 sm:h-9 rounded-xl bg-gradient-to-b from-blue-400 to-blue-500 shadow-[0_3px_12px_rgba(59,130,246,0.35),inset_0_1px_1.5px_rgba(255,255,255,0.6)] transition-all duration-200 transform active:scale-90"
-                                title="폐기물 당번"
-                              />
-                            ) : (
-                              <div 
-                                className="w-full h-8 sm:h-9 rounded-xl bg-zinc-100/40 dark:bg-zinc-800/40 hover:bg-zinc-200/40 dark:hover:bg-zinc-700/40 transition-all duration-200 border border-transparent hover:border-zinc-200/60 dark:hover:border-zinc-700/60"
-                                title="폐기물 미지정"
-                              />
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-
-                  {/* Bottom '+' Button Row */}
-                  <tr
-                    onClick={() => setShowAddModal(true)}
-                    className="hover:bg-blue-50/40 dark:hover:bg-blue-950/20 active:bg-blue-100/40 transition-all cursor-pointer group"
-                  >
-                    <td colSpan={3} className="py-3 px-3 text-center">
-                      <div className="flex items-center justify-center gap-1.5 text-zinc-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 font-bold text-xs select-none">
-                        <div className="w-5 h-5 rounded-lg bg-zinc-100/80 dark:bg-zinc-800/80 group-hover:bg-blue-600 group-hover:text-white flex items-center justify-center transition-all shadow-2xs border border-zinc-200/60 dark:border-zinc-700/60">
-                          <Plus className="w-3.5 h-3.5" />
+                          <GripVertical className="w-3.5 h-3.5 shrink-0" />
                         </div>
-                        <span>당번 인원 추가 / 제외 설정</span>
+                        <span className={`text-xs sm:text-sm font-extrabold tracking-tight truncate transition-colors ${
+                          isDraggingRow ? "text-blue-600 dark:text-blue-400 font-black" : "text-zinc-800 dark:text-zinc-100"
+                        }`}>
+                          {row.member}
+                        </span>
                       </div>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+
+                      {/* Column 2: Cleaning (Pure Color Block, No Checkmark) */}
+                      <div 
+                        className="px-1 cursor-pointer flex items-center justify-center select-none"
+                        onClick={() => handleToggleDuty(rotatedIdx, "cleaning")}
+                      >
+                        {row.cleaning ? (
+                          <div 
+                            className="w-full h-8 sm:h-9 rounded-xl bg-gradient-to-b from-emerald-400 to-emerald-500 shadow-[0_3px_10px_rgba(16,185,129,0.3),inset_0_1px_1.5px_rgba(255,255,255,0.6)] transition-transform active:scale-95"
+                            title="청소 당번"
+                          />
+                        ) : (
+                          <div 
+                            className="w-full h-8 sm:h-9 rounded-xl bg-zinc-100/40 dark:bg-zinc-800/40 hover:bg-zinc-200/40 dark:hover:bg-zinc-700/40 transition-all border border-transparent hover:border-zinc-200/60 dark:hover:border-zinc-700/60"
+                            title="청소 미지정"
+                          />
+                        )}
+                      </div>
+
+                      {/* Column 3: Waste (Pure Color Block, No Checkmark) */}
+                      <div 
+                        className="px-1 cursor-pointer flex items-center justify-center select-none"
+                        onClick={() => handleToggleDuty(rotatedIdx, "waste")}
+                      >
+                        {row.waste ? (
+                          <div 
+                            className="w-full h-8 sm:h-9 rounded-xl bg-gradient-to-b from-blue-400 to-blue-500 shadow-[0_3px_10px_rgba(59,130,246,0.3),inset_0_1px_1.5px_rgba(255,255,255,0.6)] transition-transform active:scale-95"
+                            title="폐기물 당번"
+                          />
+                        ) : (
+                          <div 
+                            className="w-full h-8 sm:h-9 rounded-xl bg-zinc-100/40 dark:bg-zinc-800/40 hover:bg-zinc-200/40 dark:hover:bg-zinc-700/40 transition-all border border-transparent hover:border-zinc-200/60 dark:hover:border-zinc-700/60"
+                            title="폐기물 미지정"
+                          />
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {/* Bottom '+' Button Row */}
+                <div
+                  onClick={() => setShowAddModal(true)}
+                  className="py-3 px-3 flex items-center justify-center gap-1.5 text-zinc-400 hover:text-blue-600 dark:hover:text-blue-400 font-bold text-xs cursor-pointer hover:bg-blue-50/40 dark:hover:bg-blue-950/20 active:bg-blue-100/40 transition-all group select-none border-t border-dashed border-zinc-200/80 dark:border-zinc-800/80"
+                >
+                  <div className="w-5 h-5 rounded-lg bg-zinc-100/80 dark:bg-zinc-800/80 group-hover:bg-blue-600 group-hover:text-white flex items-center justify-center transition-all shadow-2xs border border-zinc-200/60 dark:border-zinc-700/60">
+                    <Plus className="w-3.5 h-3.5" />
+                  </div>
+                  <span>당번 인원 추가 / 제외 설정</span>
+                </div>
+              </div>
             </div>
 
             {/* Caption */}
