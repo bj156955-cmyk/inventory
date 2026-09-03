@@ -69,6 +69,7 @@ export default function LabPage() {
   const [dragSourceIdx, setDragSourceIdx] = useState<number | null>(null);
   const [dragTargetIdx, setDragTargetIdx] = useState<number | null>(null);
   const [dragDeltaY, setDragDeltaY] = useState<number>(0);
+  const [isDropping, setIsDropping] = useState<boolean>(false);
 
   const dragSourceIdxRef = React.useRef<number | null>(null);
   const dragTargetIdxRef = React.useRef<number | null>(null);
@@ -338,17 +339,37 @@ export default function LabPage() {
           const src = dragSourceIdxRef.current;
           const tgt = dragTargetIdxRef.current;
           if (src !== null && tgt !== null && src !== tgt) {
-            handleRowDrop(src, tgt);
+            const finalDeltaY = (tgt - src) * H;
+            setIsDropping(true);
+            setDragDeltaY(finalDeltaY);
+
             if (typeof window !== "undefined" && navigator.vibrate) {
-              try { navigator.vibrate(30); } catch {}
+              try { navigator.vibrate(25); } catch {}
             }
+
+            setTimeout(() => {
+              handleRowDrop(src, tgt);
+              isDraggingRef.current = false;
+              dragSourceIdxRef.current = null;
+              dragTargetIdxRef.current = null;
+              setIsDropping(false);
+              setDragSourceIdx(null);
+              setDragTargetIdx(null);
+              setDragDeltaY(0);
+            }, 240);
+          } else {
+            setIsDropping(true);
+            setDragDeltaY(0);
+            setTimeout(() => {
+              isDraggingRef.current = false;
+              dragSourceIdxRef.current = null;
+              dragTargetIdxRef.current = null;
+              setIsDropping(false);
+              setDragSourceIdx(null);
+              setDragTargetIdx(null);
+              setDragDeltaY(0);
+            }, 240);
           }
-          isDraggingRef.current = false;
-          dragSourceIdxRef.current = null;
-          dragTargetIdxRef.current = null;
-          setDragSourceIdx(null);
-          setDragTargetIdx(null);
-          setDragDeltaY(0);
         }
       };
 
@@ -736,23 +757,29 @@ export default function LabPage() {
             </div>
 
             {/* Weekly Duties 3-Column Table with Apple Real-Time Push Displacement Animation */}
-            <div className="my-3 border border-zinc-200/80 dark:border-zinc-800/80 rounded-2xl overflow-hidden shadow-2xs bg-white/40 dark:bg-zinc-950/40 backdrop-blur-md">
+            <div 
+              style={{
+                WebkitMaskImage: "-webkit-radial-gradient(white, black)",
+                isolation: "isolate"
+              }}
+              className="my-3 border border-zinc-200/80 dark:border-zinc-800/80 rounded-2xl overflow-hidden shadow-2xs bg-white/40 dark:bg-zinc-950/40 backdrop-blur-md w-full"
+            >
               
               {/* Header */}
-              <div className="grid grid-cols-[36%_32%_32%] items-center py-2.5 px-3 bg-zinc-100/70 dark:bg-zinc-800/70 backdrop-blur-md text-zinc-500 dark:text-zinc-400 border-b border-zinc-200/80 dark:border-zinc-800/80 select-none text-xs font-black">
-                <div className="text-left pl-1">사용자</div>
-                <div className="text-center flex items-center justify-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-xs" />
+              <div className="grid grid-cols-[minmax(0,36%)_minmax(0,32%)_minmax(0,32%)] items-center py-2.5 px-3 bg-zinc-100/70 dark:bg-zinc-800/70 backdrop-blur-md text-zinc-500 dark:text-zinc-400 border-b border-zinc-200/80 dark:border-zinc-800/80 select-none text-xs font-black w-full">
+                <div className="text-left pl-1 truncate">사용자</div>
+                <div className="text-center flex items-center justify-center gap-1.5 truncate">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-xs shrink-0" />
                   <span>청소</span>
                 </div>
-                <div className="text-center flex items-center justify-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-blue-500 shadow-xs" />
+                <div className="text-center flex items-center justify-center gap-1.5 truncate">
+                  <span className="w-2 h-2 rounded-full bg-blue-500 shadow-xs shrink-0" />
                   <span>폐기물</span>
                 </div>
               </div>
 
               {/* Rows with Real-Time Push Animation */}
-              <div className="relative divide-y divide-zinc-200/60 dark:divide-zinc-800/60">
+              <div className="relative divide-y divide-zinc-200/60 dark:divide-zinc-800/60 w-full">
                 {assignments.map((row, idx) => {
                   let rotatedIdx = (idx - shift) % N;
                   if (rotatedIdx < 0) rotatedIdx += N;
@@ -794,15 +821,30 @@ export default function LabPage() {
                       }}
                       onDrop={(e) => {
                         e.preventDefault();
-                        if (dragSourceIdx !== null && dragSourceIdx !== idx) {
-                          handleRowDrop(dragSourceIdx, idx);
+                        if (dragSourceIdx !== null && dragTargetIdx !== null && dragSourceIdx !== dragTargetIdx) {
+                          const src = dragSourceIdx;
+                          const tgt = dragTargetIdx;
+                          const finalDeltaY = (tgt - src) * H;
+                          setIsDropping(true);
+                          setDragDeltaY(finalDeltaY);
+                          setTimeout(() => {
+                            handleRowDrop(src, tgt);
+                            setIsDropping(false);
+                            setDragSourceIdx(null);
+                            setDragTargetIdx(null);
+                            setDragDeltaY(0);
+                          }, 240);
+                        } else {
+                          setDragSourceIdx(null);
+                          setDragTargetIdx(null);
+                          setDragDeltaY(0);
                         }
-                        setDragSourceIdx(null);
-                        setDragTargetIdx(null);
                       }}
                       onDragEnd={() => {
-                        setDragSourceIdx(null);
-                        setDragTargetIdx(null);
+                        if (!isDropping) {
+                          setDragSourceIdx(null);
+                          setDragTargetIdx(null);
+                        }
                       }}
                       onTouchStart={(e) => handleTouchStart(idx, e)}
                       onTouchMove={handleTouchMove}
@@ -810,16 +852,18 @@ export default function LabPage() {
                       onTouchCancel={handleTouchEnd}
                       style={{
                         transform: isDraggingRow
-                          ? `translateY(${dragDeltaY}px) scale(1.03)`
-                          : `translateY(${shiftY}px)`,
+                          ? `translateY(${dragDeltaY}px) scale(${isDropping ? 1.0 : 1.025})`
+                          : shiftY !== 0
+                          ? `translateY(${shiftY}px)`
+                          : undefined,
                         zIndex: isDraggingRow ? 50 : 1,
                         transition: isDraggingRow
-                          ? "none"
-                          : "transform 0.28s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.25s ease, background-color 0.2s ease",
+                          ? (isDropping ? "transform 0.24s cubic-bezier(0.2, 0.9, 0.3, 1), box-shadow 0.24s ease, background-color 0.24s ease" : "none")
+                          : (dragSourceIdx !== null ? "transform 0.28s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.25s ease, background-color 0.2s ease" : undefined),
                       }}
-                      className={`grid grid-cols-[36%_32%_32%] items-center py-2 px-3 select-none will-change-transform ${
+                      className={`grid grid-cols-[minmax(0,36%)_minmax(0,32%)_minmax(0,32%)] items-center py-2 px-3 select-none w-full ${
                         isDraggingRow
-                          ? "bg-white/95 dark:bg-zinc-800/95 backdrop-blur-2xl shadow-[0_16px_36px_rgba(0,0,0,0.18),0_0_0_1px_rgba(255,255,255,0.9)_inset] rounded-2xl cursor-grabbing ring-1 ring-black/5"
+                          ? "bg-white/95 dark:bg-zinc-800/95 backdrop-blur-2xl shadow-[0_14px_30px_rgba(0,0,0,0.12),0_0_0_1px_rgba(255,255,255,0.7)_inset] dark:shadow-[0_14px_30px_rgba(0,0,0,0.5),0_0_0_1px_rgba(255,255,255,0.1)_inset] border border-blue-400/40 dark:border-blue-500/30 rounded-2xl cursor-grabbing ring-1 ring-black/5 dark:ring-white/5"
                           : "hover:bg-zinc-50/60 dark:hover:bg-zinc-800/30"
                       }`}
                     >
@@ -829,7 +873,7 @@ export default function LabPage() {
                           style={{ touchAction: "none" }}
                           className={`p-1.5 -m-1 cursor-grab active:cursor-grabbing rounded-lg transition-all ${
                             isDraggingRow
-                              ? "bg-blue-500/15 text-blue-600 dark:text-blue-400 scale-110"
+                              ? "bg-blue-500/10 dark:bg-blue-500/20 text-blue-600 dark:text-blue-300 scale-105"
                               : "text-zinc-400 hover:text-zinc-600 dark:text-zinc-500 hover:bg-zinc-100/60 dark:hover:bg-zinc-800/60"
                           }`}
                           title="길게 눌러 이동"
@@ -837,7 +881,7 @@ export default function LabPage() {
                           <GripVertical className="w-3.5 h-3.5 shrink-0" />
                         </div>
                         <span className={`text-xs sm:text-sm font-extrabold tracking-tight truncate transition-colors ${
-                          isDraggingRow ? "text-blue-600 dark:text-blue-400 font-black" : "text-zinc-800 dark:text-zinc-100"
+                          isDraggingRow ? "text-blue-600 dark:text-blue-300 font-black" : "text-zinc-800 dark:text-zinc-100"
                         }`}>
                           {row.member}
                         </span>
@@ -885,7 +929,7 @@ export default function LabPage() {
                 {/* Bottom '+' Button Row */}
                 <div
                   onClick={() => setShowAddModal(true)}
-                  className="py-3 px-3 flex items-center justify-center gap-1.5 text-zinc-400 hover:text-blue-600 dark:hover:text-blue-400 font-bold text-xs cursor-pointer hover:bg-blue-50/40 dark:hover:bg-blue-950/20 active:bg-blue-100/40 transition-all group select-none border-t border-dashed border-zinc-200/80 dark:border-zinc-800/80"
+                  className="py-3 px-3 flex items-center justify-center gap-1.5 text-zinc-400 hover:text-blue-600 dark:hover:text-blue-400 font-bold text-xs cursor-pointer hover:bg-blue-50/40 dark:hover:bg-blue-950/20 active:bg-blue-100/40 transition-all group select-none border-t border-dashed border-zinc-200/80 dark:border-zinc-800/80 w-full"
                 >
                   <div className="w-5 h-5 rounded-lg bg-zinc-100/80 dark:bg-zinc-800/80 group-hover:bg-blue-600 group-hover:text-white flex items-center justify-center transition-all shadow-2xs border border-zinc-200/60 dark:border-zinc-700/60">
                     <Plus className="w-3.5 h-3.5" />
