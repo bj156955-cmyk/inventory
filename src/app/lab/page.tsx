@@ -157,9 +157,9 @@ export default function LabPage() {
     };
   }, []);
 
-  // Reference Monday: Monday, Jan 5, 2026
+  // Reference Monday: Monday, Jan 5, 2026 00:00:00 (로컬 자정 기준)
   const getWeekOffset = () => {
-    const referenceDate = new Date("2026-01-05");
+    const referenceDate = new Date(2026, 0, 5, 0, 0, 0);
     const currentDate = new Date();
     const diff = currentDate.getTime() - referenceDate.getTime();
     const oneWeek = 7 * 24 * 60 * 60 * 1000;
