@@ -16,7 +16,12 @@ import {
   GripVertical,
   X,
   ShoppingCart,
-  Truck
+  Truck,
+  ChevronUp,
+  ChevronDown,
+  ArrowUpDown,
+  Check,
+  UserPlus
 } from "lucide-react";
 
 // Color mapping for member badges (Dark Pastel Accents)
@@ -67,9 +72,10 @@ export default function LabPage() {
   const [members, setMembers] = useState<string[]>([]);
   const [cleaningState, setCleaningState] = useState<CleaningState | null>(null);
   const [draggedRowIdx, setDraggedRowIdx] = useState<number | null>(null);
-  const [showAddSelect, setShowAddSelect] = useState(false);
   const [loading, setLoading] = useState(true);
   const [activeMobileTab, setActiveMobileTab] = useState<"orders" | "cleaning">("orders");
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
   
   // Orders states
   const [orders, setOrders] = useState<LabOrder[]>([]);
@@ -234,9 +240,13 @@ export default function LabPage() {
     setCleaningState(newState);
     await saveCleaningState(newState);
     setShowAddSelect(false);
+    setShowAddModal(false);
   };
 
-  const handleRemoveUser = async (indexInBase: number) => {
+  const handleRemoveUser = async (indexInBase: number, memberName?: string) => {
+    if (memberName && !window.confirm(`${memberName} 님을 주간 청소 당번에서 제외하시겠습니까?`)) {
+      return;
+    }
     const currentAssignments = cleaningState?.assignments || members.map((member, i) => {
       const N = members.length;
       const cleaning = i < Math.min(3, N);
@@ -263,9 +273,9 @@ export default function LabPage() {
     const currentWeekOffset = getWeekOffset();
     const baseWeek = cleaningState?.baseWeek || 0;
     const shift = (currentWeekOffset - baseWeek);
-    const N = members.length;
     
     const baseAssignments = cleaningState?.assignments || members.map((member, i) => {
+      const N = members.length;
       const cleaning = i < Math.min(3, N);
       const s = Math.max(1, Math.floor(N / 2));
       const wasteIdx = (i - s + N) % N;
@@ -273,8 +283,10 @@ export default function LabPage() {
       return { member, cleaning, waste };
     });
 
+    const N = baseAssignments.length;
+    if (N === 0) return;
+
     const getRotatedIndex = (idx: number) => {
-      if (N === 0) return 0;
       let r = (idx - shift) % N;
       if (r < 0) r += N;
       return r;
@@ -294,6 +306,12 @@ export default function LabPage() {
 
     setCleaningState(newState);
     await saveCleaningState(newState);
+  };
+
+  const handleMoveRow = async (sourceIdx: number, direction: "up" | "down") => {
+    const targetIdx = direction === "up" ? sourceIdx - 1 : sourceIdx + 1;
+    if (targetIdx < 0) return;
+    await handleRowDrop(sourceIdx, targetIdx);
   };
 
   // Lab Orders Handlers
@@ -377,9 +395,9 @@ export default function LabPage() {
   const currentWeekOffset = getWeekOffset();
   const baseWeek = cleaningState?.baseWeek || 0;
   const shift = (currentWeekOffset - baseWeek);
-  const N = members.length;
   
   const baseAssignments = cleaningState?.assignments || members.map((member, i) => {
+    const N = members.length;
     const cleaning = i < Math.min(3, N);
     const s = Math.max(1, Math.floor(N / 2));
     const wasteIdx = (i - s + N) % N;
@@ -387,14 +405,15 @@ export default function LabPage() {
     return { member, cleaning, waste };
   });
 
-  const assignments = members.map((_, i) => {
-    const item = baseAssignments[i] || { member: members[i] || "UNKNOWN", cleaning: false, waste: false };
+  const N = baseAssignments.length;
+
+  const assignments = baseAssignments.map((item, i) => {
     if (N === 0) return { member: item.member, cleaning: false, waste: false };
     
     let rotatedIdx = (i - shift) % N;
     if (rotatedIdx < 0) rotatedIdx += N;
     
-    const sourceItem = baseAssignments[rotatedIdx] || { member: "UNKNOWN", cleaning: false, waste: false };
+    const sourceItem = baseAssignments[rotatedIdx] || { member: item.member, cleaning: false, waste: false };
     return {
       member: item.member,
       cleaning: sourceItem.cleaning,
@@ -428,52 +447,52 @@ export default function LabPage() {
   };
 
   return (
-    <div className="flex-1 p-3 sm:p-6 md:p-8 space-y-3 sm:space-y-4 flex flex-col min-h-0 bg-zinc-50 dark:bg-zinc-950">
+    <div className="h-[calc(100dvh-50px-5rem)] md:h-[100dvh] p-2.5 sm:p-5 md:p-8 flex flex-col min-h-0 bg-zinc-50 dark:bg-zinc-950 overflow-hidden">
       {loading ? (
         <div className="flex-1 flex items-center justify-center min-h-[300px]">
           <RefreshCw className="w-8 h-8 text-blue-500 animate-spin" />
         </div>
       ) : (
-        <div className="flex-1 flex flex-col space-y-4 min-h-0">
+        <div className="flex-1 flex flex-col space-y-2 sm:space-y-4 min-h-0 overflow-hidden">
           {/* Mobile Segment Tab Bar (App-style) */}
-          <div className="lg:hidden flex bg-zinc-100 dark:bg-zinc-800/90 p-1.5 rounded-2xl gap-1.5 shrink-0 select-none shadow-sm">
+          <div className="lg:hidden flex bg-zinc-100 dark:bg-zinc-800/90 p-1 rounded-xl gap-1 shrink-0 select-none shadow-xs">
             <button
               type="button"
               onClick={() => setActiveMobileTab("orders")}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer active:scale-95 ${
+              className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer active:scale-95 ${
                 activeMobileTab === "orders"
-                  ? "bg-blue-600 text-white shadow-sm shadow-blue-600/30 font-black scale-[1.02]"
+                  ? "bg-blue-600 text-white shadow-sm shadow-blue-600/30 font-black scale-[1.01]"
                   : "text-zinc-500 dark:text-zinc-400 hover:bg-zinc-200/50 dark:hover:bg-zinc-700/50"
               }`}
             >
-              <ShoppingCart className="w-4 h-4" />
+              <ShoppingCart className="w-3.5 h-3.5" />
               <span>물품 주문 ({visibleOrders.length})</span>
             </button>
             <button
               type="button"
               onClick={() => setActiveMobileTab("cleaning")}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer active:scale-95 ${
+              className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer active:scale-95 ${
                 activeMobileTab === "cleaning"
-                  ? "bg-blue-600 text-white shadow-sm shadow-blue-600/30 font-black scale-[1.02]"
+                  ? "bg-blue-600 text-white shadow-sm shadow-blue-600/30 font-black scale-[1.01]"
                   : "text-zinc-500 dark:text-zinc-400 hover:bg-zinc-200/50 dark:hover:bg-zinc-700/50"
               }`}
             >
-              <Sparkles className="w-4 h-4" />
+              <Sparkles className="w-3.5 h-3.5" />
               <span>청소 당번</span>
             </button>
           </div>
 
           {/* Main 2-Column Content (1-Column on Mobile depending on activeMobileTab) */}
-          <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-8 min-h-0">
+          <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-6 min-h-0 overflow-hidden">
 
             {/* Left Column: Item Orders Status */}
-            <div className={`bg-white dark:bg-zinc-900 rounded-[2rem] sm:rounded-[2.5rem] p-5 sm:p-7 shadow-sm border border-zinc-200 dark:border-zinc-800 flex-col min-h-[420px] overflow-hidden ${
+            <div className={`bg-white dark:bg-zinc-900 rounded-2xl sm:rounded-[2.5rem] p-3.5 sm:p-6 shadow-sm border border-zinc-200 dark:border-zinc-800 flex-col flex-1 min-h-0 overflow-hidden ${
               activeMobileTab === "orders" ? "flex" : "hidden lg:flex"
             }`}>
               
-              <div className="flex justify-between items-center pb-3 border-b border-zinc-100 dark:border-zinc-800 shrink-0">
-                <h3 className="text-base sm:text-lg font-black text-zinc-900 dark:text-white flex items-center gap-2">
-                  <ShoppingCart className="w-5 h-5 text-blue-500" />
+              <div className="flex justify-between items-center pb-2 sm:pb-3 border-b border-zinc-100 dark:border-zinc-800 shrink-0">
+                <h3 className="text-sm sm:text-base font-black text-zinc-900 dark:text-white flex items-center gap-2">
+                  <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500" />
                   <span>연구실 물품 주문 현황 ({visibleOrders.length}건)</span>
                 </h3>
               
@@ -494,7 +513,7 @@ export default function LabPage() {
                   e.preventDefault();
                   handleAddOrder(newItemName);
                 }}
-                className="flex gap-2 p-2.5 mt-3 bg-zinc-50 dark:bg-zinc-800/80 rounded-2xl border border-zinc-200 dark:border-zinc-700 shrink-0 animate-fade-in shadow-inner"
+                className="flex gap-2 p-2.5 mt-2 bg-zinc-50 dark:bg-zinc-800/80 rounded-2xl border border-zinc-200 dark:border-zinc-700 shrink-0 animate-fade-in shadow-inner"
               >
                 <input
                   type="text"
@@ -635,52 +654,76 @@ export default function LabPage() {
           </div>
 
           {/* Right Column: Cleaning & Waste Duties Table */}
-          <div className={`bg-white dark:bg-zinc-900 rounded-[2rem] sm:rounded-[2.5rem] p-5 sm:p-7 shadow-sm border border-zinc-200 dark:border-zinc-800 flex-col min-h-[420px] overflow-hidden ${
+          <div className={`bg-white dark:bg-zinc-900 rounded-2xl sm:rounded-[2.5rem] p-3.5 sm:p-6 shadow-sm border border-zinc-200 dark:border-zinc-800 flex-col flex-1 min-h-0 overflow-hidden ${
             activeMobileTab === "cleaning" ? "flex" : "hidden lg:flex"
           }`}>
             
-            <div className="flex justify-between items-center pb-3 border-b border-zinc-100 dark:border-zinc-800 shrink-0">
-              <h3 className="text-base sm:text-lg font-black text-zinc-900 dark:text-white flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-emerald-400" />
-                <span>주간 청소 당번 {getWeeklyDateRangeString()}</span>
+            <div className="flex justify-between items-center pb-2 sm:pb-3 border-b border-zinc-100 dark:border-zinc-800 shrink-0">
+              <h3 className="text-sm sm:text-base font-black text-zinc-900 dark:text-white flex items-center gap-1.5 sm:gap-2 truncate">
+                <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-400 shrink-0" />
+                <span className="truncate">주간 청소 당번 {getWeeklyDateRangeString()}</span>
               </h3>
               
-              <div className="flex items-center gap-2 relative">
-                {showAddSelect && (
-                  <select
-                    className="bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-xl px-2.5 py-1.5 text-xs outline-none font-bold text-zinc-900 dark:text-white w-[130px] cursor-pointer absolute right-9 top-0 z-20 animate-fade-in shadow-xl"
-                    defaultValue=""
-                    onChange={(e) => handleAddUser(e.target.value)}
-                    onBlur={() => setTimeout(() => setShowAddSelect(false), 200)}
-                  >
-                    <option value="" disabled>멤버 선택...</option>
-                    {members
-                      .filter(m => !baseAssignments.some(ba => ba.member === m))
-                      .map(m => (
-                        <option key={m} value={m}>{m}</option>
-                      ))
-                    }
-                  </select>
-                )}
+              <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                {/* Add Member Button */}
                 <button
-                  onClick={() => setShowAddSelect(!showAddSelect)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold text-xs shadow-sm shadow-blue-600/30 transition-all cursor-pointer active:scale-95"
-                  title="멤버 추가"
+                  type="button"
+                  onClick={() => setShowAddModal(true)}
+                  className="flex items-center gap-1 px-2.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold text-xs shadow-sm shadow-blue-600/30 transition-all cursor-pointer active:scale-95"
+                  title="당번 추가"
                 >
-                  <Plus className="w-4 h-4" />
+                  <UserPlus className="w-3.5 h-3.5" />
                   <span className="hidden sm:inline">당번 추가</span>
+                </button>
+
+                {/* Edit Mode Toggle Button */}
+                <button
+                  type="button"
+                  onClick={() => setIsEditMode(!isEditMode)}
+                  className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl font-bold text-xs transition-all cursor-pointer active:scale-95 shadow-xs ${
+                    isEditMode
+                      ? "bg-amber-500 hover:bg-amber-600 text-white font-black shadow-amber-500/20 shadow-sm"
+                      : "bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200"
+                  }`}
+                  title={isEditMode ? "편집 완료" : "순서 및 인원 편집"}
+                >
+                  {isEditMode ? (
+                    <>
+                      <Check className="w-3.5 h-3.5" />
+                      <span>완료</span>
+                    </>
+                  ) : (
+                    <>
+                      <ArrowUpDown className="w-3.5 h-3.5 text-zinc-500" />
+                      <span>순서 편집</span>
+                    </>
+                  )}
                 </button>
               </div>
             </div>
 
-            {/* Weekly Duties 3-Column Table with Drag Sorting */}
-            <div className="my-3 border border-zinc-200 dark:border-zinc-800 rounded-2xl overflow-hidden flex-1 flex flex-col">
+            {/* Slim Tip Banner in Edit Mode */}
+            {isEditMode && (
+              <div className="mt-2 px-3 py-1.5 bg-amber-500/10 border border-amber-500/30 rounded-xl flex items-center justify-between text-[11px] font-bold text-amber-700 dark:text-amber-400 shrink-0 select-none">
+                <span>▲ / ▼ 로 순번 이동, ✕ 로 당번 제외</span>
+                <button
+                  type="button"
+                  onClick={() => setIsEditMode(false)}
+                  className="text-[10px] underline font-black cursor-pointer ml-2 shrink-0"
+                >
+                  편집 완료
+                </button>
+              </div>
+            )}
+
+            {/* Weekly Duties 3-Column Table with Drag & Arrow Sorting */}
+            <div className="my-1.5 sm:my-2 border border-zinc-200 dark:border-zinc-800 rounded-xl sm:rounded-2xl overflow-y-auto custom-scrollbar flex-1 min-h-0">
               <table className="w-full text-center border-collapse text-xs font-semibold table-fixed">
                 <thead className="sticky top-0 bg-zinc-50 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border-b border-zinc-200 dark:border-zinc-800 z-10 select-none">
                   <tr>
-                    <th className="py-3 font-black w-[40%] bg-zinc-50 dark:bg-zinc-800">사용자</th>
-                    <th className="py-3 font-black w-[30%] bg-zinc-50 dark:bg-zinc-800">청소</th>
-                    <th className="py-3 font-black w-[30%] bg-zinc-50 dark:bg-zinc-800">폐기물</th>
+                    <th className="py-2 font-black w-[44%] bg-zinc-50 dark:bg-zinc-800">사용자</th>
+                    <th className="py-2 font-black w-[28%] bg-zinc-50 dark:bg-zinc-800">청소</th>
+                    <th className="py-2 font-black w-[28%] bg-zinc-50 dark:bg-zinc-800">폐기물</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
@@ -691,7 +734,7 @@ export default function LabPage() {
                     return (
                       <tr 
                         key={row.member} 
-                        draggable={true}
+                        draggable={!isEditMode}
                         onDragStart={(e) => {
                           setDraggedRowIdx(idx);
                           e.dataTransfer.effectAllowed = "move";
@@ -712,30 +755,65 @@ export default function LabPage() {
                           draggedRowIdx === idx ? "opacity-30 bg-zinc-100 dark:bg-zinc-900" : ""
                         }`}
                       >
-                        <td className="py-2.5 border-r border-zinc-200 dark:border-zinc-800">
-                          <div className="flex items-center justify-between gap-1.5 px-3">
-                            <div className="flex items-center gap-2 min-w-0">
+                        <td className="py-1.5 sm:py-2 border-r border-zinc-200 dark:border-zinc-800">
+                          <div className="flex items-center justify-between gap-1 px-2 sm:px-3">
+                            <div className="flex items-center gap-1.5 min-w-0">
                               {/* Desktop: Drag Grip */}
-                              <GripVertical className="hidden md:block w-4 h-4 text-zinc-400 dark:text-zinc-500 shrink-0 cursor-grab active:cursor-grabbing" />
+                              {!isEditMode && (
+                                <GripVertical className="hidden md:block w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500 shrink-0 cursor-grab active:cursor-grabbing" />
+                              )}
                               
                               <span className="text-xs sm:text-sm text-zinc-900 dark:text-white font-bold truncate">
                                 {row.member}
                               </span>
                             </div>
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveUser(rotatedIdx)}
-                              className="text-zinc-400 hover:text-rose-400 dark:text-zinc-500 dark:hover:text-rose-400 opacity-0 group-hover:opacity-100 transition-all p-1 shrink-0 cursor-pointer"
-                              title="제거"
-                            >
-                              <X className="w-3.5 h-3.5" />
-                            </button>
+
+                            {/* Actions: Edit Mode (Up/Down/Exclude) vs Normal */}
+                            {isEditMode ? (
+                              <div className="flex items-center gap-0.5 shrink-0">
+                                <button
+                                  type="button"
+                                  disabled={idx === 0}
+                                  onClick={() => handleMoveRow(idx, "up")}
+                                  className="w-5 h-5 rounded-md bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 flex items-center justify-center disabled:opacity-20 cursor-pointer active:scale-90 transition-all"
+                                  title="위로 이동"
+                                >
+                                  <ChevronUp className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={idx === assignments.length - 1}
+                                  onClick={() => handleMoveRow(idx, "down")}
+                                  className="w-5 h-5 rounded-md bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 flex items-center justify-center disabled:opacity-20 cursor-pointer active:scale-90 transition-all"
+                                  title="아래로 이동"
+                                >
+                                  <ChevronDown className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveUser(rotatedIdx, row.member)}
+                                  className="w-5 h-5 rounded-md bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/60 text-rose-500 flex items-center justify-center cursor-pointer active:scale-90 transition-all ml-0.5"
+                                  title="당번에서 제외"
+                                >
+                                  <X className="w-3 h-3" />
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveUser(rotatedIdx, row.member)}
+                                className="text-zinc-400 hover:text-rose-500 dark:text-zinc-500 dark:hover:text-rose-400 opacity-60 md:opacity-0 md:group-hover:opacity-100 transition-all p-1 shrink-0 cursor-pointer"
+                                title="제거"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            )}
                           </div>
                         </td>
                         <td 
-                          className={`py-2.5 border-r border-zinc-200 dark:border-zinc-800 px-1 cursor-pointer select-none transition-all ${
+                          className={`py-1.5 sm:py-2 border-r border-zinc-200 dark:border-zinc-800 px-1 cursor-pointer select-none transition-all ${
                             row.cleaning 
-                              ? "bg-emerald-500/20 text-emerald-400 font-black" 
+                              ? "bg-emerald-500/20 text-emerald-500 dark:text-emerald-400 font-black" 
                               : "hover:bg-zinc-100 dark:hover:bg-zinc-800/30 text-transparent"
                           }`}
                           onClick={() => handleToggleDuty(rotatedIdx, "cleaning")}
@@ -743,9 +821,9 @@ export default function LabPage() {
                           <span className="text-xs select-none">✓</span>
                         </td>
                         <td 
-                          className={`py-2.5 px-1 cursor-pointer select-none transition-all ${
+                          className={`py-1.5 sm:py-2 px-1 cursor-pointer select-none transition-all ${
                             row.waste 
-                              ? "bg-blue-500/20 text-blue-400 font-black" 
+                              ? "bg-blue-500/20 text-blue-500 dark:text-blue-400 font-black" 
                               : "hover:bg-zinc-100 dark:hover:bg-zinc-800/30 text-transparent"
                           }`}
                           onClick={() => handleToggleDuty(rotatedIdx, "waste")}
@@ -760,14 +838,76 @@ export default function LabPage() {
             </div>
 
             {/* Caption */}
-            <div className="text-[10px] text-zinc-400 dark:text-zinc-500 font-bold flex items-center justify-between shrink-0 pt-2.5 border-t border-zinc-100 dark:border-zinc-800 select-none">
-              <span>※ 드래그하여 순번을 정하고, 칸을 눌러 이번 주 당번을 지정합니다.</span>
+            <div className="text-[10px] text-zinc-400 dark:text-zinc-500 font-bold flex items-center justify-between shrink-0 pt-1.5 border-t border-zinc-100 dark:border-zinc-800 select-none">
+              <span>※ {isEditMode ? "편집 모드 활성화됨" : "칸을 눌러 당번을 지정하고, [순서 편집]으로 순번을 변경합니다."}</span>
               <span>+{shift}주차</span>
             </div>
 
           </div>
 
         </div>
+        </div>
+      )}
+
+      {/* Member Add Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-xs z-[300] flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white dark:bg-zinc-900 w-full max-w-[360px] rounded-3xl shadow-2xl p-5 space-y-4 border border-zinc-200 dark:border-zinc-800">
+            <div className="flex items-center justify-between pb-2 border-b border-zinc-100 dark:border-zinc-800">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-sm shadow-blue-600/30">
+                  <UserPlus className="w-4 h-4" />
+                </div>
+                <h4 className="font-black text-sm sm:text-base text-zinc-900 dark:text-white">
+                  청소 당번 추가
+                </h4>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAddModal(false)}
+                className="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full text-zinc-400 hover:text-zinc-700 dark:hover:text-white transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 font-semibold">
+              추가할 멤버를 선택하세요. 당번 목록 맨 끝에 추가됩니다.
+            </p>
+
+            {/* Member Chips List */}
+            <div className="max-h-52 overflow-y-auto custom-scrollbar py-1">
+              {members.filter(m => !baseAssignments.some(ba => ba.member === m)).length === 0 ? (
+                <div className="py-6 text-center text-xs font-bold text-zinc-400 dark:text-zinc-500">
+                  모든 팀원이 이미 당번에 포함되어 있습니다.
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-2">
+                  {members
+                    .filter(m => !baseAssignments.some(ba => ba.member === m))
+                    .map(m => (
+                      <button
+                        key={m}
+                        type="button"
+                        onClick={() => handleAddUser(m)}
+                        className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-zinc-100 dark:bg-zinc-800 hover:bg-blue-600 hover:text-white dark:hover:bg-blue-600 dark:hover:text-white text-zinc-800 dark:text-zinc-200 rounded-xl text-xs font-black transition-all active:scale-95 cursor-pointer shadow-xs"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>{m}</span>
+                      </button>
+                    ))}
+                </div>
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowAddModal(false)}
+              className="w-full py-2.5 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 rounded-xl font-bold text-xs transition-all cursor-pointer"
+            >
+              닫기
+            </button>
+          </div>
         </div>
       )}
 
