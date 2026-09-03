@@ -237,7 +237,7 @@ export default function MembersPage() {
     <div className="flex-1 p-3 sm:p-6 md:p-8 space-y-3 sm:space-y-4 bg-zinc-50 dark:bg-zinc-950 flex flex-col min-h-0">
       
       {/* Directory Card */}
-      <div className="w-full max-w-4xl mx-auto flex-1 flex flex-col min-h-0 bg-white dark:bg-zinc-900 rounded-[2rem] sm:rounded-[2.5rem] p-5 sm:p-7 shadow-sm border border-zinc-200 dark:border-zinc-800 overflow-hidden">
+      <div className="w-full max-w-lg sm:max-w-xl mx-auto h-fit max-h-[calc(100vh-5rem)] flex flex-col bg-white dark:bg-zinc-900 rounded-[2rem] sm:rounded-[2.5rem] p-5 sm:p-7 shadow-sm border border-zinc-200 dark:border-zinc-800 transition-all">
         
         {/* Header: Title + Circular Plus Button */}
         <div className="flex justify-between items-center pb-3 sm:pb-4 border-b border-zinc-100 dark:border-zinc-800 shrink-0">
@@ -257,18 +257,18 @@ export default function MembersPage() {
 
         {/* 3-Column Grid Member List */}
         {loading ? (
-          <div className="flex-1 flex items-center justify-center min-h-[250px]">
+          <div className="py-12 flex items-center justify-center min-h-[160px]">
             <div className="w-8 h-8 border-3 border-blue-600 border-t-transparent rounded-full animate-spin" />
           </div>
         ) : (
-          <div className="flex-1 overflow-y-auto pr-1 mt-4 grid grid-cols-3 gap-2.5 sm:gap-3.5 content-start custom-scrollbar">
+          <div className="overflow-y-auto pr-1 mt-4 grid grid-cols-3 gap-2.5 sm:gap-3.5 content-start custom-scrollbar">
             {members.map((member) => {
               const isOnline = !!onlineMembers[member];
               
               return (
                 <div 
                   key={member}
-                  className="relative group p-4 sm:p-5 bg-zinc-50 dark:bg-zinc-800/60 rounded-2xl sm:rounded-3xl border border-zinc-200/70 dark:border-zinc-700/70 hover:border-zinc-400 dark:hover:border-zinc-500 hover:shadow-xs transition-all flex items-center justify-center select-none min-h-[72px] sm:min-h-[84px]"
+                  className="relative group p-3.5 sm:p-4.5 bg-zinc-50 dark:bg-zinc-800/60 rounded-2xl sm:rounded-3xl border border-zinc-200/70 dark:border-zinc-700/70 hover:border-zinc-400 dark:hover:border-zinc-500 hover:shadow-xs transition-all flex items-center justify-center select-none"
                 >
                   {/* Initials Only */}
                   <span className="font-headline font-black text-sm sm:text-base text-zinc-900 dark:text-zinc-100 tracking-wider">
@@ -354,7 +354,7 @@ export default function MembersPage() {
                   required
                   value={newMemberName}
                   onChange={(e) => setNewMemberName(e.target.value)}
-                  placeholder="예: HONG, LJM (영문/이니셜 권장)"
+                  placeholder="HONG, LJM (영문/이니셜 권장)"
                   className="w-full px-3.5 py-2.5 bg-zinc-100 dark:bg-zinc-800/90 border border-zinc-200 dark:border-zinc-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/20 text-sm font-semibold text-zinc-900 dark:text-white transition-all"
                   autoFocus
                 />
