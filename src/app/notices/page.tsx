@@ -39,9 +39,7 @@ export default function NoticesPage() {
       if (error) throw error;
       const filtered = (data || []).filter(
         (n) => 
-          n.title !== "__TEAM_MEMBERS__" && 
-          n.title !== "__LAB_RESERVATIONS__" && 
-          n.title !== "__LAB_CLEANING__"
+          !n.title?.startsWith("__")
       );
       setNotices(filtered);
     } catch (err) {
@@ -63,9 +61,7 @@ export default function NoticesPage() {
         if (error) throw error;
         const filtered = (data || []).filter(
           (n) => 
-            n.title !== "__TEAM_MEMBERS__" && 
-            n.title !== "__LAB_RESERVATIONS__" && 
-            n.title !== "__LAB_CLEANING__"
+            !n.title?.startsWith("__")
         );
         if (!ignore) setNotices(filtered);
       } catch (err) {

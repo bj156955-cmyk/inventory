@@ -85,8 +85,29 @@ export default function LabPage() {
   // Orders states
   const [orders, setOrders] = useState<LabOrder[]>([]);
   const [orderDbId, setOrderDbId] = useState<string | null>(null);
-  const [showAddOrderInput, setShowAddOrderInput] = useState(false);
+  const [showAddOrderModal, setShowAddOrderModal] = useState(false);
   const [newItemName, setNewItemName] = useState("");
+  const [newItemCode, setNewItemCode] = useState("");
+  const [newItemQuantity, setNewItemQuantity] = useState("1");
+
+  // Close modals on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        if (showAddOrderModal) {
+          setShowAddOrderModal(false);
+          setNewItemName("");
+          setNewItemCode("");
+          setNewItemQuantity("1");
+        }
+        if (showAddModal) {
+          setShowAddModal(false);
+        }
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [showAddOrderModal, showAddModal]);
 
   // Database record references
   const [cleanDbId, setCleanDbId] = useState<string | null>(null);
@@ -431,12 +452,14 @@ export default function LabPage() {
     }
   };
 
-  const handleAddOrder = async (itemName: string) => {
+  const handleAddOrder = async (itemName: string, itemCode?: string, quantity?: string) => {
     if (!itemName.trim() || !user) return;
     const currentUserInitials = user.email?.split("@")[0].toUpperCase() || "UNKNOWN";
     const newOrder: LabOrder = {
       id: crypto.randomUUID(),
       itemName: itemName.trim(),
+      itemCode: itemCode?.trim() || undefined,
+      quantity: quantity?.trim() || "1",
       requestedBy: currentUserInitials,
       status: "REQUESTED",
       createdAt: new Date().toISOString()
@@ -444,7 +467,9 @@ export default function LabPage() {
     const updated = [newOrder, ...orders];
     setOrders(updated);
     setNewItemName("");
-    setShowAddOrderInput(false);
+    setNewItemCode("");
+    setNewItemQuantity("1");
+    setShowAddOrderModal(false);
     await saveOrdersState(updated);
   };
 
@@ -587,107 +612,86 @@ export default function LabPage() {
               <div className="flex justify-between items-center pb-2 sm:pb-3 border-b border-zinc-100 dark:border-zinc-800 shrink-0">
                 <h3 className="text-sm sm:text-base font-black text-zinc-900 dark:text-white flex items-center gap-2">
                   <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500" />
-                  <span>연구실 물품 주문 현황 ({visibleOrders.length}건)</span>
+                  <span>{visibleOrders.length}건</span>
                 </h3>
               
-              <button
-                onClick={() => setShowAddOrderInput(!showAddOrderInput)}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold text-xs shadow-sm shadow-blue-600/30 transition-all cursor-pointer active:scale-95"
-                title="물품 추가"
-              >
-                <Plus className="w-4 h-4" />
-                <span className="hidden sm:inline">물품 요청</span>
-              </button>
-            </div>
-
-            {/* Inline Addition Input Form */}
-            {showAddOrderInput && (
-              <form 
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  handleAddOrder(newItemName);
-                }}
-                className="flex gap-2 p-2.5 mt-2 bg-zinc-50 dark:bg-zinc-800/80 rounded-2xl border border-zinc-200 dark:border-zinc-700 shrink-0 animate-fade-in shadow-inner"
-              >
-                <input
-                  type="text"
-                  value={newItemName}
-                  onChange={(e) => setNewItemName(e.target.value)}
-                  placeholder="주문할 물품명을 입력하세요..."
-                  className="flex-1 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-bold text-zinc-900 dark:text-white outline-none focus:ring-2 focus:ring-zinc-900/10 dark:focus:ring-white/10"
-                  autoFocus
-                />
-                <button
-                  type="submit"
-                  className="px-3.5 py-2 bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200 text-white rounded-xl text-xs font-black cursor-pointer shadow-sm transition-all active:scale-95"
-                >
-                  추가
-                </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    setShowAddOrderInput(false);
-                    setNewItemName("");
-                  }}
-                  className="px-3 py-2 bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-700 dark:hover:bg-zinc-600 text-zinc-700 dark:text-zinc-200 rounded-xl text-xs font-black cursor-pointer transition-all"
+                  onClick={() => setShowAddOrderModal(true)}
+                  className="w-8 h-8 rounded-full bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center shadow-sm shadow-blue-600/30 transition-all cursor-pointer active:scale-95 shrink-0"
+                  title="물품 추가"
                 >
-                  취소
+                  <Plus className="w-4 h-4" />
                 </button>
-              </form>
-            )}
+              </div>
 
-            {/* Orders List Container */}
-            <div className="flex-1 overflow-y-auto my-3 space-y-2.5 pr-1 custom-scrollbar min-h-[200px]">
-              {visibleOrders.length === 0 ? (
-                <div className="h-full min-h-[180px] flex flex-col items-center justify-center text-center p-6 text-on-surface-variant/40 dark:text-gray-500 space-y-2">
-                  <ShoppingCart className="w-10 h-10 opacity-20" />
-                  <span className="text-xs font-bold">현재 등록된 물품 주문 요청이 없습니다.</span>
-                </div>
-              ) : (
-                visibleOrders.map((order) => {
-                  const color = getColorForUser(order.requestedBy);
-                  const hasRequested = order.status === "REQUESTED";
-                  const hasOrdered = order.status === "ORDERED";
-                  const hasReceived = order.status === "RECEIVED";
+              {/* Orders List Container */}
+              <div className="flex-1 overflow-y-auto my-3 space-y-2.5 pr-1 custom-scrollbar min-h-[200px]">
+                {visibleOrders.length === 0 ? (
+                  <div className="h-full min-h-[180px] flex flex-col items-center justify-center text-center p-6 text-on-surface-variant/40 dark:text-gray-500 space-y-2">
+                    <ShoppingCart className="w-10 h-10 opacity-20" />
+                    <span className="text-xs font-bold">현재 등록된 물품 주문 요청이 없습니다.</span>
+                  </div>
+                ) : (
+                  visibleOrders.map((order) => {
+                    const color = getColorForUser(order.requestedBy);
+                    const hasRequested = order.status === "REQUESTED";
+                    const hasOrdered = order.status === "ORDERED";
+                    const hasReceived = order.status === "RECEIVED";
 
-                  return (
-                    <div 
-                      key={order.id} 
-                      className={`group flex items-center justify-between p-3 sm:p-3.5 rounded-2xl border transition-all ${
-                        hasReceived 
-                          ? "bg-zinc-100/50 dark:bg-zinc-800/30 border-zinc-200/50 dark:border-zinc-800/50 opacity-60" 
-                          : hasOrdered 
-                          ? "bg-sky-500/5 border-sky-500/30 shadow-sm" 
-                          : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800"
-                      }`}
-                    >
-                      <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-                        <span className={`w-6 h-6 rounded-lg flex items-center justify-center font-headline font-black text-[9px] border shadow-inner ${color.badge} shrink-0`}>
-                          {order.requestedBy}
-                        </span>
-                        <div className="flex flex-col min-w-0">
-                          <span className={`text-xs sm:text-sm font-bold text-zinc-900 dark:text-zinc-100 truncate ${
-                            hasReceived ? "line-through text-zinc-400 dark:text-zinc-500" : ""
-                          }`}>
-                            {order.itemName}
+                    return (
+                      <div 
+                        key={order.id} 
+                        className={`group flex items-center justify-between p-3 sm:p-3.5 rounded-2xl border transition-all ${
+                          hasReceived 
+                            ? "bg-zinc-100/50 dark:bg-zinc-800/30 border-zinc-200/50 dark:border-zinc-800/50 opacity-60" 
+                            : hasOrdered 
+                            ? "bg-sky-500/5 border-sky-500/30 shadow-sm" 
+                            : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                          <span className={`w-6 h-6 rounded-lg flex items-center justify-center font-headline font-black text-[9px] border shadow-inner ${color.badge} shrink-0`}>
+                            {order.requestedBy}
                           </span>
-                          <span className="text-[9px] sm:text-[10px] text-zinc-500 dark:text-zinc-400 font-medium flex items-center gap-1.5 mt-0.5 select-none">
-                            <span>요청: {order.requestedBy}</span>
-                            {order.orderedBy && (
-                              <>
-                                <span>•</span>
-                                <span className="text-sky-400 font-bold">주문: {order.orderedBy}</span>
-                              </>
-                            )}
-                            {order.receivedBy && (
-                              <>
-                                <span>•</span>
-                                <span className="text-emerald-400 font-bold">수령: {order.receivedBy}</span>
-                              </>
-                            )}
-                          </span>
+                          <div className="flex flex-col min-w-0">
+                            <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
+                              <span className={`text-xs sm:text-sm font-bold text-zinc-900 dark:text-zinc-100 truncate ${
+                                hasReceived ? "line-through text-zinc-400 dark:text-zinc-500" : ""
+                              }`}>
+                                {order.itemName}
+                              </span>
+                              {order.quantity && (
+                                <span className="text-[10px] font-black px-1.5 py-0.2 rounded-md bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border border-blue-200/60 dark:border-blue-800/50 shrink-0 select-none">
+                                  {order.quantity}{/^\d+$/.test(String(order.quantity).trim()) ? "개" : ""}
+                                </span>
+                              )}
+                            </div>
+                            <span className="text-[9px] sm:text-[10px] text-zinc-500 dark:text-zinc-400 font-medium flex items-center gap-1.5 mt-0.5 select-none flex-wrap">
+                              {order.itemCode && (
+                                <>
+                                  <span className="font-mono text-[9px] bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-600 dark:text-zinc-300 font-bold border border-zinc-200/80 dark:border-zinc-700/80">
+                                    {order.itemCode}
+                                  </span>
+                                  <span>•</span>
+                                </>
+                              )}
+                              <span>요청: {order.requestedBy}</span>
+                              {order.orderedBy && (
+                                <>
+                                  <span>•</span>
+                                  <span className="text-sky-400 font-bold">주문: {order.orderedBy}</span>
+                                </>
+                              )}
+                              {order.receivedBy && (
+                                <>
+                                  <span>•</span>
+                                  <span className="text-emerald-400 font-bold">수령: {order.receivedBy}</span>
+                                </>
+                              )}
+                            </span>
+                          </div>
                         </div>
-                      </div>
                       
                       <div className="flex items-center gap-1.5 shrink-0">
                         {/* Step 1: Cart (Order) Button */}
@@ -1020,6 +1024,131 @@ export default function LabPage() {
                 완료
               </button>
             </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* Lab Order Request Modal */}
+      {showAddOrderModal && (
+        <div 
+          className="fixed inset-0 bg-black/50 backdrop-blur-xs z-[300] flex items-center justify-center p-4 animate-fade-in"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowAddOrderModal(false);
+              setNewItemName("");
+              setNewItemCode("");
+              setNewItemQuantity("1");
+            }
+          }}
+        >
+          <div className="bg-white dark:bg-zinc-900 w-[95%] sm:w-full max-w-[440px] rounded-3xl shadow-2xl p-5 sm:p-6 space-y-4 border border-zinc-200 dark:border-zinc-800">
+            
+            {/* Modal Header */}
+            <div className="flex items-center justify-between pb-2.5 border-b border-zinc-100 dark:border-zinc-800">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-sm shadow-blue-600/30">
+                  <ShoppingCart className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="font-black text-sm sm:text-base text-zinc-900 dark:text-white">
+                    물품 주문 요청
+                  </h4>
+                  <p className="text-[10px] text-zinc-400">
+                    연구실에서 필요한 물품 정보를 입력해주세요
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowAddOrderModal(false);
+                  setNewItemName("");
+                  setNewItemCode("");
+                  setNewItemQuantity("1");
+                }}
+                className="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full text-zinc-400 hover:text-zinc-700 dark:hover:text-white transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Form */}
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleAddOrder(newItemName, newItemCode, newItemQuantity);
+              }}
+              className="space-y-3.5"
+            >
+              {/* 이름 */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[11px] font-black uppercase text-zinc-500 dark:text-zinc-400 tracking-wider">
+                  이름 <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={newItemName}
+                  onChange={(e) => setNewItemName(e.target.value)}
+                  placeholder="물품 이름을 입력하세요"
+                  className="w-full px-3.5 py-2.5 bg-zinc-100 dark:bg-zinc-800/90 border border-zinc-200 dark:border-zinc-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/20 text-sm font-semibold text-zinc-900 dark:text-white transition-all"
+                  autoFocus
+                />
+              </div>
+
+              {/* 물품코드 & 수량 (2-Column Grid) */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[11px] font-black uppercase text-zinc-500 dark:text-zinc-400 tracking-wider">
+                    물품코드
+                  </label>
+                  <input
+                    type="text"
+                    value={newItemCode}
+                    onChange={(e) => setNewItemCode(e.target.value)}
+                    placeholder="코드 또는 품번 (선택)"
+                    className="w-full px-3.5 py-2.5 bg-zinc-100 dark:bg-zinc-800/90 border border-zinc-200 dark:border-zinc-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/20 text-sm font-semibold text-zinc-900 dark:text-white transition-all"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[11px] font-black uppercase text-zinc-500 dark:text-zinc-400 tracking-wider">
+                    수량 <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={newItemQuantity}
+                    onChange={(e) => setNewItemQuantity(e.target.value)}
+                    placeholder="예: 1, 2박스"
+                    className="w-full px-3.5 py-2.5 bg-zinc-100 dark:bg-zinc-800/90 border border-zinc-200 dark:border-zinc-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/20 text-sm font-semibold text-zinc-900 dark:text-white transition-all"
+                  />
+                </div>
+              </div>
+
+              {/* Modal Footer Buttons */}
+              <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAddOrderModal(false);
+                    setNewItemName("");
+                    setNewItemCode("");
+                    setNewItemQuantity("1");
+                  }}
+                  className="px-4 py-2 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-300 rounded-xl font-bold text-xs transition-all cursor-pointer"
+                >
+                  취소
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-black text-xs transition-all cursor-pointer shadow-sm shadow-blue-600/30 active:scale-95"
+                >
+                  추가
+                </button>
+              </div>
+            </form>
 
           </div>
         </div>

@@ -86,6 +86,8 @@ export interface CleaningState {
 export interface LabOrder {
   id: string;
   itemName: string;
+  itemCode?: string;
+  quantity?: string;
   requestedBy: string;
   status: "REQUESTED" | "ORDERED" | "RECEIVED";
   createdAt: string;
