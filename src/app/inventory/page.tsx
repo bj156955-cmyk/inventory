@@ -12,7 +12,8 @@ import {
   X, 
   AlertCircle, 
   ArrowUpDown, 
-  Check 
+  Check,
+  Layers 
 } from "lucide-react";
 
 export type SortOption = "recent" | "oldest" | "name_asc" | "name_desc";
@@ -30,6 +31,7 @@ interface ItemModalProps {
   existingLocations: string[];
   existingTypes: string[];
   activeLocationsCount: number;
+  sameNameProducts?: Product[];
   onClose: () => void;
   onDeleteRequest: (prod: Product) => void;
   onSave: (data: {
@@ -48,6 +50,7 @@ function ItemModal({
   existingLocations,
   existingTypes,
   activeLocationsCount,
+  sameNameProducts,
   onClose,
   onDeleteRequest,
   onSave,
@@ -62,6 +65,16 @@ function ItemModal({
   const [itemLogs, setItemLogs] = useState<Activity[]>([]);
   const [loadingLogs, setLoadingLogs] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  const otherLocations = useMemo(() => {
+    if (!editingProduct || !sameNameProducts) return [];
+    return sameNameProducts.filter((p) => p.id !== editingProduct.id);
+  }, [editingProduct, sameNameProducts]);
+
+  const totalStockAcrossAll = useMemo(() => {
+    if (!sameNameProducts || sameNameProducts.length === 0) return editingProduct?.stock || 0;
+    return sameNameProducts.reduce((sum, p) => sum + p.stock, 0);
+  }, [sameNameProducts, editingProduct]);
 
   // Fetch modification logs if editing an existing product
   useEffect(() => {
@@ -156,7 +169,38 @@ function ItemModal({
             <X className="w-5 h-5" />
           </button>
         </div>
-        
+
+        {/* Other Locations Info Banner */}
+        {editingProduct && otherLocations.length > 0 && (
+          <div className="p-3.5 bg-indigo-50/75 dark:bg-indigo-950/40 border border-indigo-200/80 dark:border-indigo-800/60 rounded-2xl flex items-start gap-2.5">
+            <Layers className="w-4 h-4 text-indigo-500 shrink-0 mt-0.5" />
+            <div className="text-xs space-y-1.5 flex-1 min-w-0">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <span className="font-bold text-indigo-900 dark:text-indigo-200">
+                  다른 위치에도 보관 중인 품목입니다
+                </span>
+                <span className="text-[10px] font-black px-1.5 py-0.5 bg-indigo-200/60 dark:bg-indigo-900/60 text-indigo-800 dark:text-indigo-300 rounded-md shrink-0">
+                  전체 총 {totalStockAcrossAll}{editingProduct.unit}
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-1.5 pt-0.5">
+                {sameNameProducts?.map((o) => (
+                  <span 
+                    key={o.id}
+                    className={`px-2 py-0.5 rounded-md text-[11px] font-bold border ${
+                      o.id === editingProduct.id 
+                        ? "bg-indigo-600 text-white border-indigo-600 font-extrabold shadow-2xs"
+                        : "bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700"
+                    }`}
+                  >
+                    {o.category || "기타"}: {o.stock}{o.unit} {o.id === editingProduct.id && "(현재 위치)"}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Form Fields: Name, Location & Type (2-Col Grid), Quantity & Unit */}
         <form onSubmit={handleSubmit} className="space-y-3.5">
           {/* 1. Name */}
@@ -427,6 +471,7 @@ export default function InventoryPage() {
   const [search, setSearch] = useState("");
   const [selectedLocations, setSelectedLocations] = useState<string[] | null>(null);
   const [loading, setLoading] = useState(true);
+  const [hoveredName, setHoveredName] = useState<string | null>(null);
 
   // Client-only Sort state (Saved per user in localStorage)
   const [sortOption, setSortOption] = useState<SortOption>(() => {
@@ -605,7 +650,7 @@ export default function InventoryPage() {
     });
   };
 
-  // Existing Types: Only types that previously exist in products
+  // 4. Existing Types: Only types that previously exist in products
   const existingTypes = useMemo(() => {
     return Array.from(
       new Set(
@@ -616,10 +661,20 @@ export default function InventoryPage() {
     );
   }, [products]);
 
-  // 4. Filter, Aggregate & Sort Products:
-  // - If 0 locations selected: empty list
-  // - If 1 location selected: individual items in that location
-  // - If 2+ locations selected: merge same name items across selected locations (합산)
+  // 5. Map of same-item occurrences across all locations (normalized by lowercase name)
+  const sameNameItemsMap = useMemo(() => {
+    const map = new Map<string, Product[]>();
+    for (const p of products) {
+      const nameKey = (p.name || "").trim().toLowerCase();
+      if (!nameKey) continue;
+      const list = map.get(nameKey) || [];
+      list.push(p);
+      map.set(nameKey, list);
+    }
+    return map;
+  }, [products]);
+
+  // 6. Filter & Sort Products (Display separately per location, do not aggregate)
   const filteredProducts = useMemo(() => {
     const searchLower = search.trim().toLowerCase();
 
@@ -628,18 +683,28 @@ export default function InventoryPage() {
         if (sortOption === "recent") {
           const timeA = a.updated_at ? new Date(a.updated_at).getTime() : (a.edit_date ? new Date(a.edit_date).getTime() : 0);
           const timeB = b.updated_at ? new Date(b.updated_at).getTime() : (b.edit_date ? new Date(b.edit_date).getTime() : 0);
-          return timeB - timeA;
+          if (timeB !== timeA) return timeB - timeA;
+          const nameCmp = a.name.localeCompare(b.name, "ko");
+          if (nameCmp !== 0) return nameCmp;
+          return (a.category || "").localeCompare(b.category || "", "ko");
         }
         if (sortOption === "oldest") {
           const timeA = a.updated_at ? new Date(a.updated_at).getTime() : (a.edit_date ? new Date(a.edit_date).getTime() : 0);
           const timeB = b.updated_at ? new Date(b.updated_at).getTime() : (b.edit_date ? new Date(b.edit_date).getTime() : 0);
-          return timeA - timeB;
+          if (timeA !== timeB) return timeA - timeB;
+          const nameCmp = a.name.localeCompare(b.name, "ko");
+          if (nameCmp !== 0) return nameCmp;
+          return (a.category || "").localeCompare(b.category || "", "ko");
         }
         if (sortOption === "name_asc") {
-          return a.name.localeCompare(b.name, "ko");
+          const cmp = a.name.localeCompare(b.name, "ko");
+          if (cmp !== 0) return cmp;
+          return (a.category || "").localeCompare(b.category || "", "ko");
         }
         if (sortOption === "name_desc") {
-          return b.name.localeCompare(a.name, "ko");
+          const cmp = b.name.localeCompare(a.name, "ko");
+          if (cmp !== 0) return cmp;
+          return (a.category || "").localeCompare(b.category || "", "ko");
         }
         return 0;
       });
@@ -666,71 +731,18 @@ export default function InventoryPage() {
       return true;
     });
 
-    if (activeLocations.length === 1) {
-      // Single Location Selected: show items for that location
-      const list = matchedProducts.map((p) => ({
+    // Do NOT aggregate items across locations: each product row is kept individually
+    const list = matchedProducts.map((p) => {
+      const pCat = (p.category || "").trim();
+      return {
         ...p,
-        locations: p.category ? [p.category] : [],
+        category: pCat || "기타",
+        locations: pCat ? [pCat] : [],
         locationCount: 1,
-      }));
-      return applySort(list);
-    } else {
-      // Multiple Locations Selected (or All): aggregate items with same name across selected locations
-      const map = new Map<string, {
-        product: Product;
-        totalStock: number;
-        totalTarget: number;
-        locations: Set<string>;
-      }>();
+      };
+    });
 
-      for (const p of matchedProducts) {
-        const pName = (p.name || "").trim();
-        const pCategory = (p.category || "").trim();
-
-        const key = pName.toLowerCase();
-        if (!map.has(key)) {
-          map.set(key, {
-            product: { ...p },
-            totalStock: p.stock,
-            totalTarget: p.target,
-            locations: new Set(pCategory ? [pCategory] : []),
-          });
-        } else {
-          const existing = map.get(key)!;
-          existing.totalStock += p.stock;
-          existing.totalTarget += p.target;
-          if (pCategory) existing.locations.add(pCategory);
-
-          if (p.updated_at && (!existing.product.updated_at || new Date(p.updated_at) > new Date(existing.product.updated_at))) {
-            existing.product.updated_by = p.updated_by;
-            existing.product.updated_at = p.updated_at;
-          }
-          if (!existing.product.item_type && p.item_type) {
-            existing.product.item_type = p.item_type;
-          }
-          if (!existing.product.unit && p.unit) {
-            existing.product.unit = p.unit;
-          }
-        }
-      }
-
-      const aggregatedList = Array.from(map.values())
-        .map(({ product, totalStock, totalTarget, locations }) => {
-          const locArray = Array.from(locations);
-          return {
-            ...product,
-            stock: totalStock,
-            stock_quantity: totalStock,
-            target: totalTarget,
-            target_quantity: totalTarget,
-            category: locArray.join(", "),
-            locations: locArray,
-            locationCount: locArray.length,
-          };
-        });
-
-      return applySort(aggregatedList);
-    }
+    return applySort(list);
   }, [products, activeLocations, search, sortOption]);
 
   // 5. Open Form Modal for Create/Update
@@ -1029,35 +1041,37 @@ export default function InventoryPage() {
                   {filteredProducts.map((p) => {
                     const isLow = p.stock > 0 && p.stock <= p.target * 0.3;
                     const isOut = p.stock === 0;
+                    const nameKey = (p.name || "").trim().toLowerCase();
+                    const allOccurrences = sameNameItemsMap.get(nameKey) || [];
+                    const otherLocations = allOccurrences.filter((other) => other.id !== p.id);
+                    const isMultiLocation = otherLocations.length > 0;
+                    const totalStockAcrossAll = allOccurrences.reduce((sum, item) => sum + item.stock, 0);
+                    const isHoveredGroup = hoveredName === nameKey && isMultiLocation;
+
                     return (
                       <tr 
                         key={p.id} 
                         onClick={() => openItemModal(p)}
-                        className="hover:bg-zinc-50 dark:hover:bg-zinc-800/40 active:bg-zinc-100 dark:active:bg-zinc-800/70 transition-colors cursor-pointer select-none"
+                        onMouseEnter={() => setHoveredName(nameKey)}
+                        onMouseLeave={() => setHoveredName(null)}
+                        className={`transition-colors cursor-pointer select-none ${
+                          isHoveredGroup
+                            ? "bg-indigo-50/70 dark:bg-indigo-950/40 ring-1.5 ring-inset ring-indigo-400/60 dark:ring-indigo-600/60"
+                            : "hover:bg-zinc-50 dark:hover:bg-zinc-800/40 active:bg-zinc-100 dark:active:bg-zinc-800/70"
+                        }`}
                       >
                         <td className="px-8 py-4">
-                          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 min-w-0">
+                          <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 min-w-0">
                             {/* Product Name */}
                             <span className="font-extrabold text-base text-zinc-900 dark:text-white leading-snug break-words">
                               {p.name}
                             </span>
 
-                            {/* Category & Status Badges Group (Wraps together cleanly when name is long) */}
+                            {/* Category & Status Badges Group */}
                             <div className="inline-flex items-center gap-1.5 flex-wrap">
-                              {p.locations && p.locations.length > 0 ? (
-                                p.locations.map((loc) => (
-                                  <span
-                                    key={loc}
-                                    className="px-2 py-0.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 rounded-md text-[10px] font-bold border border-zinc-200/60 dark:border-zinc-700/60 shrink-0"
-                                  >
-                                    {loc}
-                                  </span>
-                                ))
-                              ) : (
-                                <span className="px-2 py-0.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 rounded-md text-[10px] font-bold border border-zinc-200/60 dark:border-zinc-700/60 shrink-0">
-                                  {p.category || "기타"}
-                                </span>
-                              )}
+                              <span className="px-2 py-0.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 rounded-md text-[10px] font-bold border border-zinc-200/60 dark:border-zinc-700/60 shrink-0">
+                                {p.category || "기타"}
+                              </span>
 
                               {p.item_type && (
                                 <span className="px-2 py-0.5 bg-blue-500/10 dark:bg-blue-500/15 text-blue-600 dark:text-blue-400 rounded-md text-[9px] font-black border border-blue-500/20 shrink-0">
@@ -1074,6 +1088,22 @@ export default function InventoryPage() {
                                   부족
                                 </span>
                               ) : null}
+
+                              {/* Multi-Location Indicator Badge */}
+                              {isMultiLocation && (
+                                <span 
+                                  className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 rounded-lg text-[10px] font-bold border border-indigo-200/90 dark:border-indigo-800/70 shrink-0 shadow-2xs"
+                                  title={`전체 위치 재고:\n${allOccurrences.map(o => `• ${o.category || "기타"}: ${o.stock}${o.unit || ""}`).join("\n")}\n총합: ${totalStockAcrossAll}${p.unit || ""}`}
+                                >
+                                  <Layers className="w-3 h-3 text-indigo-500 shrink-0" />
+                                  <span>
+                                    타 위치: {otherLocations.map(o => `${o.category || "기타"} (${o.stock}${o.unit || ""})`).join(", ")}
+                                  </span>
+                                  <span className="text-[9px] font-black text-indigo-500/80 dark:text-indigo-400/80">
+                                    · 총 {totalStockAcrossAll}{p.unit || ""}
+                                  </span>
+                                </span>
+                              )}
                             </div>
                           </div>
                         </td>
@@ -1106,51 +1136,68 @@ export default function InventoryPage() {
               {filteredProducts.map((p) => {
                 const isLow = p.stock > 0 && p.stock <= p.target * 0.3;
                 const isOut = p.stock === 0;
+                const nameKey = (p.name || "").trim().toLowerCase();
+                const allOccurrences = sameNameItemsMap.get(nameKey) || [];
+                const otherLocations = allOccurrences.filter((other) => other.id !== p.id);
+                const isMultiLocation = otherLocations.length > 0;
+                const totalStockAcrossAll = allOccurrences.reduce((sum, item) => sum + item.stock, 0);
+                const isHoveredGroup = hoveredName === nameKey && isMultiLocation;
+
                 return (
                   <div
                     key={p.id}
                     onClick={() => openItemModal(p)}
-                    className="bg-white dark:bg-zinc-900 px-4 py-3.5 sm:px-5 sm:py-4 rounded-2xl border border-zinc-200/90 dark:border-zinc-800/90 shadow-xs flex items-center justify-between gap-3 hover:border-zinc-400 dark:hover:border-zinc-700 active:scale-[0.99] active:bg-zinc-50 dark:active:bg-zinc-800/60 transition-all cursor-pointer select-none"
+                    onMouseEnter={() => setHoveredName(nameKey)}
+                    onMouseLeave={() => setHoveredName(null)}
+                    className={`bg-white dark:bg-zinc-900 px-4 py-3.5 sm:px-5 sm:py-4 rounded-2xl border shadow-xs flex items-center justify-between gap-3 active:scale-[0.99] transition-all cursor-pointer select-none ${
+                      isHoveredGroup
+                        ? "border-indigo-400 dark:border-indigo-600 ring-2 ring-indigo-400/30 bg-indigo-50/20 dark:bg-indigo-950/20"
+                        : "border-zinc-200/90 dark:border-zinc-800/90 hover:border-zinc-400 dark:hover:border-zinc-700 active:bg-zinc-50 dark:active:bg-zinc-800/60"
+                    }`}
                   >
-                    {/* Left: Product Name & Category Badges (Inline with clean wrap on overflow) */}
-                    <div className="min-w-0 flex-1 flex flex-wrap items-center gap-x-2 gap-y-1">
-                      <h4 className="font-extrabold text-sm sm:text-base text-zinc-900 dark:text-white leading-snug break-words">
-                        {p.name}
-                      </h4>
+                    {/* Left: Product Name & Category Badges */}
+                    <div className="min-w-0 flex-1 flex flex-col gap-1.5">
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                        <h4 className="font-extrabold text-sm sm:text-base text-zinc-900 dark:text-white leading-snug break-words">
+                          {p.name}
+                        </h4>
 
-                      {/* Location & Type Badges Group */}
-                      <div className="inline-flex items-center gap-1.5 flex-wrap">
-                        {p.locations && p.locations.length > 0 ? (
-                          p.locations.map((loc) => (
-                            <span
-                              key={loc}
-                              className="text-[10px] bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-bold px-2 py-0.5 rounded-md border border-zinc-200/60 dark:border-zinc-700/60 shrink-0"
-                            >
-                              {loc}
-                            </span>
-                          ))
-                        ) : (
+                        {/* Location & Type Badges Group */}
+                        <div className="inline-flex items-center gap-1.5 flex-wrap">
                           <span className="text-[10px] bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-bold px-2 py-0.5 rounded-md border border-zinc-200/60 dark:border-zinc-700/60 shrink-0">
                             {p.category || "기타"}
                           </span>
-                        )}
 
-                        {p.item_type && (
-                          <span className="text-[10px] bg-blue-500/10 dark:bg-blue-500/15 text-blue-600 dark:text-blue-400 font-black px-2 py-0.5 rounded-md border border-blue-500/20 shrink-0">
-                            {p.item_type}
-                          </span>
-                        )}
+                          {p.item_type && (
+                            <span className="text-[10px] bg-blue-500/10 dark:bg-blue-500/15 text-blue-600 dark:text-blue-400 font-black px-2 py-0.5 rounded-md border border-blue-500/20 shrink-0">
+                              {p.item_type}
+                            </span>
+                          )}
 
-                        {isOut ? (
-                          <span className="px-1.5 py-0.5 bg-rose-500/15 border border-rose-500/30 text-rose-400 text-[9px] font-black rounded-md shrink-0">
-                            품절
-                          </span>
-                        ) : isLow ? (
-                          <span className="px-1.5 py-0.5 bg-amber-500/15 border border-amber-500/30 text-amber-400 text-[9px] font-black rounded-md shrink-0">
-                            부족
-                          </span>
-                        ) : null}
+                          {isOut ? (
+                            <span className="px-1.5 py-0.5 bg-rose-500/15 border border-rose-500/30 text-rose-400 text-[9px] font-black rounded-md shrink-0">
+                              품절
+                            </span>
+                          ) : isLow ? (
+                            <span className="px-1.5 py-0.5 bg-amber-500/15 border border-amber-500/30 text-amber-400 text-[9px] font-black rounded-md shrink-0">
+                              부족
+                            </span>
+                          ) : null}
+                        </div>
                       </div>
+
+                      {/* Multi-Location Badge on Mobile */}
+                      {isMultiLocation && (
+                        <div className="inline-flex items-center gap-1 px-2 py-0.5 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 rounded-md text-[9.5px] font-bold border border-indigo-200/80 dark:border-indigo-800/60 w-fit shrink-0">
+                          <Layers className="w-2.5 h-2.5 text-indigo-500 shrink-0" />
+                          <span className="truncate">
+                            타 위치: {otherLocations.map(o => `${o.category || "기타"} (${o.stock}${o.unit || ""})`).join(", ")}
+                          </span>
+                          <span className="text-[8.5px] font-black shrink-0">
+                            · 총 {totalStockAcrossAll}{p.unit || ""}
+                          </span>
+                        </div>
+                      )}
                     </div>
 
                     {/* Right: Current Stock on the right */}
@@ -1185,6 +1232,11 @@ export default function InventoryPage() {
           existingLocations={existingLocations}
           existingTypes={existingTypes}
           activeLocationsCount={activeLocations.length}
+          sameNameProducts={
+            editingProduct 
+              ? sameNameItemsMap.get((editingProduct.name || "").trim().toLowerCase()) 
+              : undefined
+          }
           onClose={() => setItemModalOpen(false)}
           onDeleteRequest={(prod) => {
             setDeletingProduct(prod);
