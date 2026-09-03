@@ -71,6 +71,9 @@ export default function LabPage() {
   const [touchOverIdx, setTouchOverIdx] = useState<number | null>(null);
   const touchTimerRef = React.useRef<NodeJS.Timeout | null>(null);
   const touchStartPosRef = React.useRef<{ x: number; y: number } | null>(null);
+  const isDraggingRef = React.useRef<boolean>(false);
+  const dragSourceIdxRef = React.useRef<number | null>(null);
+  const dragTargetIdxRef = React.useRef<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeMobileTab, setActiveMobileTab] = useState<"orders" | "cleaning">("orders");
   const [showAddModal, setShowAddModal] = useState(false);
@@ -246,10 +249,6 @@ export default function LabPage() {
   const handleRowDrop = async (sourceIdx: number, targetIdx: number) => {
     if (sourceIdx === targetIdx) return;
     
-    const currentWeekOffset = getWeekOffset();
-    const baseWeek = cleaningState?.baseWeek || 0;
-    const shift = (currentWeekOffset - baseWeek);
-    
     const baseAssignments = cleaningState?.assignments || members.map((member, i) => {
       const N = members.length;
       const cleaning = i < Math.min(3, N);
@@ -261,19 +260,11 @@ export default function LabPage() {
 
     const N = baseAssignments.length;
     if (N === 0) return;
-
-    const getRotatedIndex = (idx: number) => {
-      let r = (idx - shift) % N;
-      if (r < 0) r += N;
-      return r;
-    };
-
-    const sourceBaseIdx = getRotatedIndex(sourceIdx);
-    const targetBaseIdx = getRotatedIndex(targetIdx);
+    if (sourceIdx < 0 || sourceIdx >= N || targetIdx < 0 || targetIdx >= N) return;
 
     const updated = [...baseAssignments];
-    const [moved] = updated.splice(sourceBaseIdx, 1);
-    updated.splice(targetBaseIdx, 0, moved);
+    const [moved] = updated.splice(sourceIdx, 1);
+    updated.splice(targetIdx, 0, moved);
 
     const newState: CleaningState = {
       baseWeek: cleaningState?.baseWeek || 0,
@@ -288,66 +279,93 @@ export default function LabPage() {
     const touch = e.touches[0];
     touchStartPosRef.current = { x: touch.clientX, y: touch.clientY };
 
+    if (touchTimerRef.current) {
+      clearTimeout(touchTimerRef.current);
+    }
+
     touchTimerRef.current = setTimeout(() => {
-      if (typeof window !== "undefined" && navigator.vibrate) {
-        try {
-          navigator.vibrate(40);
-        } catch {}
-      }
+      isDraggingRef.current = true;
+      dragSourceIdxRef.current = idx;
+      dragTargetIdxRef.current = idx;
       setTouchDraggingIdx(idx);
       setTouchOverIdx(idx);
-    }, 280);
+
+      if (typeof window !== "undefined" && navigator.vibrate) {
+        try {
+          navigator.vibrate(50);
+        } catch {}
+      }
+
+      const onGlobalMove = (ev: TouchEvent) => {
+        if (!isDraggingRef.current) return;
+        if (ev.cancelable) ev.preventDefault();
+
+        const t = ev.touches[0];
+        const el = document.elementFromPoint(t.clientX, t.clientY);
+        const row = el?.closest("[data-row-idx]");
+        if (row) {
+          const overIdx = parseInt(row.getAttribute("data-row-idx") || "-1", 10);
+          if (overIdx >= 0 && overIdx !== dragTargetIdxRef.current) {
+            dragTargetIdxRef.current = overIdx;
+            setTouchOverIdx(overIdx);
+          }
+        }
+      };
+
+      const onGlobalEnd = () => {
+        window.removeEventListener("touchmove", onGlobalMove);
+        window.removeEventListener("touchend", onGlobalEnd);
+        window.removeEventListener("touchcancel", onGlobalEnd);
+
+        if (isDraggingRef.current) {
+          const src = dragSourceIdxRef.current;
+          const tgt = dragTargetIdxRef.current;
+          if (src !== null && tgt !== null && src !== tgt) {
+            handleRowDrop(src, tgt);
+            if (typeof window !== "undefined" && navigator.vibrate) {
+              try {
+                navigator.vibrate(35);
+              } catch {}
+            }
+          }
+          isDraggingRef.current = false;
+          dragSourceIdxRef.current = null;
+          dragTargetIdxRef.current = null;
+          setTouchDraggingIdx(null);
+          setTouchOverIdx(null);
+        }
+      };
+
+      window.addEventListener("touchmove", onGlobalMove, { passive: false });
+      window.addEventListener("touchend", onGlobalEnd, { passive: false });
+      window.addEventListener("touchcancel", onGlobalEnd, { passive: false });
+    }, 220);
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    const touch = e.touches[0];
-
-    if (touchDraggingIdx === null) {
-      if (touchStartPosRef.current) {
-        const dx = Math.abs(touch.clientX - touchStartPosRef.current.x);
-        const dy = Math.abs(touch.clientY - touchStartPosRef.current.y);
-        if (dx > 8 || dy > 8) {
-          if (touchTimerRef.current) {
-            clearTimeout(touchTimerRef.current);
-            touchTimerRef.current = null;
-          }
-        }
-      }
+    if (isDraggingRef.current) {
+      if (e.cancelable) e.preventDefault();
       return;
     }
 
-    if (e.cancelable) {
-      e.preventDefault();
-    }
-
-    const element = document.elementFromPoint(touch.clientX, touch.clientY);
-    const rowEl = element?.closest("[data-row-idx]");
-    if (rowEl) {
-      const overIdx = parseInt(rowEl.getAttribute("data-row-idx") || "-1", 10);
-      if (overIdx >= 0 && overIdx < assignments.length) {
-        setTouchOverIdx(overIdx);
+    if (touchStartPosRef.current) {
+      const touch = e.touches[0];
+      const dx = Math.abs(touch.clientX - touchStartPosRef.current.x);
+      const dy = Math.abs(touch.clientY - touchStartPosRef.current.y);
+      if (dx > 12 || dy > 12) {
+        if (touchTimerRef.current) {
+          clearTimeout(touchTimerRef.current);
+          touchTimerRef.current = null;
+        }
       }
     }
   };
 
   const handleTouchEnd = () => {
-    if (touchTimerRef.current) {
+    if (!isDraggingRef.current && touchTimerRef.current) {
       clearTimeout(touchTimerRef.current);
       touchTimerRef.current = null;
     }
-    touchStartPosRef.current = null;
-
-    if (touchDraggingIdx !== null && touchOverIdx !== null && touchDraggingIdx !== touchOverIdx) {
-      handleRowDrop(touchDraggingIdx, touchOverIdx);
-      if (typeof window !== "undefined" && navigator.vibrate) {
-        try {
-          navigator.vibrate(30);
-        } catch {}
-      }
-    }
-
-    setTouchDraggingIdx(null);
-    setTouchOverIdx(null);
   };
 
   // Lab Orders Handlers
@@ -708,9 +726,9 @@ export default function LabPage() {
               <table className="w-full text-center border-collapse text-xs font-semibold table-fixed">
                 <thead className="sticky top-0 bg-zinc-50 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border-b border-zinc-200 dark:border-zinc-800 select-none">
                   <tr>
-                    <th className="py-2.5 sm:py-3 px-3.5 font-black w-[46%] bg-zinc-50 dark:bg-zinc-800 text-left">사용자</th>
-                    <th className="py-2.5 sm:py-3 px-2 font-black w-[27%] bg-zinc-50 dark:bg-zinc-800">청소</th>
-                    <th className="py-2.5 sm:py-3 px-2 font-black w-[27%] bg-zinc-50 dark:bg-zinc-800">폐기물</th>
+                    <th className="py-2.5 sm:py-3 px-3 font-black w-[34%] bg-zinc-50 dark:bg-zinc-800 text-left">사용자</th>
+                    <th className="py-2.5 sm:py-3 px-2 font-black w-[33%] bg-zinc-50 dark:bg-zinc-800 text-center">청소</th>
+                    <th className="py-2.5 sm:py-3 px-2 font-black w-[33%] bg-zinc-50 dark:bg-zinc-800 text-center">폐기물</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
@@ -748,15 +766,21 @@ export default function LabPage() {
                         onTouchCancel={handleTouchEnd}
                         className={`group transition-all select-none ${
                           draggedRowIdx === idx || isTouchDragging
-                            ? "opacity-40 bg-blue-500/10 dark:bg-blue-500/20 ring-2 ring-blue-500 shadow-lg scale-[1.01] z-20"
+                            ? "bg-blue-500/20 ring-2 ring-blue-500 shadow-xl scale-[1.02] z-30 opacity-90"
                             : isTouchTarget
-                            ? "bg-blue-50 dark:bg-blue-950/40 border-t-2 border-t-blue-500"
+                            ? "bg-blue-50 dark:bg-blue-950/60 border-t-2 border-t-blue-600"
                             : "hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 active:bg-zinc-100/60 dark:active:bg-zinc-800/60"
                         }`}
                       >
                         <td className="py-2.5 sm:py-3.5 border-r border-zinc-200 dark:border-zinc-800 text-left">
-                          <div className="flex items-center gap-2 px-3 sm:px-3.5">
-                            <GripVertical className="w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500 shrink-0 cursor-grab active:cursor-grabbing" />
+                          <div className="flex items-center gap-2 px-2.5 sm:px-3">
+                            <div 
+                              style={{ touchAction: "none" }}
+                              className="p-1 -m-1 cursor-grab active:cursor-grabbing text-zinc-400 hover:text-zinc-600 dark:text-zinc-500 dark:hover:text-zinc-300"
+                              title="길게 눌러 이동"
+                            >
+                              <GripVertical className="w-3.5 h-3.5 shrink-0" />
+                            </div>
                             <span className="text-xs sm:text-sm text-zinc-900 dark:text-white font-bold truncate">
                               {row.member}
                             </span>
@@ -815,10 +839,10 @@ export default function LabPage() {
         </div>
       )}
 
-      {/* Member Management Grid Modal (3 Columns, No Plus Icon) */}
+      {/* Member Management Grid Modal (3 Columns, No Initial Box, Spacious Ratio) */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-xs z-[300] flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-white dark:bg-zinc-900 w-full max-w-[440px] rounded-3xl shadow-2xl p-5 space-y-4 border border-zinc-200 dark:border-zinc-800">
+          <div className="bg-white dark:bg-zinc-900 w-[95%] sm:w-full max-w-[500px] rounded-3xl shadow-2xl p-5 sm:p-6 space-y-4 border border-zinc-200 dark:border-zinc-800">
             
             {/* Modal Header */}
             <div className="flex items-center justify-between pb-2.5 border-b border-zinc-100 dark:border-zinc-800">
@@ -831,7 +855,7 @@ export default function LabPage() {
                     당번 인원 관리
                   </h4>
                   <p className="text-[10px] text-zinc-400">
-                    선택하여 당번 포함 및 제외를 설정합니다
+                    클릭하여 당번 포함/제외를 설정합니다
                   </p>
                 </div>
               </div>
@@ -844,9 +868,9 @@ export default function LabPage() {
               </button>
             </div>
 
-            {/* Member Grid List (3-Column Layout without '+' icon) */}
-            <div className="max-h-64 overflow-y-auto custom-scrollbar py-1">
-              <div className="grid grid-cols-3 gap-2">
+            {/* Member Grid List (3-Column Layout without initial box, spacious padding) */}
+            <div className="max-h-72 overflow-y-auto custom-scrollbar py-1">
+              <div className="grid grid-cols-3 gap-2 sm:gap-2.5">
                 {members.map((m) => {
                   const isSelected = baseAssignments.some((ba) => ba.member === m);
                   return (
@@ -854,25 +878,15 @@ export default function LabPage() {
                       key={m}
                       type="button"
                       onClick={() => handleToggleMember(m)}
-                      className={`flex items-center justify-between px-2.5 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer active:scale-95 select-none ${
+                      className={`flex items-center justify-center gap-1.5 py-3 px-2 rounded-2xl border text-xs sm:text-sm font-bold transition-all cursor-pointer active:scale-95 select-none ${
                         isSelected
-                          ? "bg-blue-600 text-white border-blue-600 shadow-xs font-black"
-                          : "bg-zinc-50 dark:bg-zinc-800/80 text-zinc-600 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700 hover:border-zinc-300 dark:hover:border-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                          ? "bg-blue-600 text-white border-blue-600 shadow-sm shadow-blue-600/30 font-black"
+                          : "bg-zinc-50 dark:bg-zinc-800/80 text-zinc-700 dark:text-zinc-200 border-zinc-200 dark:border-zinc-700 hover:border-zinc-300 dark:hover:border-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-800"
                       }`}
                     >
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <div className={`w-5 h-5 rounded-md flex items-center justify-center text-[10px] font-black shrink-0 ${
-                          isSelected ? "bg-white/20 text-white" : "bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300"
-                        }`}>
-                          {m.slice(0, 1)}
-                        </div>
-                        <span className="truncate">{m}</span>
-                      </div>
-
+                      <span className="truncate">{m}</span>
                       {isSelected && (
-                        <span className="shrink-0 text-[11px] font-black text-white ml-1">
-                          ✓
-                        </span>
+                        <span className="shrink-0 text-xs font-black">✓</span>
                       )}
                     </button>
                   );
@@ -888,7 +902,7 @@ export default function LabPage() {
               <button
                 type="button"
                 onClick={() => setShowAddModal(false)}
-                className="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200 text-white rounded-xl font-black text-xs transition-all cursor-pointer shadow-xs active:scale-95"
+                className="px-5 py-2.5 bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200 text-white rounded-xl font-black text-xs transition-all cursor-pointer shadow-xs active:scale-95"
               >
                 완료
               </button>
