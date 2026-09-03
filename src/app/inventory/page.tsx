@@ -30,8 +30,6 @@ export interface ParsedImportItem {
   item_type: string;
   stock: number;
   unit: string;
-  target: number;
-  price: number;
 }
 
 const SORT_OPTIONS: { id: SortOption; label: string }[] = [
@@ -936,14 +934,12 @@ export default function InventoryPage() {
       "분류 (선택)",
       "현재재고 (필수)",
       "단위 (선택)",
-      "목표재고 (선택)",
-      "단가 (선택)",
     ];
 
     const sampleRows = [
-      ["에탄올 99%", "1층 실험실", "시약", 10, "병", 15, 25000],
-      ["마이크로피펫 팁 (200ul)", "2층 창고", "소모품", 5, "box", 10, 18000],
-      ["라텍스 장갑 (M)", "사무실", "소모품", 3, "box", 5, 12000],
+      ["에탄올 99%", "1층 실험실", "시약", 10, "병"],
+      ["마이크로피펫 팁 (200ul)", "2층 창고", "소모품", 5, "box"],
+      ["라텍스 장갑 (M)", "사무실", "소모품", 3, "box"],
     ];
 
     const ws = XLSX.utils.aoa_to_sheet([headers, ...sampleRows]);
@@ -953,8 +949,6 @@ export default function InventoryPage() {
       { wch: 15 },
       { wch: 15 },
       { wch: 12 },
-      { wch: 15 },
-      { wch: 15 },
     ];
 
     const wb = XLSX.utils.book_new();
@@ -975,8 +969,6 @@ export default function InventoryPage() {
       "분류",
       "현재재고",
       "단위",
-      "목표재고",
-      "단가(원)",
       "최종수정자",
       "최종수정일",
     ];
@@ -989,8 +981,6 @@ export default function InventoryPage() {
       p.item_type || "-",
       p.stock,
       p.unit || "-",
-      p.target,
-      p.price || 0,
       p.updated_by || "-",
       p.updated_at ? new Date(p.updated_at).toLocaleString("ko-KR") : "-",
     ]);
@@ -1002,8 +992,6 @@ export default function InventoryPage() {
       { wch: 15 },
       { wch: 12 },
       { wch: 10 },
-      { wch: 12 },
-      { wch: 15 },
       { wch: 15 },
       { wch: 22 },
     ];
@@ -1052,8 +1040,6 @@ export default function InventoryPage() {
         const typeIdx = headerRow.findIndex((h) => h.includes("분류") || h.includes("유형") || h.includes("type"));
         const stockIdx = headerRow.findIndex((h) => h.includes("재고") || h.includes("수량") || h.includes("stock"));
         const unitIdx = headerRow.findIndex((h) => h.includes("단위") || h.includes("unit"));
-        const targetIdx = headerRow.findIndex((h) => h.includes("목표") || h.includes("적정") || h.includes("target"));
-        const priceIdx = headerRow.findIndex((h) => h.includes("단가") || h.includes("가격") || h.includes("price") || h.includes("금액"));
 
         if (nameIdx === -1) {
           alert("품목명(이름) 열을 찾을 수 없습니다.\n양식을 다운로드하여 양식대로 작성해 주세요.");
@@ -1071,8 +1057,6 @@ export default function InventoryPage() {
           const itemType = typeIdx !== -1 && r[typeIdx] ? String(r[typeIdx]).trim() : "";
           const stock = stockIdx !== -1 ? Math.max(0, parseInt(String(r[stockIdx] || "0").replace(/[^0-9-]/g, ""), 10) || 0) : 0;
           const unit = unitIdx !== -1 && r[unitIdx] ? String(r[unitIdx]).trim() : "개";
-          const target = targetIdx !== -1 ? Math.max(0, parseInt(String(r[targetIdx] || "0").replace(/[^0-9-]/g, ""), 10) || 0) : stock;
-          const price = priceIdx !== -1 ? Math.max(0, parseInt(String(r[priceIdx] || "0").replace(/[^0-9-]/g, ""), 10) || 0) : 0;
 
           parsed.push({
             name,
@@ -1080,8 +1064,6 @@ export default function InventoryPage() {
             item_type: itemType,
             stock,
             unit: unit || "개",
-            target: target || stock,
-            price,
           });
         }
 
@@ -1144,8 +1126,7 @@ export default function InventoryPage() {
             .from("products")
             .update({
               stock_quantity: newTotalStock,
-              target_quantity: item.target || newTotalStock,
-              price: item.price || matched.price || 0,
+              target_quantity: newTotalStock,
               updated_by: userShort,
               updated_at: new Date().toISOString(),
             })
@@ -1165,8 +1146,8 @@ export default function InventoryPage() {
             category: cleanCat || "기타",
             sku: skuVal,
             stock_quantity: item.stock,
-            target_quantity: item.target || item.stock,
-            price: item.price || 0,
+            target_quantity: item.stock,
+            price: 0,
             updated_by: userShort,
             updated_at: new Date().toISOString(),
           };
@@ -1835,17 +1816,15 @@ export default function InventoryPage() {
                         <th className="px-3.5 py-2.5">위치</th>
                         <th className="px-3.5 py-2.5">분류</th>
                         <th className="px-3.5 py-2.5 text-right">수량</th>
-                        <th className="px-3.5 py-2.5 text-right">단가</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-zinc-200/60 dark:divide-zinc-800/60">
                       {importPreviewItems.map((item, idx) => (
                         <tr key={idx} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/40 font-medium">
-                          <td className="px-3.5 py-2 font-bold text-zinc-900 dark:text-white truncate max-w-[140px]">{item.name}</td>
+                          <td className="px-3.5 py-2 font-bold text-zinc-900 dark:text-white truncate max-w-[160px]">{item.name}</td>
                           <td className="px-3.5 py-2 text-zinc-600 dark:text-zinc-300">{item.category}</td>
                           <td className="px-3.5 py-2 text-zinc-500">{item.item_type || "-"}</td>
                           <td className="px-3.5 py-2 text-right font-black tabular-nums">{item.stock}{item.unit}</td>
-                          <td className="px-3.5 py-2 text-right tabular-nums text-zinc-500">{item.price ? `${item.price.toLocaleString()}원` : "-"}</td>
                         </tr>
                       ))}
                     </tbody>
