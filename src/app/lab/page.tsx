@@ -69,6 +69,7 @@ export default function LabPage() {
   const [draggedRowIdx, setDraggedRowIdx] = useState<number | null>(null);
   const [touchDraggingIdx, setTouchDraggingIdx] = useState<number | null>(null);
   const [touchOverIdx, setTouchOverIdx] = useState<number | null>(null);
+  const [justDroppedIdx, setJustDroppedIdx] = useState<number | null>(null);
   const touchTimerRef = React.useRef<NodeJS.Timeout | null>(null);
   const touchStartPosRef = React.useRef<{ x: number; y: number } | null>(null);
   const isDraggingRef = React.useRef<boolean>(false);
@@ -322,6 +323,8 @@ export default function LabPage() {
           const tgt = dragTargetIdxRef.current;
           if (src !== null && tgt !== null && src !== tgt) {
             handleRowDrop(src, tgt);
+            setJustDroppedIdx(tgt);
+            setTimeout(() => setJustDroppedIdx(null), 500);
             if (typeof window !== "undefined" && navigator.vibrate) {
               try {
                 navigator.vibrate(35);
@@ -736,8 +739,9 @@ export default function LabPage() {
                     let rotatedIdx = (idx - shift) % N;
                     if (rotatedIdx < 0) rotatedIdx += N;
                     
-                    const isTouchDragging = touchDraggingIdx === idx;
-                    const isTouchTarget = touchOverIdx === idx && touchDraggingIdx !== null && touchDraggingIdx !== idx;
+                    const isFloating = draggedRowIdx === idx || touchDraggingIdx === idx;
+                    const isTarget = touchOverIdx === idx && touchDraggingIdx !== null && touchDraggingIdx !== idx;
+                    const isJustDropped = justDroppedIdx === idx;
 
                     return (
                       <tr 
@@ -755,6 +759,8 @@ export default function LabPage() {
                           e.preventDefault();
                           if (draggedRowIdx !== null && draggedRowIdx !== idx) {
                             handleRowDrop(draggedRowIdx, idx);
+                            setJustDroppedIdx(idx);
+                            setTimeout(() => setJustDroppedIdx(null), 500);
                           }
                         }}
                         onDragEnd={() => {
@@ -764,47 +770,92 @@ export default function LabPage() {
                         onTouchMove={handleTouchMove}
                         onTouchEnd={handleTouchEnd}
                         onTouchCancel={handleTouchEnd}
-                        className={`group transition-all select-none ${
-                          draggedRowIdx === idx || isTouchDragging
-                            ? "bg-blue-500/20 ring-2 ring-blue-500 shadow-xl scale-[1.02] z-30 opacity-90"
-                            : isTouchTarget
-                            ? "bg-blue-50 dark:bg-blue-950/60 border-t-2 border-t-blue-600"
-                            : "hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 active:bg-zinc-100/60 dark:active:bg-zinc-800/60"
+                        className={`group transition-all duration-200 select-none ${
+                          isFloating
+                            ? "relative z-30"
+                            : isTarget
+                            ? "relative z-20"
+                            : isJustDropped
+                            ? "relative z-10"
+                            : ""
                         }`}
                       >
-                        <td className="py-2.5 sm:py-3.5 border-r border-zinc-200 dark:border-zinc-800 text-left">
-                          <div className="flex items-center gap-2 px-2.5 sm:px-3">
+                        {/* Column 1: Member Name */}
+                        <td className={`py-2.5 sm:py-3.5 border-r border-zinc-200 dark:border-zinc-800 text-left transition-all duration-200 ${
+                          isFloating
+                            ? "bg-blue-600/15 dark:bg-blue-500/25 border-y-2 border-l-2 border-blue-500 rounded-l-xl shadow-lg shadow-blue-500/15"
+                            : isTarget
+                            ? "bg-blue-50/70 dark:bg-blue-950/50 border-t-2 border-t-blue-500"
+                            : isJustDropped
+                            ? "bg-emerald-500/15 dark:bg-emerald-400/20 border-y border-emerald-500/40"
+                            : "hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30"
+                        }`}>
+                          <div className={`flex items-center gap-2 px-2.5 sm:px-3 transition-all duration-200 ${
+                            isFloating ? "transform -translate-y-1.5 scale-[1.02]" : isTarget ? "transform translate-y-1 opacity-70" : isJustDropped ? "transform translate-y-0 scale-100" : ""
+                          }`}>
                             <div 
                               style={{ touchAction: "none" }}
-                              className="p-1 -m-1 cursor-grab active:cursor-grabbing text-zinc-400 hover:text-zinc-600 dark:text-zinc-500 dark:hover:text-zinc-300"
+                              className={`p-1 -m-1 cursor-grab active:cursor-grabbing transition-colors ${
+                                isFloating ? "text-blue-600 dark:text-blue-400 scale-110" : "text-zinc-400 hover:text-zinc-600 dark:text-zinc-500"
+                              }`}
                               title="길게 눌러 이동"
                             >
                               <GripVertical className="w-3.5 h-3.5 shrink-0" />
                             </div>
-                            <span className="text-xs sm:text-sm text-zinc-900 dark:text-white font-bold truncate">
+                            <span className={`text-xs sm:text-sm font-bold truncate transition-colors ${
+                              isFloating ? "text-blue-700 dark:text-blue-300 font-black" : "text-zinc-900 dark:text-white"
+                            }`}>
                               {row.member}
                             </span>
                           </div>
                         </td>
+
+                        {/* Column 2: Cleaning */}
                         <td 
-                          className={`py-2.5 sm:py-3.5 border-r border-zinc-200 dark:border-zinc-800 px-2 cursor-pointer select-none transition-all ${
-                            row.cleaning 
-                              ? "bg-emerald-500/20 text-emerald-500 dark:text-emerald-400 font-black" 
+                          className={`py-2.5 sm:py-3.5 border-r border-zinc-200 dark:border-zinc-800 px-2 cursor-pointer select-none transition-all duration-200 ${
+                            isFloating
+                              ? "bg-blue-600/15 dark:bg-blue-500/25 border-y-2 border-blue-500 shadow-lg shadow-blue-500/15"
+                              : isTarget
+                              ? "bg-blue-50/70 dark:bg-blue-950/50 border-t-2 border-t-blue-500"
+                              : isJustDropped
+                              ? "bg-emerald-500/15 dark:bg-emerald-400/20 border-y border-emerald-500/40"
+                              : row.cleaning
+                              ? "bg-emerald-500/20 text-emerald-500 dark:text-emerald-400 font-black"
                               : "hover:bg-zinc-100 dark:hover:bg-zinc-800/30 text-transparent"
                           }`}
                           onClick={() => handleToggleDuty(rotatedIdx, "cleaning")}
                         >
-                          <span className="text-sm font-black select-none">✓</span>
+                          <div className={`transition-all duration-200 ${
+                            isFloating ? "transform -translate-y-1.5 scale-[1.02]" : isTarget ? "transform translate-y-1 opacity-70" : ""
+                          }`}>
+                            <span className={`text-sm font-black select-none ${row.cleaning ? "text-emerald-500 dark:text-emerald-400" : "text-transparent"}`}>
+                              ✓
+                            </span>
+                          </div>
                         </td>
+
+                        {/* Column 3: Waste */}
                         <td 
-                          className={`py-2.5 sm:py-3.5 px-2 cursor-pointer select-none transition-all ${
-                            row.waste 
-                              ? "bg-blue-500/20 text-blue-500 dark:text-blue-400 font-black" 
+                          className={`py-2.5 sm:py-3.5 px-2 cursor-pointer select-none transition-all duration-200 ${
+                            isFloating
+                              ? "bg-blue-600/15 dark:bg-blue-500/25 border-y-2 border-r-2 border-blue-500 rounded-r-xl shadow-lg shadow-blue-500/15"
+                              : isTarget
+                              ? "bg-blue-50/70 dark:bg-blue-950/50 border-t-2 border-t-blue-500"
+                              : isJustDropped
+                              ? "bg-emerald-500/15 dark:bg-emerald-400/20 border-y border-emerald-500/40"
+                              : row.waste
+                              ? "bg-blue-500/20 text-blue-500 dark:text-blue-400 font-black"
                               : "hover:bg-zinc-100 dark:hover:bg-zinc-800/30 text-transparent"
                           }`}
                           onClick={() => handleToggleDuty(rotatedIdx, "waste")}
                         >
-                          <span className="text-sm font-black select-none">✓</span>
+                          <div className={`transition-all duration-200 ${
+                            isFloating ? "transform -translate-y-1.5 scale-[1.02]" : isTarget ? "transform translate-y-1 opacity-70" : ""
+                          }`}>
+                            <span className={`text-sm font-black select-none ${row.waste ? "text-blue-500 dark:text-blue-400" : "text-transparent"}`}>
+                              ✓
+                            </span>
+                          </div>
                         </td>
                       </tr>
                     );
