@@ -542,7 +542,7 @@ export default function LabPage() {
           <RefreshCw className="w-8 h-8 text-blue-500 animate-spin" />
         </div>
       ) : (
-        <div className="flex-1 flex flex-col space-y-3 sm:space-y-4 min-h-0">
+        <div className="w-full flex-1 flex flex-col space-y-3 sm:space-y-4">
           {/* Mobile Segment Tab Bar (App-style) */}
           <div className="lg:hidden flex bg-zinc-100 dark:bg-zinc-800/90 p-1 rounded-xl gap-1 shrink-0 select-none shadow-xs">
             <button
@@ -572,12 +572,15 @@ export default function LabPage() {
           </div>
 
           {/* Main 2-Column Content */}
-          <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 items-start">
+          <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 items-start">
 
             {/* Left Column: Item Orders Status */}
-            <div className={`bg-white dark:bg-zinc-900 rounded-2xl sm:rounded-[2.5rem] p-4 sm:p-6 shadow-sm border border-zinc-200 dark:border-zinc-800 flex-col min-h-[420px] ${
-              activeMobileTab === "orders" ? "flex" : "hidden lg:flex"
-            }`}>
+            <div 
+              key={`orders-card-${activeMobileTab}`}
+              className={`bg-white dark:bg-zinc-900 rounded-2xl sm:rounded-[2.5rem] p-4 sm:p-6 shadow-sm border border-zinc-200 dark:border-zinc-800 flex-col min-h-[420px] ${
+                activeMobileTab === "orders" ? "flex" : "hidden lg:flex"
+              }`}
+            >
               
               <div className="flex justify-between items-center pb-2 sm:pb-3 border-b border-zinc-100 dark:border-zinc-800 shrink-0">
                 <h3 className="text-sm sm:text-base font-black text-zinc-900 dark:text-white flex items-center gap-2">
@@ -743,9 +746,12 @@ export default function LabPage() {
           </div>
 
           {/* Right Column: Cleaning & Waste Duties Table */}
-          <div className={`bg-white dark:bg-zinc-900 rounded-2xl sm:rounded-[2.5rem] p-4 sm:p-6 shadow-sm border border-zinc-200 dark:border-zinc-800 flex flex-col ${
-            activeMobileTab === "cleaning" ? "flex" : "hidden lg:flex"
-          }`}>
+          <div 
+            key={`cleaning-card-${activeMobileTab}-${assignments.length}`}
+            className={`bg-white dark:bg-zinc-900 rounded-2xl sm:rounded-[2.5rem] p-4 sm:p-6 shadow-sm border border-zinc-200 dark:border-zinc-800 flex flex-col ${
+              activeMobileTab === "cleaning" ? "flex" : "hidden lg:flex"
+            }`}
+          >
             
             <div className="flex items-center pb-2.5 sm:pb-3 border-b border-zinc-100 dark:border-zinc-800 shrink-0">
               <div className="flex items-center gap-2">
