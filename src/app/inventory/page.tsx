@@ -12,8 +12,7 @@ import {
   X, 
   AlertCircle, 
   ArrowUpDown, 
-  Check,
-  Layers 
+  Check 
 } from "lucide-react";
 
 export type SortOption = "recent" | "oldest" | "name_asc" | "name_desc";
@@ -31,7 +30,6 @@ interface ItemModalProps {
   existingLocations: string[];
   existingTypes: string[];
   activeLocationsCount: number;
-  sameNameProducts?: Product[];
   onClose: () => void;
   onDeleteRequest: (prod: Product) => void;
   onSave: (data: {
@@ -50,7 +48,6 @@ function ItemModal({
   existingLocations,
   existingTypes,
   activeLocationsCount,
-  sameNameProducts,
   onClose,
   onDeleteRequest,
   onSave,
@@ -65,16 +62,6 @@ function ItemModal({
   const [itemLogs, setItemLogs] = useState<Activity[]>([]);
   const [loadingLogs, setLoadingLogs] = useState(false);
   const [saving, setSaving] = useState(false);
-
-  const otherLocations = useMemo(() => {
-    if (!editingProduct || !sameNameProducts) return [];
-    return sameNameProducts.filter((p) => p.id !== editingProduct.id);
-  }, [editingProduct, sameNameProducts]);
-
-  const totalStockAcrossAll = useMemo(() => {
-    if (!sameNameProducts || sameNameProducts.length === 0) return editingProduct?.stock || 0;
-    return sameNameProducts.reduce((sum, p) => sum + p.stock, 0);
-  }, [sameNameProducts, editingProduct]);
 
   // Fetch modification logs if editing an existing product
   useEffect(() => {
@@ -169,37 +156,6 @@ function ItemModal({
             <X className="w-5 h-5" />
           </button>
         </div>
-
-        {/* Other Locations Info Banner */}
-        {editingProduct && otherLocations.length > 0 && (
-          <div className="p-3.5 bg-indigo-50/75 dark:bg-indigo-950/40 border border-indigo-200/80 dark:border-indigo-800/60 rounded-2xl flex items-start gap-2.5">
-            <Layers className="w-4 h-4 text-indigo-500 shrink-0 mt-0.5" />
-            <div className="text-xs space-y-1.5 flex-1 min-w-0">
-              <div className="flex items-center justify-between gap-2 flex-wrap">
-                <span className="font-bold text-indigo-900 dark:text-indigo-200">
-                  다른 위치에도 보관 중인 품목입니다
-                </span>
-                <span className="text-[10px] font-black px-1.5 py-0.5 bg-indigo-200/60 dark:bg-indigo-900/60 text-indigo-800 dark:text-indigo-300 rounded-md shrink-0">
-                  전체 총 {totalStockAcrossAll}{editingProduct.unit}
-                </span>
-              </div>
-              <div className="flex flex-wrap gap-1.5 pt-0.5">
-                {sameNameProducts?.map((o) => (
-                  <span 
-                    key={o.id}
-                    className={`px-2 py-0.5 rounded-md text-[11px] font-bold border ${
-                      o.id === editingProduct.id 
-                        ? "bg-indigo-600 text-white border-indigo-600 font-extrabold shadow-2xs"
-                        : "bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700"
-                    }`}
-                  >
-                    {o.category || "기타"}: {o.stock}{o.unit} {o.id === editingProduct.id && "(현재 위치)"}
-                  </span>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Form Fields: Name, Location & Type (2-Col Grid), Quantity & Unit */}
         <form onSubmit={handleSubmit} className="space-y-3.5">
@@ -1091,9 +1047,6 @@ export default function InventoryPage() {
                                   <span className="font-black text-base text-indigo-950 dark:text-indigo-100">
                                     {group.name}
                                   </span>
-                                  <span className="text-[10px] font-black px-2 py-0.5 bg-indigo-200/70 dark:bg-indigo-900/80 text-indigo-800 dark:text-indigo-200 rounded-md">
-                                    {group.items.length}개 위치 보관
-                                  </span>
                                 </div>
                                 <div className="flex items-baseline gap-1.5 text-right">
                                   <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400">총 재고</span>
@@ -1228,9 +1181,6 @@ export default function InventoryPage() {
                           <h4 className="font-black text-sm sm:text-base text-indigo-950 dark:text-indigo-100">
                             {group.name}
                           </h4>
-                          <span className="text-[9px] font-extrabold px-1.5 py-0.5 bg-indigo-200/70 dark:bg-indigo-900/80 text-indigo-800 dark:text-indigo-200 rounded">
-                            {group.items.length}개 위치 보관
-                          </span>
                         </div>
                         <div className="flex items-baseline gap-1 text-right">
                           <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400">총</span>
@@ -1353,11 +1303,6 @@ export default function InventoryPage() {
           existingLocations={existingLocations}
           existingTypes={existingTypes}
           activeLocationsCount={activeLocations.length}
-          sameNameProducts={
-            editingProduct 
-              ? sameNameItemsMap.get((editingProduct.name || "").trim().toLowerCase()) 
-              : undefined
-          }
           onClose={() => setItemModalOpen(false)}
           onDeleteRequest={(prod) => {
             setDeletingProduct(prod);
