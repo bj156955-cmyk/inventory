@@ -16,7 +16,10 @@ import {
   ShieldCheck,
   Users,
   ChevronRight,
-  ChevronDown
+  ChevronDown,
+  Upload,
+  Download,
+  FileSpreadsheet
 } from "lucide-react";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -25,22 +28,30 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { theme, setTheme } = useTheme();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
+
+  // Top Bar Inventory Menu state
+  const [inventoryMenuOpen, setInventoryMenuOpen] = useState(false);
+  const inventoryMenuRef = useRef<HTMLDivElement>(null);
+
   const isLoginPage = pathname === "/login";
 
-  // Close user dropdown menu when clicking outside
+  // Close user dropdown & inventory menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
         setUserMenuOpen(false);
       }
+      if (inventoryMenuRef.current && !inventoryMenuRef.current.contains(event.target as Node)) {
+        setInventoryMenuOpen(false);
+      }
     };
-    if (userMenuOpen) {
+    if (userMenuOpen || inventoryMenuOpen) {
       document.addEventListener("mousedown", handleClickOutside);
     }
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [userMenuOpen]);
+  }, [userMenuOpen, inventoryMenuOpen]);
 
   const getPageTitle = () => {
     switch (pathname) {
@@ -83,26 +94,88 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <div className="flex flex-col md:flex-row min-h-[100dvh] w-full bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 transition-colors duration-200">
       {/* Mobile Top App Bar */}
       <header className="md:hidden sticky top-0 left-0 w-full bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl border-b border-zinc-200 dark:border-zinc-800 px-4 py-2.5 pt-[max(0.6rem,env(safe-area-inset-top))] flex items-center justify-between z-40 shadow-sm select-none">
-        <div 
-          onClick={(e) => {
-            if (pathname === "/inventory" || pathname === "/") {
-              e.preventDefault();
-              window.dispatchEvent(new CustomEvent("open-inventory-menu"));
-            }
-          }}
-          className="flex items-center gap-2.5 active:scale-95 transition-transform cursor-pointer"
-        >
-          <div className="w-7 h-7 bg-blue-600 rounded-xl flex items-center justify-center shadow-sm shadow-blue-600/30">
-            <Package className="w-4 h-4 text-white" />
-          </div>
-          <div className="flex items-center gap-1">
-            <span className="font-black text-sm tracking-tight text-zinc-900 dark:text-white">
-              {getPageTitle()}
-            </span>
-            {(pathname === "/inventory" || pathname === "/") && (
-              <ChevronDown className="w-3.5 h-3.5 text-zinc-400" />
-            )}
-          </div>
+        {/* Inventory Title & Dropdown Trigger */}
+        <div className="relative" ref={inventoryMenuRef}>
+          <button
+            type="button"
+            onClick={() => {
+              if (pathname === "/inventory" || pathname === "/") {
+                setInventoryMenuOpen(!inventoryMenuOpen);
+              }
+            }}
+            className="flex items-center gap-2.5 active:scale-95 transition-transform cursor-pointer"
+          >
+            <div className="w-7 h-7 bg-blue-600 rounded-xl flex items-center justify-center shadow-sm shadow-blue-600/30">
+              <Package className="w-4 h-4 text-white" />
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="font-black text-sm tracking-tight text-zinc-900 dark:text-white">
+                {getPageTitle()}
+              </span>
+              {(pathname === "/inventory" || pathname === "/") && (
+                <ChevronDown className={`w-3.5 h-3.5 text-zinc-400 transition-transform duration-200 ${inventoryMenuOpen ? "rotate-180" : ""}`} />
+              )}
+            </div>
+          </button>
+
+          {/* Top Bar Dropdown Menu */}
+          {inventoryMenuOpen && (pathname === "/inventory" || pathname === "/") && (
+            <div className="absolute left-0 top-full mt-2.5 w-60 bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl border border-zinc-200 dark:border-zinc-800 p-2 z-50 animate-fadeIn space-y-1">
+              {/* 1. Import */}
+              <button
+                type="button"
+                onClick={() => {
+                  setInventoryMenuOpen(false);
+                  window.dispatchEvent(new CustomEvent("inventory-import"));
+                }}
+                className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-950/40 text-zinc-800 dark:text-zinc-200 hover:text-blue-600 dark:hover:text-blue-400 font-bold text-xs transition-all cursor-pointer text-left"
+              >
+                <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center text-blue-600 dark:text-blue-400 shrink-0">
+                  <Upload className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="font-extrabold text-xs">Import</div>
+                  <div className="text-[10px] text-zinc-400 font-normal">엑셀 파일로 일괄 등록</div>
+                </div>
+              </button>
+
+              {/* 2. Export */}
+              <button
+                type="button"
+                onClick={() => {
+                  setInventoryMenuOpen(false);
+                  window.dispatchEvent(new CustomEvent("inventory-export"));
+                }}
+                className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-zinc-800 dark:text-zinc-200 hover:text-emerald-600 dark:hover:text-emerald-400 font-bold text-xs transition-all cursor-pointer text-left"
+              >
+                <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
+                  <Download className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="font-extrabold text-xs">Export</div>
+                  <div className="text-[10px] text-zinc-400 font-normal">현재 재고 목록 엑셀 저장</div>
+                </div>
+              </button>
+
+              {/* 3. 양식 다운로드 */}
+              <button
+                type="button"
+                onClick={() => {
+                  setInventoryMenuOpen(false);
+                  window.dispatchEvent(new CustomEvent("inventory-download-template"));
+                }}
+                className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl hover:bg-amber-50 dark:hover:bg-amber-950/40 text-zinc-800 dark:text-zinc-200 hover:text-amber-600 dark:hover:text-amber-400 font-bold text-xs transition-all cursor-pointer text-left"
+              >
+                <div className="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0">
+                  <FileSpreadsheet className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="font-extrabold text-xs">양식 다운로드</div>
+                  <div className="text-[10px] text-zinc-400 font-normal">등록용 엑셀 양식 받기</div>
+                </div>
+              </button>
+            </div>
+          )}
         </div>
 
         {/* User Avatar & Dropdown Menu */}

@@ -467,9 +467,9 @@ export default function InventoryPage() {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
 
-  // Inventory Top-Left Menu & Excel states
-  const [inventoryMenuOpen, setInventoryMenuOpen] = useState(false);
-  const inventoryMenuRef = useRef<HTMLDivElement>(null);
+  // Desktop Excel Actions Menu & Import file ref
+  const [desktopMenuOpen, setDesktopMenuOpen] = useState(false);
+  const desktopMenuRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Import states
@@ -928,27 +928,6 @@ export default function InventoryPage() {
     }
   };
 
-  // 8. Listen for mobile header click from AppLayout & outside click for inventoryMenu
-  useEffect(() => {
-    const handleOpenMenu = () => {
-      setInventoryMenuOpen((prev) => !prev);
-    };
-    window.addEventListener("open-inventory-menu", handleOpenMenu);
-    return () => window.removeEventListener("open-inventory-menu", handleOpenMenu);
-  }, []);
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (inventoryMenuRef.current && !inventoryMenuRef.current.contains(e.target as Node)) {
-        setInventoryMenuOpen(false);
-      }
-    };
-    if (inventoryMenuOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [inventoryMenuOpen]);
-
   // 9. Download Excel Template (양식 다운로드)
   const handleDownloadTemplate = () => {
     const headers = [
@@ -1233,94 +1212,48 @@ export default function InventoryPage() {
     }
   };
 
+  // 13. Listen for actions dispatched from AppLayout (최상단 바)
+  useEffect(() => {
+    const handleImport = () => handleTriggerImport();
+    const handleExport = () => handleExportExcel();
+    const handleDownload = () => handleDownloadTemplate();
+
+    window.addEventListener("inventory-import", handleImport);
+    window.addEventListener("inventory-export", handleExport);
+    window.addEventListener("inventory-download-template", handleDownload);
+
+    return () => {
+      window.removeEventListener("inventory-import", handleImport);
+      window.removeEventListener("inventory-export", handleExport);
+      window.removeEventListener("inventory-download-template", handleDownload);
+    };
+  });
+
+  // 14. Close desktop menu on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (desktopMenuRef.current && !desktopMenuRef.current.contains(e.target as Node)) {
+        setDesktopMenuOpen(false);
+      }
+    };
+    if (desktopMenuOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [desktopMenuOpen]);
+
   return (
     <div className="flex-1 p-3 sm:p-6 md:p-8 flex flex-col min-h-0 bg-zinc-50 dark:bg-zinc-950">
       
-      {/* Top Header: 재고 관리 Title & Menu Trigger */}
-      <div className="flex items-center justify-between gap-3 mb-3 sm:mb-4 shrink-0">
-        <div className="relative" ref={inventoryMenuRef}>
-          <button
-            type="button"
-            onClick={() => setInventoryMenuOpen(!inventoryMenuOpen)}
-            className="flex items-center gap-2 py-1 px-2.5 -ml-2 rounded-2xl hover:bg-zinc-200/60 dark:hover:bg-zinc-800/80 active:scale-95 transition-all cursor-pointer group select-none"
-            title="재고 관리 메뉴 (Import, Export, 양식 다운로드)"
-          >
-            <h1 className="text-xl sm:text-2xl font-black text-zinc-900 dark:text-white tracking-tight">
-              재고 관리
-            </h1>
-            <ChevronDown className={`w-4 h-4 sm:w-5 sm:h-5 text-zinc-400 group-hover:text-zinc-700 dark:group-hover:text-zinc-200 transition-transform duration-200 ${inventoryMenuOpen ? "rotate-180" : ""}`} />
-          </button>
+      {/* Hidden File Input for Excel Import */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileChange}
+        accept=".xlsx, .xls, .csv"
+        className="hidden"
+      />
 
-          {/* Hidden File Input for Excel Import */}
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleFileChange}
-            accept=".xlsx, .xls, .csv"
-            className="hidden"
-          />
-
-          {/* Dropdown Menu */}
-          {inventoryMenuOpen && (
-            <div className="absolute left-0 top-full mt-2 w-56 sm:w-64 bg-white dark:bg-zinc-900 rounded-2xl shadow-xl border border-zinc-200 dark:border-zinc-800 p-2 z-50 animate-fadeIn space-y-1">
-              {/* 1. Import */}
-              <button
-                type="button"
-                onClick={() => {
-                  setInventoryMenuOpen(false);
-                  handleTriggerImport();
-                }}
-                className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-950/40 text-zinc-800 dark:text-zinc-200 hover:text-blue-600 dark:hover:text-blue-400 font-bold text-xs sm:text-sm transition-all cursor-pointer text-left"
-              >
-                <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center text-blue-600 dark:text-blue-400 shrink-0">
-                  <Upload className="w-4 h-4" />
-                </div>
-                <div>
-                  <div className="font-extrabold">Import</div>
-                  <div className="text-[10px] text-zinc-400 font-normal">엑셀 파일로 일괄 등록</div>
-                </div>
-              </button>
-
-              {/* 2. Export */}
-              <button
-                type="button"
-                onClick={() => {
-                  setInventoryMenuOpen(false);
-                  handleExportExcel();
-                }}
-                className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-zinc-800 dark:text-zinc-200 hover:text-emerald-600 dark:hover:text-emerald-400 font-bold text-xs sm:text-sm transition-all cursor-pointer text-left"
-              >
-                <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
-                  <Download className="w-4 h-4" />
-                </div>
-                <div>
-                  <div className="font-extrabold">Export</div>
-                  <div className="text-[10px] text-zinc-400 font-normal">현재 재고 목록 엑셀 저장</div>
-                </div>
-              </button>
-
-              {/* 3. 양식 다운로드 */}
-              <button
-                type="button"
-                onClick={() => {
-                  setInventoryMenuOpen(false);
-                  handleDownloadTemplate();
-                }}
-                className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl hover:bg-amber-50 dark:hover:bg-amber-950/40 text-zinc-800 dark:text-zinc-200 hover:text-amber-600 dark:hover:text-amber-400 font-bold text-xs sm:text-sm transition-all cursor-pointer text-left"
-              >
-                <div className="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0">
-                  <FileSpreadsheet className="w-4 h-4" />
-                </div>
-                <div>
-                  <div className="font-extrabold">양식 다운로드</div>
-                  <div className="text-[10px] text-zinc-400 font-normal">등록용 엑셀 서식 받기</div>
-                </div>
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-      
       {/* Top Search Bar & Circular Plus Button */}
       <div className="flex items-center gap-2.5 sm:gap-3 shrink-0 mb-3 sm:mb-3.5">
         {/* Standalone Search Input */}
@@ -1333,6 +1266,58 @@ export default function InventoryPage() {
             placeholder="품목 이름, 위치 검색..."
             className="w-full pl-10 pr-4 py-2.5 sm:py-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl text-xs sm:text-sm font-semibold outline-none focus:ring-2 focus:ring-blue-500/20 shadow-xs text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 transition-all"
           />
+        </div>
+
+        {/* Desktop-only Excel Actions Menu */}
+        <div className="relative hidden md:block" ref={desktopMenuRef}>
+          <button
+            type="button"
+            onClick={() => setDesktopMenuOpen((prev) => !prev)}
+            className="h-10 sm:h-11 px-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 rounded-2xl flex items-center gap-1.5 text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95"
+            title="엑셀 관리 (Import / Export / 양식 다운로드)"
+          >
+            <FileSpreadsheet className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+            <span>엑셀 관리</span>
+            <ChevronDown className={`w-3.5 h-3.5 text-zinc-400 transition-transform ${desktopMenuOpen ? "rotate-180" : ""}`} />
+          </button>
+
+          {desktopMenuOpen && (
+            <div className="absolute right-0 top-full mt-2 w-56 bg-white dark:bg-zinc-900 rounded-2xl shadow-xl border border-zinc-200 dark:border-zinc-800 p-2 z-50 animate-fadeIn space-y-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setDesktopMenuOpen(false);
+                  handleTriggerImport();
+                }}
+                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-950/40 text-zinc-800 dark:text-zinc-200 hover:text-blue-600 dark:hover:text-blue-400 font-bold text-xs transition-all cursor-pointer text-left"
+              >
+                <Upload className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
+                <span>Import (엑셀 업로드)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setDesktopMenuOpen(false);
+                  handleExportExcel();
+                }}
+                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-zinc-800 dark:text-zinc-200 hover:text-emerald-600 dark:hover:text-emerald-400 font-bold text-xs transition-all cursor-pointer text-left"
+              >
+                <Download className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                <span>Export (엑셀 내보내기)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setDesktopMenuOpen(false);
+                  handleDownloadTemplate();
+                }}
+                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-amber-50 dark:hover:bg-amber-950/40 text-zinc-800 dark:text-zinc-200 hover:text-amber-600 dark:hover:text-amber-400 font-bold text-xs transition-all cursor-pointer text-left"
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
+                <span>양식 다운로드</span>
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Circular Plus Button */}
