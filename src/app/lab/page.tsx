@@ -239,7 +239,6 @@ export default function LabPage() {
 
     setCleaningState(newState);
     await saveCleaningState(newState);
-    setShowAddSelect(false);
     setShowAddModal(false);
   };
 
