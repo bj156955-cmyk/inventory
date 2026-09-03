@@ -610,42 +610,42 @@ export default function LabPage() {
                         }`}
                       >
                         <div className="flex flex-col min-w-0 flex-1 mr-2">
+                          {/* Top Row: 이름, 코드, 수량 */}
                           <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
-                              <span className={`text-xs sm:text-sm font-bold text-zinc-900 dark:text-zinc-100 truncate ${
-                                hasReceived ? "line-through text-zinc-400 dark:text-zinc-500" : ""
-                              }`}>
-                                {order.itemName}
-                              </span>
-                              {order.quantity && (
-                                <span className="text-[10px] font-black px-1.5 py-0.2 rounded-md bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border border-blue-200/60 dark:border-blue-800/50 shrink-0 select-none">
-                                  {order.quantity}{/^\d+$/.test(String(order.quantity).trim()) ? "개" : ""}
-                                </span>
-                              )}
-                            </div>
-                            <span className="text-[9px] sm:text-[10px] text-zinc-500 dark:text-zinc-400 font-medium flex items-center gap-1.5 mt-0.5 select-none flex-wrap">
-                              {order.itemCode && (
-                                <>
-                                  <span className="font-mono text-[9px] bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-600 dark:text-zinc-300 font-bold border border-zinc-200/80 dark:border-zinc-700/80">
-                                    {order.itemCode}
-                                  </span>
-                                  <span>•</span>
-                                </>
-                              )}
-                              <span>요청: {order.requestedBy}</span>
-                              {order.orderedBy && (
-                                <>
-                                  <span>•</span>
-                                  <span className="text-sky-400 font-bold">주문: {order.orderedBy}</span>
-                                </>
-                              )}
-                              {order.receivedBy && (
-                                <>
-                                  <span>•</span>
-                                  <span className="text-emerald-400 font-bold">수령: {order.receivedBy}</span>
-                                </>
-                              )}
+                            <span className={`text-xs sm:text-sm font-bold text-zinc-900 dark:text-zinc-100 truncate ${
+                              hasReceived ? "line-through text-zinc-400 dark:text-zinc-500" : ""
+                            }`}>
+                              {order.itemName}
                             </span>
+                            {order.itemCode && (
+                              <span className="font-mono text-[9px] bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-600 dark:text-zinc-300 font-bold border border-zinc-200/80 dark:border-zinc-700/80 shrink-0 select-none">
+                                {order.itemCode}
+                              </span>
+                            )}
+                            {order.quantity && (
+                              <span className="text-[10px] font-black px-1.5 py-0.2 rounded-md bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border border-blue-200/60 dark:border-blue-800/50 shrink-0 select-none">
+                                {order.quantity}{/^\d+$/.test(String(order.quantity).trim()) ? "개" : ""}
+                              </span>
+                            )}
                           </div>
+
+                          {/* Bottom Row: 요청, 주문, 수령 */}
+                          <span className="text-[9px] sm:text-[10px] text-zinc-500 dark:text-zinc-400 font-medium flex items-center gap-1.5 mt-0.5 select-none flex-wrap">
+                            <span>요청: {order.requestedBy}</span>
+                            {order.orderedBy && (
+                              <>
+                                <span>•</span>
+                                <span className="text-sky-400 font-bold">주문: {order.orderedBy}</span>
+                              </>
+                            )}
+                            {order.receivedBy && (
+                              <>
+                                <span>•</span>
+                                <span className="text-emerald-400 font-bold">수령: {order.receivedBy}</span>
+                              </>
+                            )}
+                          </span>
+                        </div>
                       
                       <div className="flex items-center gap-1.5 shrink-0">
                         {/* Step 1: Cart (Order) Button */}
