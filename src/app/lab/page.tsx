@@ -16,12 +16,7 @@ import {
   GripVertical,
   X,
   ShoppingCart,
-  Truck,
-  ChevronUp,
-  ChevronDown,
-  ArrowUpDown,
-  Check,
-  UserPlus
+  Truck
 } from "lucide-react";
 
 // Color mapping for member badges (Dark Pastel Accents)
@@ -72,9 +67,12 @@ export default function LabPage() {
   const [members, setMembers] = useState<string[]>([]);
   const [cleaningState, setCleaningState] = useState<CleaningState | null>(null);
   const [draggedRowIdx, setDraggedRowIdx] = useState<number | null>(null);
+  const [touchDraggingIdx, setTouchDraggingIdx] = useState<number | null>(null);
+  const [touchOverIdx, setTouchOverIdx] = useState<number | null>(null);
+  const touchTimerRef = React.useRef<NodeJS.Timeout | null>(null);
+  const touchStartPosRef = React.useRef<{ x: number; y: number } | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeMobileTab, setActiveMobileTab] = useState<"orders" | "cleaning">("orders");
-  const [isEditMode, setIsEditMode] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   
   // Orders states
@@ -214,8 +212,7 @@ export default function LabPage() {
     await saveCleaningState(newState);
   };
 
-  const handleAddUser = async (newMember: string) => {
-    if (!newMember) return;
+  const handleToggleMember = async (memberName: string) => {
     const currentAssignments = cleaningState?.assignments || members.map((member, i) => {
       const N = members.length;
       const cleaning = i < Math.min(3, N);
@@ -225,37 +222,17 @@ export default function LabPage() {
       return { member, cleaning, waste };
     });
 
-    if (currentAssignments.some(item => item.member === newMember)) return;
+    const isAlreadySelected = currentAssignments.some((item) => item.member === memberName);
 
-    const updated = [
-      ...currentAssignments,
-      { member: newMember, cleaning: false, waste: false }
-    ];
-
-    const newState: CleaningState = {
-      baseWeek: cleaningState?.baseWeek || 0,
-      assignments: updated
-    };
-
-    setCleaningState(newState);
-    await saveCleaningState(newState);
-    setShowAddModal(false);
-  };
-
-  const handleRemoveUser = async (indexInBase: number, memberName?: string) => {
-    if (memberName && !window.confirm(`${memberName} 님을 주간 청소 당번에서 제외하시겠습니까?`)) {
-      return;
+    let updated: CleaningAssignment[];
+    if (isAlreadySelected) {
+      updated = currentAssignments.filter((item) => item.member !== memberName);
+    } else {
+      updated = [
+        ...currentAssignments,
+        { member: memberName, cleaning: false, waste: false }
+      ];
     }
-    const currentAssignments = cleaningState?.assignments || members.map((member, i) => {
-      const N = members.length;
-      const cleaning = i < Math.min(3, N);
-      const s = Math.max(1, Math.floor(N / 2));
-      const wasteIdx = (i - s + N) % N;
-      const waste = wasteIdx < Math.min(2, N);
-      return { member, cleaning, waste };
-    });
-
-    const updated = currentAssignments.filter((_, i) => i !== indexInBase);
 
     const newState: CleaningState = {
       baseWeek: cleaningState?.baseWeek || 0,
@@ -307,10 +284,70 @@ export default function LabPage() {
     await saveCleaningState(newState);
   };
 
-  const handleMoveRow = async (sourceIdx: number, direction: "up" | "down") => {
-    const targetIdx = direction === "up" ? sourceIdx - 1 : sourceIdx + 1;
-    if (targetIdx < 0) return;
-    await handleRowDrop(sourceIdx, targetIdx);
+  const handleTouchStart = (idx: number, e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    touchStartPosRef.current = { x: touch.clientX, y: touch.clientY };
+
+    touchTimerRef.current = setTimeout(() => {
+      if (typeof window !== "undefined" && navigator.vibrate) {
+        try {
+          navigator.vibrate(40);
+        } catch {}
+      }
+      setTouchDraggingIdx(idx);
+      setTouchOverIdx(idx);
+    }, 280);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    const touch = e.touches[0];
+
+    if (touchDraggingIdx === null) {
+      if (touchStartPosRef.current) {
+        const dx = Math.abs(touch.clientX - touchStartPosRef.current.x);
+        const dy = Math.abs(touch.clientY - touchStartPosRef.current.y);
+        if (dx > 8 || dy > 8) {
+          if (touchTimerRef.current) {
+            clearTimeout(touchTimerRef.current);
+            touchTimerRef.current = null;
+          }
+        }
+      }
+      return;
+    }
+
+    if (e.cancelable) {
+      e.preventDefault();
+    }
+
+    const element = document.elementFromPoint(touch.clientX, touch.clientY);
+    const rowEl = element?.closest("[data-row-idx]");
+    if (rowEl) {
+      const overIdx = parseInt(rowEl.getAttribute("data-row-idx") || "-1", 10);
+      if (overIdx >= 0 && overIdx < assignments.length) {
+        setTouchOverIdx(overIdx);
+      }
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (touchTimerRef.current) {
+      clearTimeout(touchTimerRef.current);
+      touchTimerRef.current = null;
+    }
+    touchStartPosRef.current = null;
+
+    if (touchDraggingIdx !== null && touchOverIdx !== null && touchDraggingIdx !== touchOverIdx) {
+      handleRowDrop(touchDraggingIdx, touchOverIdx);
+      if (typeof window !== "undefined" && navigator.vibrate) {
+        try {
+          navigator.vibrate(30);
+        } catch {}
+      }
+    }
+
+    setTouchDraggingIdx(null);
+    setTouchOverIdx(null);
   };
 
   // Lab Orders Handlers
@@ -657,65 +694,19 @@ export default function LabPage() {
             activeMobileTab === "cleaning" ? "flex" : "hidden lg:flex"
           }`}>
             
-            <div className="flex justify-between items-center pb-2 sm:pb-3 border-b border-zinc-100 dark:border-zinc-800 shrink-0">
-              <h3 className="text-sm sm:text-base font-black text-zinc-900 dark:text-white flex items-center gap-1.5 sm:gap-2 truncate">
+            <div className="flex items-center justify-between pb-2 sm:pb-3 border-b border-zinc-100 dark:border-zinc-800 shrink-0">
+              <div className="flex items-center gap-2">
                 <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-400 shrink-0" />
-                <span className="truncate">주간 청소 당번 {getWeeklyDateRangeString()}</span>
-              </h3>
-              
-              <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-                {/* Add Member Button */}
-                <button
-                  type="button"
-                  onClick={() => setShowAddModal(true)}
-                  className="flex items-center gap-1 px-2.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold text-xs shadow-sm shadow-blue-600/30 transition-all cursor-pointer active:scale-95"
-                  title="당번 추가"
-                >
-                  <UserPlus className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">당번 추가</span>
-                </button>
-
-                {/* Edit Mode Toggle Button */}
-                <button
-                  type="button"
-                  onClick={() => setIsEditMode(!isEditMode)}
-                  className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl font-bold text-xs transition-all cursor-pointer active:scale-95 shadow-xs ${
-                    isEditMode
-                      ? "bg-amber-500 hover:bg-amber-600 text-white font-black shadow-amber-500/20 shadow-sm"
-                      : "bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200"
-                  }`}
-                  title={isEditMode ? "편집 완료" : "순서 및 인원 편집"}
-                >
-                  {isEditMode ? (
-                    <>
-                      <Check className="w-3.5 h-3.5" />
-                      <span>완료</span>
-                    </>
-                  ) : (
-                    <>
-                      <ArrowUpDown className="w-3.5 h-3.5 text-zinc-500" />
-                      <span>순서 편집</span>
-                    </>
-                  )}
-                </button>
+                <span className="text-sm sm:text-base font-black text-zinc-900 dark:text-white">
+                  {getWeeklyDateRangeString()}
+                </span>
+                <span className="px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 text-[10px] font-bold">
+                  +{shift}주차
+                </span>
               </div>
             </div>
 
-            {/* Slim Tip Banner in Edit Mode */}
-            {isEditMode && (
-              <div className="mt-2 px-3 py-1.5 bg-amber-500/10 border border-amber-500/30 rounded-xl flex items-center justify-between text-[11px] font-bold text-amber-700 dark:text-amber-400 shrink-0 select-none">
-                <span>▲ / ▼ 로 순번 이동, ✕ 로 당번 제외</span>
-                <button
-                  type="button"
-                  onClick={() => setIsEditMode(false)}
-                  className="text-[10px] underline font-black cursor-pointer ml-2 shrink-0"
-                >
-                  편집 완료
-                </button>
-              </div>
-            )}
-
-            {/* Weekly Duties 3-Column Table with Drag & Arrow Sorting */}
+            {/* Weekly Duties 3-Column Table with Touch & Drag Sorting */}
             <div className="my-1.5 sm:my-2 border border-zinc-200 dark:border-zinc-800 rounded-xl sm:rounded-2xl overflow-y-auto custom-scrollbar flex-1 min-h-0">
               <table className="w-full text-center border-collapse text-xs font-semibold table-fixed">
                 <thead className="sticky top-0 bg-zinc-50 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border-b border-zinc-200 dark:border-zinc-800 z-10 select-none">
@@ -730,10 +721,14 @@ export default function LabPage() {
                     let rotatedIdx = (idx - shift) % N;
                     if (rotatedIdx < 0) rotatedIdx += N;
                     
+                    const isTouchDragging = touchDraggingIdx === idx;
+                    const isTouchTarget = touchOverIdx === idx && touchDraggingIdx !== null && touchDraggingIdx !== idx;
+
                     return (
                       <tr 
-                        key={row.member} 
-                        draggable={!isEditMode}
+                        key={row.member}
+                        data-row-idx={idx}
+                        draggable={true}
                         onDragStart={(e) => {
                           setDraggedRowIdx(idx);
                           e.dataTransfer.effectAllowed = "move";
@@ -750,67 +745,28 @@ export default function LabPage() {
                         onDragEnd={() => {
                           setDraggedRowIdx(null);
                         }}
-                        className={`group hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 transition-all select-none ${
-                          draggedRowIdx === idx ? "opacity-30 bg-zinc-100 dark:bg-zinc-900" : ""
+                        onTouchStart={(e) => handleTouchStart(idx, e)}
+                        onTouchMove={handleTouchMove}
+                        onTouchEnd={handleTouchEnd}
+                        onTouchCancel={handleTouchEnd}
+                        className={`group transition-all select-none ${
+                          draggedRowIdx === idx || isTouchDragging
+                            ? "opacity-40 bg-blue-500/10 dark:bg-blue-500/20 ring-2 ring-blue-500 shadow-lg scale-[1.01] z-20"
+                            : isTouchTarget
+                            ? "bg-blue-50 dark:bg-blue-950/40 border-t-2 border-t-blue-500"
+                            : "hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 active:bg-zinc-100/60 dark:active:bg-zinc-800/60"
                         }`}
                       >
-                        <td className="py-1.5 sm:py-2 border-r border-zinc-200 dark:border-zinc-800">
-                          <div className="flex items-center justify-between gap-1 px-2 sm:px-3">
-                            <div className="flex items-center gap-1.5 min-w-0">
-                              {/* Desktop: Drag Grip */}
-                              {!isEditMode && (
-                                <GripVertical className="hidden md:block w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500 shrink-0 cursor-grab active:cursor-grabbing" />
-                              )}
-                              
-                              <span className="text-xs sm:text-sm text-zinc-900 dark:text-white font-bold truncate">
-                                {row.member}
-                              </span>
-                            </div>
-
-                            {/* Actions: Edit Mode (Up/Down/Exclude) vs Normal */}
-                            {isEditMode ? (
-                              <div className="flex items-center gap-0.5 shrink-0">
-                                <button
-                                  type="button"
-                                  disabled={idx === 0}
-                                  onClick={() => handleMoveRow(idx, "up")}
-                                  className="w-5 h-5 rounded-md bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 flex items-center justify-center disabled:opacity-20 cursor-pointer active:scale-90 transition-all"
-                                  title="위로 이동"
-                                >
-                                  <ChevronUp className="w-3.5 h-3.5" />
-                                </button>
-                                <button
-                                  type="button"
-                                  disabled={idx === assignments.length - 1}
-                                  onClick={() => handleMoveRow(idx, "down")}
-                                  className="w-5 h-5 rounded-md bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 flex items-center justify-center disabled:opacity-20 cursor-pointer active:scale-90 transition-all"
-                                  title="아래로 이동"
-                                >
-                                  <ChevronDown className="w-3.5 h-3.5" />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleRemoveUser(rotatedIdx, row.member)}
-                                  className="w-5 h-5 rounded-md bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/60 text-rose-500 flex items-center justify-center cursor-pointer active:scale-90 transition-all ml-0.5"
-                                  title="당번에서 제외"
-                                >
-                                  <X className="w-3 h-3" />
-                                </button>
-                              </div>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveUser(rotatedIdx, row.member)}
-                                className="text-zinc-400 hover:text-rose-500 dark:text-zinc-500 dark:hover:text-rose-400 opacity-60 md:opacity-0 md:group-hover:opacity-100 transition-all p-1 shrink-0 cursor-pointer"
-                                title="제거"
-                              >
-                                <X className="w-3.5 h-3.5" />
-                              </button>
-                            )}
+                        <td className="py-2 sm:py-2.5 border-r border-zinc-200 dark:border-zinc-800">
+                          <div className="flex items-center gap-2 px-2.5 sm:px-3">
+                            <GripVertical className="w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500 shrink-0 cursor-grab active:cursor-grabbing" />
+                            <span className="text-xs sm:text-sm text-zinc-900 dark:text-white font-bold truncate">
+                              {row.member}
+                            </span>
                           </div>
                         </td>
                         <td 
-                          className={`py-1.5 sm:py-2 border-r border-zinc-200 dark:border-zinc-800 px-1 cursor-pointer select-none transition-all ${
+                          className={`py-2 sm:py-2.5 border-r border-zinc-200 dark:border-zinc-800 px-1 cursor-pointer select-none transition-all ${
                             row.cleaning 
                               ? "bg-emerald-500/20 text-emerald-500 dark:text-emerald-400 font-black" 
                               : "hover:bg-zinc-100 dark:hover:bg-zinc-800/30 text-transparent"
@@ -820,7 +776,7 @@ export default function LabPage() {
                           <span className="text-xs select-none">✓</span>
                         </td>
                         <td 
-                          className={`py-1.5 sm:py-2 px-1 cursor-pointer select-none transition-all ${
+                          className={`py-2 sm:py-2.5 px-1 cursor-pointer select-none transition-all ${
                             row.waste 
                               ? "bg-blue-500/20 text-blue-500 dark:text-blue-400 font-black" 
                               : "hover:bg-zinc-100 dark:hover:bg-zinc-800/30 text-transparent"
@@ -832,13 +788,28 @@ export default function LabPage() {
                       </tr>
                     );
                   })}
+
+                  {/* Bottom '+' Button Row */}
+                  <tr
+                    onClick={() => setShowAddModal(true)}
+                    className="border-t border-dashed border-zinc-200 dark:border-zinc-800 hover:bg-blue-50/50 dark:hover:bg-blue-950/20 active:bg-blue-100/50 transition-all cursor-pointer group"
+                  >
+                    <td colSpan={3} className="py-2.5 px-3 text-center">
+                      <div className="flex items-center justify-center gap-1.5 text-zinc-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 font-bold text-xs select-none">
+                        <div className="w-5 h-5 rounded-lg bg-zinc-100 dark:bg-zinc-800 group-hover:bg-blue-600 group-hover:text-white flex items-center justify-center transition-all shadow-2xs">
+                          <Plus className="w-3.5 h-3.5" />
+                        </div>
+                        <span>당번 인원 추가 / 제외 설정</span>
+                      </div>
+                    </td>
+                  </tr>
                 </tbody>
               </table>
             </div>
 
             {/* Caption */}
             <div className="text-[10px] text-zinc-400 dark:text-zinc-500 font-bold flex items-center justify-between shrink-0 pt-1.5 border-t border-zinc-100 dark:border-zinc-800 select-none">
-              <span>※ {isEditMode ? "편집 모드 활성화됨" : "칸을 눌러 당번을 지정하고, [순서 편집]으로 순번을 변경합니다."}</span>
+              <span>※ 길게 눌러 순서를 이동하고, 표 하단 [+]에서 인원을 설정합니다.</span>
               <span>+{shift}주차</span>
             </div>
 
@@ -848,18 +819,25 @@ export default function LabPage() {
         </div>
       )}
 
-      {/* Member Add Modal */}
+      {/* Member Management Grid Modal */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-xs z-[300] flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-white dark:bg-zinc-900 w-full max-w-[360px] rounded-3xl shadow-2xl p-5 space-y-4 border border-zinc-200 dark:border-zinc-800">
-            <div className="flex items-center justify-between pb-2 border-b border-zinc-100 dark:border-zinc-800">
+          <div className="bg-white dark:bg-zinc-900 w-full max-w-[400px] rounded-3xl shadow-2xl p-5 space-y-4 border border-zinc-200 dark:border-zinc-800">
+            
+            {/* Modal Header */}
+            <div className="flex items-center justify-between pb-2.5 border-b border-zinc-100 dark:border-zinc-800">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-sm shadow-blue-600/30">
-                  <UserPlus className="w-4 h-4" />
+                  <Sparkles className="w-4 h-4" />
                 </div>
-                <h4 className="font-black text-sm sm:text-base text-zinc-900 dark:text-white">
-                  청소 당번 추가
-                </h4>
+                <div>
+                  <h4 className="font-black text-sm sm:text-base text-zinc-900 dark:text-white">
+                    당번 인원 관리
+                  </h4>
+                  <p className="text-[10px] text-zinc-400">
+                    선택하여 당번 포함 및 제외를 설정합니다
+                  </p>
+                </div>
               </div>
               <button
                 type="button"
@@ -870,42 +848,62 @@ export default function LabPage() {
               </button>
             </div>
 
-            <p className="text-xs text-zinc-500 dark:text-zinc-400 font-semibold">
-              추가할 멤버를 선택하세요. 당번 목록 맨 끝에 추가됩니다.
-            </p>
+            {/* Member Grid List */}
+            <div className="max-h-64 overflow-y-auto custom-scrollbar py-1">
+              <div className="grid grid-cols-2 gap-2">
+                {members.map((m) => {
+                  const isSelected = baseAssignments.some((ba) => ba.member === m);
+                  return (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => handleToggleMember(m)}
+                      className={`flex items-center justify-between p-2.5 rounded-2xl border text-xs font-bold transition-all cursor-pointer active:scale-95 select-none ${
+                        isSelected
+                          ? "bg-blue-600 text-white border-blue-600 shadow-sm shadow-blue-600/20 font-black"
+                          : "bg-zinc-50 dark:bg-zinc-800/80 text-zinc-600 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700 hover:border-zinc-300 dark:hover:border-zinc-600"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 truncate">
+                        <div className={`w-5 h-5 rounded-lg flex items-center justify-center text-[10px] font-black ${
+                          isSelected ? "bg-white/20 text-white" : "bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300"
+                        }`}>
+                          {m.slice(0, 1)}
+                        </div>
+                        <span className="truncate">{m}</span>
+                      </div>
 
-            {/* Member Chips List */}
-            <div className="max-h-52 overflow-y-auto custom-scrollbar py-1">
-              {members.filter(m => !baseAssignments.some(ba => ba.member === m)).length === 0 ? (
-                <div className="py-6 text-center text-xs font-bold text-zinc-400 dark:text-zinc-500">
-                  모든 팀원이 이미 당번에 포함되어 있습니다.
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 gap-2">
-                  {members
-                    .filter(m => !baseAssignments.some(ba => ba.member === m))
-                    .map(m => (
-                      <button
-                        key={m}
-                        type="button"
-                        onClick={() => handleAddUser(m)}
-                        className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-zinc-100 dark:bg-zinc-800 hover:bg-blue-600 hover:text-white dark:hover:bg-blue-600 dark:hover:text-white text-zinc-800 dark:text-zinc-200 rounded-xl text-xs font-black transition-all active:scale-95 cursor-pointer shadow-xs"
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                        <span>{m}</span>
-                      </button>
-                    ))}
-                </div>
-              )}
+                      <div className="shrink-0 ml-1">
+                        {isSelected ? (
+                          <span className="flex items-center justify-center w-4 h-4 rounded-full bg-white text-blue-600 font-black text-[10px]">
+                            ✓
+                          </span>
+                        ) : (
+                          <span className="flex items-center justify-center w-4 h-4 rounded-full bg-zinc-200 dark:bg-zinc-700 text-zinc-400 font-bold text-xs">
+                            +
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
-            <button
-              type="button"
-              onClick={() => setShowAddModal(false)}
-              className="w-full py-2.5 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 rounded-xl font-bold text-xs transition-all cursor-pointer"
-            >
-              닫기
-            </button>
+            {/* Modal Footer */}
+            <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
+              <span className="text-[11px] font-bold text-zinc-400">
+                현재 당번: <strong className="text-blue-600 dark:text-blue-400">{baseAssignments.length}</strong>명
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowAddModal(false)}
+                className="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200 text-white rounded-xl font-black text-xs transition-all cursor-pointer shadow-xs active:scale-95"
+              >
+                완료
+              </button>
+            </div>
+
           </div>
         </div>
       )}
