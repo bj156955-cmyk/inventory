@@ -479,23 +479,23 @@ export default function LabPage() {
     sunday.setDate(sunday.getDate() + 6);
     
     const format = (d: Date) => `${d.getMonth() + 1}.${d.getDate()}`;
-    return `(${format(monday)} ~ ${format(sunday)})`;
+    return `${format(monday)} ~ ${format(sunday)}`;
   };
 
   return (
-    <div className="h-[calc(100dvh-50px-5rem)] md:h-[100dvh] p-2.5 sm:p-5 md:p-8 flex flex-col min-h-0 bg-zinc-50 dark:bg-zinc-950 overflow-hidden">
+    <div className="flex-1 p-3 sm:p-6 md:p-8 flex flex-col min-h-0 bg-zinc-50 dark:bg-zinc-950 overflow-y-auto custom-scrollbar">
       {loading ? (
         <div className="flex-1 flex items-center justify-center min-h-[300px]">
           <RefreshCw className="w-8 h-8 text-blue-500 animate-spin" />
         </div>
       ) : (
-        <div className="flex-1 flex flex-col space-y-2 sm:space-y-4 min-h-0 overflow-hidden">
+        <div className="flex-1 flex flex-col space-y-3 sm:space-y-4 min-h-0">
           {/* Mobile Segment Tab Bar (App-style) */}
           <div className="lg:hidden flex bg-zinc-100 dark:bg-zinc-800/90 p-1 rounded-xl gap-1 shrink-0 select-none shadow-xs">
             <button
               type="button"
               onClick={() => setActiveMobileTab("orders")}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer active:scale-95 ${
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer active:scale-95 ${
                 activeMobileTab === "orders"
                   ? "bg-blue-600 text-white shadow-sm shadow-blue-600/30 font-black scale-[1.01]"
                   : "text-zinc-500 dark:text-zinc-400 hover:bg-zinc-200/50 dark:hover:bg-zinc-700/50"
@@ -507,7 +507,7 @@ export default function LabPage() {
             <button
               type="button"
               onClick={() => setActiveMobileTab("cleaning")}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer active:scale-95 ${
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer active:scale-95 ${
                 activeMobileTab === "cleaning"
                   ? "bg-blue-600 text-white shadow-sm shadow-blue-600/30 font-black scale-[1.01]"
                   : "text-zinc-500 dark:text-zinc-400 hover:bg-zinc-200/50 dark:hover:bg-zinc-700/50"
@@ -518,11 +518,11 @@ export default function LabPage() {
             </button>
           </div>
 
-          {/* Main 2-Column Content (1-Column on Mobile depending on activeMobileTab) */}
-          <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-6 min-h-0 overflow-hidden">
+          {/* Main 2-Column Content */}
+          <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 items-start">
 
             {/* Left Column: Item Orders Status */}
-            <div className={`bg-white dark:bg-zinc-900 rounded-2xl sm:rounded-[2.5rem] p-3.5 sm:p-6 shadow-sm border border-zinc-200 dark:border-zinc-800 flex-col flex-1 min-h-0 overflow-hidden ${
+            <div className={`bg-white dark:bg-zinc-900 rounded-2xl sm:rounded-[2.5rem] p-4 sm:p-6 shadow-sm border border-zinc-200 dark:border-zinc-800 flex-col min-h-[420px] ${
               activeMobileTab === "orders" ? "flex" : "hidden lg:flex"
             }`}>
               
@@ -690,30 +690,27 @@ export default function LabPage() {
           </div>
 
           {/* Right Column: Cleaning & Waste Duties Table */}
-          <div className={`bg-white dark:bg-zinc-900 rounded-2xl sm:rounded-[2.5rem] p-3.5 sm:p-6 shadow-sm border border-zinc-200 dark:border-zinc-800 flex-col flex-1 min-h-0 overflow-hidden ${
+          <div className={`bg-white dark:bg-zinc-900 rounded-2xl sm:rounded-[2.5rem] p-4 sm:p-6 shadow-sm border border-zinc-200 dark:border-zinc-800 flex flex-col h-fit transition-all ${
             activeMobileTab === "cleaning" ? "flex" : "hidden lg:flex"
           }`}>
             
-            <div className="flex items-center justify-between pb-2 sm:pb-3 border-b border-zinc-100 dark:border-zinc-800 shrink-0">
+            <div className="flex items-center pb-2.5 sm:pb-3 border-b border-zinc-100 dark:border-zinc-800 shrink-0">
               <div className="flex items-center gap-2">
                 <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-400 shrink-0" />
-                <span className="text-sm sm:text-base font-black text-zinc-900 dark:text-white">
+                <span className="text-sm sm:text-base font-black text-zinc-900 dark:text-white tracking-tight">
                   {getWeeklyDateRangeString()}
-                </span>
-                <span className="px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 text-[10px] font-bold">
-                  +{shift}주차
                 </span>
               </div>
             </div>
 
             {/* Weekly Duties 3-Column Table with Touch & Drag Sorting */}
-            <div className="my-1.5 sm:my-2 border border-zinc-200 dark:border-zinc-800 rounded-xl sm:rounded-2xl overflow-y-auto custom-scrollbar flex-1 min-h-0">
+            <div className="my-3 border border-zinc-200 dark:border-zinc-800 rounded-xl sm:rounded-2xl overflow-hidden shadow-2xs">
               <table className="w-full text-center border-collapse text-xs font-semibold table-fixed">
-                <thead className="sticky top-0 bg-zinc-50 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border-b border-zinc-200 dark:border-zinc-800 z-10 select-none">
+                <thead className="sticky top-0 bg-zinc-50 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border-b border-zinc-200 dark:border-zinc-800 select-none">
                   <tr>
-                    <th className="py-2 font-black w-[44%] bg-zinc-50 dark:bg-zinc-800">사용자</th>
-                    <th className="py-2 font-black w-[28%] bg-zinc-50 dark:bg-zinc-800">청소</th>
-                    <th className="py-2 font-black w-[28%] bg-zinc-50 dark:bg-zinc-800">폐기물</th>
+                    <th className="py-2.5 sm:py-3 px-3.5 font-black w-[46%] bg-zinc-50 dark:bg-zinc-800 text-left">사용자</th>
+                    <th className="py-2.5 sm:py-3 px-2 font-black w-[27%] bg-zinc-50 dark:bg-zinc-800">청소</th>
+                    <th className="py-2.5 sm:py-3 px-2 font-black w-[27%] bg-zinc-50 dark:bg-zinc-800">폐기물</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
@@ -757,8 +754,8 @@ export default function LabPage() {
                             : "hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 active:bg-zinc-100/60 dark:active:bg-zinc-800/60"
                         }`}
                       >
-                        <td className="py-2 sm:py-2.5 border-r border-zinc-200 dark:border-zinc-800">
-                          <div className="flex items-center gap-2 px-2.5 sm:px-3">
+                        <td className="py-2.5 sm:py-3.5 border-r border-zinc-200 dark:border-zinc-800 text-left">
+                          <div className="flex items-center gap-2 px-3 sm:px-3.5">
                             <GripVertical className="w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500 shrink-0 cursor-grab active:cursor-grabbing" />
                             <span className="text-xs sm:text-sm text-zinc-900 dark:text-white font-bold truncate">
                               {row.member}
@@ -766,24 +763,24 @@ export default function LabPage() {
                           </div>
                         </td>
                         <td 
-                          className={`py-2 sm:py-2.5 border-r border-zinc-200 dark:border-zinc-800 px-1 cursor-pointer select-none transition-all ${
+                          className={`py-2.5 sm:py-3.5 border-r border-zinc-200 dark:border-zinc-800 px-2 cursor-pointer select-none transition-all ${
                             row.cleaning 
                               ? "bg-emerald-500/20 text-emerald-500 dark:text-emerald-400 font-black" 
                               : "hover:bg-zinc-100 dark:hover:bg-zinc-800/30 text-transparent"
                           }`}
                           onClick={() => handleToggleDuty(rotatedIdx, "cleaning")}
                         >
-                          <span className="text-xs select-none">✓</span>
+                          <span className="text-sm font-black select-none">✓</span>
                         </td>
                         <td 
-                          className={`py-2 sm:py-2.5 px-1 cursor-pointer select-none transition-all ${
+                          className={`py-2.5 sm:py-3.5 px-2 cursor-pointer select-none transition-all ${
                             row.waste 
                               ? "bg-blue-500/20 text-blue-500 dark:text-blue-400 font-black" 
                               : "hover:bg-zinc-100 dark:hover:bg-zinc-800/30 text-transparent"
                           }`}
                           onClick={() => handleToggleDuty(rotatedIdx, "waste")}
                         >
-                          <span className="text-xs select-none">✓</span>
+                          <span className="text-sm font-black select-none">✓</span>
                         </td>
                       </tr>
                     );
@@ -794,7 +791,7 @@ export default function LabPage() {
                     onClick={() => setShowAddModal(true)}
                     className="border-t border-dashed border-zinc-200 dark:border-zinc-800 hover:bg-blue-50/50 dark:hover:bg-blue-950/20 active:bg-blue-100/50 transition-all cursor-pointer group"
                   >
-                    <td colSpan={3} className="py-2.5 px-3 text-center">
+                    <td colSpan={3} className="py-3 px-3 text-center">
                       <div className="flex items-center justify-center gap-1.5 text-zinc-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 font-bold text-xs select-none">
                         <div className="w-5 h-5 rounded-lg bg-zinc-100 dark:bg-zinc-800 group-hover:bg-blue-600 group-hover:text-white flex items-center justify-center transition-all shadow-2xs">
                           <Plus className="w-3.5 h-3.5" />
@@ -808,9 +805,8 @@ export default function LabPage() {
             </div>
 
             {/* Caption */}
-            <div className="text-[10px] text-zinc-400 dark:text-zinc-500 font-bold flex items-center justify-between shrink-0 pt-1.5 border-t border-zinc-100 dark:border-zinc-800 select-none">
+            <div className="text-[10px] text-zinc-400 dark:text-zinc-500 font-bold flex items-center shrink-0 pt-2 border-t border-zinc-100 dark:border-zinc-800 select-none">
               <span>※ 길게 눌러 순서를 이동하고, 표 하단 [+]에서 인원을 설정합니다.</span>
-              <span>+{shift}주차</span>
             </div>
 
           </div>
@@ -819,10 +815,10 @@ export default function LabPage() {
         </div>
       )}
 
-      {/* Member Management Grid Modal */}
+      {/* Member Management Grid Modal (3 Columns, No Plus Icon) */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-xs z-[300] flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-white dark:bg-zinc-900 w-full max-w-[400px] rounded-3xl shadow-2xl p-5 space-y-4 border border-zinc-200 dark:border-zinc-800">
+          <div className="bg-white dark:bg-zinc-900 w-full max-w-[440px] rounded-3xl shadow-2xl p-5 space-y-4 border border-zinc-200 dark:border-zinc-800">
             
             {/* Modal Header */}
             <div className="flex items-center justify-between pb-2.5 border-b border-zinc-100 dark:border-zinc-800">
@@ -848,9 +844,9 @@ export default function LabPage() {
               </button>
             </div>
 
-            {/* Member Grid List */}
+            {/* Member Grid List (3-Column Layout without '+' icon) */}
             <div className="max-h-64 overflow-y-auto custom-scrollbar py-1">
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-3 gap-2">
                 {members.map((m) => {
                   const isSelected = baseAssignments.some((ba) => ba.member === m);
                   return (
@@ -858,14 +854,14 @@ export default function LabPage() {
                       key={m}
                       type="button"
                       onClick={() => handleToggleMember(m)}
-                      className={`flex items-center justify-between p-2.5 rounded-2xl border text-xs font-bold transition-all cursor-pointer active:scale-95 select-none ${
+                      className={`flex items-center justify-between px-2.5 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer active:scale-95 select-none ${
                         isSelected
-                          ? "bg-blue-600 text-white border-blue-600 shadow-sm shadow-blue-600/20 font-black"
-                          : "bg-zinc-50 dark:bg-zinc-800/80 text-zinc-600 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700 hover:border-zinc-300 dark:hover:border-zinc-600"
+                          ? "bg-blue-600 text-white border-blue-600 shadow-xs font-black"
+                          : "bg-zinc-50 dark:bg-zinc-800/80 text-zinc-600 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700 hover:border-zinc-300 dark:hover:border-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-800"
                       }`}
                     >
-                      <div className="flex items-center gap-2 truncate">
-                        <div className={`w-5 h-5 rounded-lg flex items-center justify-center text-[10px] font-black ${
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <div className={`w-5 h-5 rounded-md flex items-center justify-center text-[10px] font-black shrink-0 ${
                           isSelected ? "bg-white/20 text-white" : "bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300"
                         }`}>
                           {m.slice(0, 1)}
@@ -873,17 +869,11 @@ export default function LabPage() {
                         <span className="truncate">{m}</span>
                       </div>
 
-                      <div className="shrink-0 ml-1">
-                        {isSelected ? (
-                          <span className="flex items-center justify-center w-4 h-4 rounded-full bg-white text-blue-600 font-black text-[10px]">
-                            ✓
-                          </span>
-                        ) : (
-                          <span className="flex items-center justify-center w-4 h-4 rounded-full bg-zinc-200 dark:bg-zinc-700 text-zinc-400 font-bold text-xs">
-                            +
-                          </span>
-                        )}
-                      </div>
+                      {isSelected && (
+                        <span className="shrink-0 text-[11px] font-black text-white ml-1">
+                          ✓
+                        </span>
+                      )}
                     </button>
                   );
                 })}
