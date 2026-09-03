@@ -743,7 +743,7 @@ export default function LabPage() {
           </div>
 
           {/* Right Column: Cleaning & Waste Duties Table */}
-          <div className={`bg-white dark:bg-zinc-900 rounded-2xl sm:rounded-[2.5rem] p-4 sm:p-6 shadow-sm border border-zinc-200 dark:border-zinc-800 flex flex-col h-fit transition-all ${
+          <div className={`bg-white dark:bg-zinc-900 rounded-2xl sm:rounded-[2.5rem] p-4 sm:p-6 shadow-sm border border-zinc-200 dark:border-zinc-800 flex flex-col ${
             activeMobileTab === "cleaning" ? "flex" : "hidden lg:flex"
           }`}>
             
@@ -757,13 +757,7 @@ export default function LabPage() {
             </div>
 
             {/* Weekly Duties 3-Column Table with Apple Real-Time Push Displacement Animation */}
-            <div 
-              style={{
-                WebkitMaskImage: "-webkit-radial-gradient(white, black)",
-                isolation: "isolate"
-              }}
-              className="my-3 border border-zinc-200/80 dark:border-zinc-800/80 rounded-2xl overflow-hidden shadow-2xs bg-white/40 dark:bg-zinc-950/40 backdrop-blur-md w-full"
-            >
+            <div className="my-3 border border-zinc-200/80 dark:border-zinc-800/80 rounded-2xl overflow-hidden shadow-2xs bg-white/40 dark:bg-zinc-950/40 backdrop-blur-md w-full">
               
               {/* Header */}
               <div className="grid grid-cols-[minmax(0,36%)_minmax(0,32%)_minmax(0,32%)] items-center py-2.5 px-3 bg-zinc-100/70 dark:bg-zinc-800/70 backdrop-blur-md text-zinc-500 dark:text-zinc-400 border-b border-zinc-200/80 dark:border-zinc-800/80 select-none text-xs font-black w-full">
