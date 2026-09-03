@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useRef } from "react";
+import * as XLSX from "xlsx";
 import { supabase } from "@/lib/supabase";
 import { Product, Activity } from "@/types";
 import { useAuth } from "@/context/AuthContext";
@@ -12,10 +13,26 @@ import {
   X, 
   AlertCircle, 
   ArrowUpDown, 
-  Check 
+  Check,
+  Upload,
+  Download,
+  FileSpreadsheet,
+  ChevronDown,
+  CheckCircle2,
+  Loader2
 } from "lucide-react";
 
 export type SortOption = "recent" | "oldest" | "name_asc" | "name_desc";
+
+export interface ParsedImportItem {
+  name: string;
+  category: string;
+  item_type: string;
+  stock: number;
+  unit: string;
+  target: number;
+  price: number;
+}
 
 const SORT_OPTIONS: { id: SortOption; label: string }[] = [
   { id: "recent", label: "최신순" },
@@ -450,6 +467,22 @@ export default function InventoryPage() {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
 
+  // Inventory Top-Left Menu & Excel states
+  const [inventoryMenuOpen, setInventoryMenuOpen] = useState(false);
+  const inventoryMenuRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Import states
+  const [importModalOpen, setImportModalOpen] = useState(false);
+  const [importPreviewItems, setImportPreviewItems] = useState<ParsedImportItem[]>([]);
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState<{
+    success: number;
+    newCount: number;
+    mergedCount: number;
+    errors: string[];
+  } | null>(null);
+
   const handleSelectSort = (opt: SortOption) => {
     setSortOption(opt);
     try {
@@ -458,57 +491,57 @@ export default function InventoryPage() {
     setSortMenuOpen(false);
   };
 
+  const normalizeProduct = (p: Record<string, unknown>): Product => {
+    const rawSku = p.sku ? String(p.sku) : "";
+    let parsedType = "";
+    let parsedUnit = "";
+
+    if (rawSku.includes(":::")) {
+      const parts = rawSku.split(":::");
+      parsedType = parts[0] ? parts[0].trim() : "";
+      // Only consider parts[1] as unit if parts has at least 3 elements (type, unit, hash)
+      if (parts.length >= 3) {
+        parsedUnit = parts[1] ? parts[1].trim() : "";
+      } else {
+        parsedUnit = "";
+      }
+    } else if (rawSku.includes("_")) {
+      parsedType = rawSku.split("_")[0] || "";
+      parsedUnit = "";
+    } else {
+      parsedType = rawSku || (p.item_type ? String(p.item_type) : "");
+      parsedUnit = p.unit ? String(p.unit) : "";
+    }
+
+    // Filter out accidental hash / random strings from unit
+    if (/^[a-z0-9]{6,12}$/i.test(parsedUnit)) {
+      parsedUnit = "";
+    }
+
+    const stockNum = typeof p.stock_quantity === "number" ? p.stock_quantity : (typeof p.stock === "number" ? p.stock : 0);
+    const targetNum = typeof p.target_quantity === "number" ? p.target_quantity : (typeof p.target === "number" ? p.target : 0);
+
+    return {
+      id: String(p.id || ""),
+      name: String(p.name || ""),
+      category: String(p.category || ""),
+      sku: p.sku ? String(p.sku) : null,
+      item_type: parsedType,
+      unit: parsedUnit,
+      stock_quantity: stockNum,
+      stock: stockNum,
+      target_quantity: targetNum,
+      target: targetNum,
+      price: typeof p.price === "number" ? p.price : 0,
+      updated_by: p.updated_by ? String(p.updated_by) : (p.edit_user ? String(p.edit_user) : ""),
+      edit_user: p.updated_by ? String(p.updated_by) : (p.edit_user ? String(p.edit_user) : ""),
+      updated_at: p.updated_at ? String(p.updated_at) : (p.edit_date ? String(p.edit_date) : ""),
+      edit_date: p.updated_at ? String(p.updated_at) : (p.edit_date ? String(p.edit_date) : ""),
+    };
+  };
+
   useEffect(() => {
     let ignore = false;
-
-    const normalizeProduct = (p: Record<string, unknown>): Product => {
-      const rawSku = p.sku ? String(p.sku) : "";
-      let parsedType = "";
-      let parsedUnit = "";
-
-      if (rawSku.includes(":::")) {
-        const parts = rawSku.split(":::");
-        parsedType = parts[0] ? parts[0].trim() : "";
-        // Only consider parts[1] as unit if parts has at least 3 elements (type, unit, hash)
-        if (parts.length >= 3) {
-          parsedUnit = parts[1] ? parts[1].trim() : "";
-        } else {
-          parsedUnit = "";
-        }
-      } else if (rawSku.includes("_")) {
-        parsedType = rawSku.split("_")[0] || "";
-        parsedUnit = "";
-      } else {
-        parsedType = rawSku || (p.item_type ? String(p.item_type) : "");
-        parsedUnit = p.unit ? String(p.unit) : "";
-      }
-
-      // Filter out accidental hash / random strings from unit
-      if (/^[a-z0-9]{6,12}$/i.test(parsedUnit)) {
-        parsedUnit = "";
-      }
-
-      const stockNum = typeof p.stock_quantity === "number" ? p.stock_quantity : (typeof p.stock === "number" ? p.stock : 0);
-      const targetNum = typeof p.target_quantity === "number" ? p.target_quantity : (typeof p.target === "number" ? p.target : 0);
-
-      return {
-        id: String(p.id || ""),
-        name: String(p.name || ""),
-        category: String(p.category || ""),
-        sku: p.sku ? String(p.sku) : null,
-        item_type: parsedType,
-        unit: parsedUnit,
-        stock_quantity: stockNum,
-        stock: stockNum,
-        target_quantity: targetNum,
-        target: targetNum,
-        price: typeof p.price === "number" ? p.price : 0,
-        updated_by: p.updated_by ? String(p.updated_by) : (p.edit_user ? String(p.edit_user) : ""),
-        edit_user: p.updated_by ? String(p.updated_by) : (p.edit_user ? String(p.edit_user) : ""),
-        updated_at: p.updated_at ? String(p.updated_at) : (p.edit_date ? String(p.edit_date) : ""),
-        edit_date: p.updated_at ? String(p.updated_at) : (p.edit_date ? String(p.edit_date) : ""),
-      };
-    };
 
     const loadProducts = async () => {
       try {
@@ -895,8 +928,398 @@ export default function InventoryPage() {
     }
   };
 
+  // 8. Listen for mobile header click from AppLayout & outside click for inventoryMenu
+  useEffect(() => {
+    const handleOpenMenu = () => {
+      setInventoryMenuOpen((prev) => !prev);
+    };
+    window.addEventListener("open-inventory-menu", handleOpenMenu);
+    return () => window.removeEventListener("open-inventory-menu", handleOpenMenu);
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (inventoryMenuRef.current && !inventoryMenuRef.current.contains(e.target as Node)) {
+        setInventoryMenuOpen(false);
+      }
+    };
+    if (inventoryMenuOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [inventoryMenuOpen]);
+
+  // 9. Download Excel Template (양식 다운로드)
+  const handleDownloadTemplate = () => {
+    const headers = [
+      "품목명 (필수)",
+      "보관위치 (필수)",
+      "분류 (선택)",
+      "현재재고 (필수)",
+      "단위 (선택)",
+      "목표재고 (선택)",
+      "단가 (선택)",
+    ];
+
+    const sampleRows = [
+      ["에탄올 99%", "1층 실험실", "시약", 10, "병", 15, 25000],
+      ["마이크로피펫 팁 (200ul)", "2층 창고", "소모품", 5, "box", 10, 18000],
+      ["라텍스 장갑 (M)", "사무실", "소모품", 3, "box", 5, 12000],
+    ];
+
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...sampleRows]);
+    ws["!cols"] = [
+      { wch: 25 },
+      { wch: 18 },
+      { wch: 15 },
+      { wch: 15 },
+      { wch: 12 },
+      { wch: 15 },
+      { wch: 15 },
+    ];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "재고등록양식");
+    XLSX.writeFile(wb, "재고_일괄등록_양식.xlsx");
+  };
+
+  // 10. Export Inventory to Excel (현재 재고 목록 엑셀 내보내기)
+  const handleExportExcel = () => {
+    if (products.length === 0) {
+      alert("내보낼 재고 데이터가 없습니다.");
+      return;
+    }
+
+    const headers = [
+      "품목명",
+      "보관위치",
+      "분류",
+      "현재재고",
+      "단위",
+      "목표재고",
+      "단가(원)",
+      "최종수정자",
+      "최종수정일",
+    ];
+
+    const listToExport = filteredProducts.length > 0 ? filteredProducts : products;
+
+    const rows = listToExport.map((p) => [
+      p.name,
+      p.category || "기타",
+      p.item_type || "-",
+      p.stock,
+      p.unit || "-",
+      p.target,
+      p.price || 0,
+      p.updated_by || "-",
+      p.updated_at ? new Date(p.updated_at).toLocaleString("ko-KR") : "-",
+    ]);
+
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+    ws["!cols"] = [
+      { wch: 25 },
+      { wch: 18 },
+      { wch: 15 },
+      { wch: 12 },
+      { wch: 10 },
+      { wch: 12 },
+      { wch: 15 },
+      { wch: 15 },
+      { wch: 22 },
+    ];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "재고목록");
+
+    const todayStr = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(wb, `재고목록_${todayStr}.xlsx`);
+  };
+
+  // 11. Trigger File Upload (Import)
+  const handleTriggerImport = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+      fileInputRef.current.click();
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const buffer = event.target?.result as ArrayBuffer;
+        const wb = XLSX.read(new Uint8Array(buffer), { type: "array" });
+        const sheetName = wb.SheetNames[0];
+        if (!sheetName) {
+          alert("유효한 시트를 찾을 수 없습니다.");
+          return;
+        }
+
+        const ws = wb.Sheets[sheetName];
+        const rawRows = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1 });
+        if (!rawRows || rawRows.length < 2) {
+          alert("파일에 데이터가 없거나 서식이 비어 있습니다.");
+          return;
+        }
+
+        const headerRow = (rawRows[0] || []).map((h) => String(h || "").trim().toLowerCase());
+
+        const nameIdx = headerRow.findIndex((h) => h.includes("품목") || h.includes("이름") || h.includes("name"));
+        const catIdx = headerRow.findIndex((h) => h.includes("위치") || h.includes("카테고리") || h.includes("category") || h.includes("장소"));
+        const typeIdx = headerRow.findIndex((h) => h.includes("분류") || h.includes("유형") || h.includes("type"));
+        const stockIdx = headerRow.findIndex((h) => h.includes("재고") || h.includes("수량") || h.includes("stock"));
+        const unitIdx = headerRow.findIndex((h) => h.includes("단위") || h.includes("unit"));
+        const targetIdx = headerRow.findIndex((h) => h.includes("목표") || h.includes("적정") || h.includes("target"));
+        const priceIdx = headerRow.findIndex((h) => h.includes("단가") || h.includes("가격") || h.includes("price") || h.includes("금액"));
+
+        if (nameIdx === -1) {
+          alert("품목명(이름) 열을 찾을 수 없습니다.\n양식을 다운로드하여 양식대로 작성해 주세요.");
+          return;
+        }
+
+        const parsed: ParsedImportItem[] = [];
+        for (let i = 1; i < rawRows.length; i++) {
+          const r = rawRows[i];
+          if (!r || r.length === 0) continue;
+          const name = String(r[nameIdx] || "").trim();
+          if (!name) continue;
+
+          const category = catIdx !== -1 && r[catIdx] ? String(r[catIdx]).trim() : "기타";
+          const itemType = typeIdx !== -1 && r[typeIdx] ? String(r[typeIdx]).trim() : "";
+          const stock = stockIdx !== -1 ? Math.max(0, parseInt(String(r[stockIdx] || "0").replace(/[^0-9-]/g, ""), 10) || 0) : 0;
+          const unit = unitIdx !== -1 && r[unitIdx] ? String(r[unitIdx]).trim() : "개";
+          const target = targetIdx !== -1 ? Math.max(0, parseInt(String(r[targetIdx] || "0").replace(/[^0-9-]/g, ""), 10) || 0) : stock;
+          const price = priceIdx !== -1 ? Math.max(0, parseInt(String(r[priceIdx] || "0").replace(/[^0-9-]/g, ""), 10) || 0) : 0;
+
+          parsed.push({
+            name,
+            category: category || "기타",
+            item_type: itemType,
+            stock,
+            unit: unit || "개",
+            target: target || stock,
+            price,
+          });
+        }
+
+        if (parsed.length === 0) {
+          alert("등록 가능한 품목이 없습니다. 파일 내용을 확인해 주세요.");
+          return;
+        }
+
+        setImportPreviewItems(parsed);
+        setImportResult(null);
+        setImportModalOpen(true);
+      } catch (err) {
+        console.error("Error reading excel file:", err);
+        alert("엑셀 파일을 읽는 중 오류가 발생했습니다. 올바른 엑셀 파일인지 확인해 주세요.");
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  };
+
+  // 12. Batch Import Execution
+  const handleExecuteImport = async () => {
+    if (!user) {
+      alert("로그인이 필요합니다.");
+      return;
+    }
+    if (importPreviewItems.length === 0) return;
+
+    setImporting(true);
+    const userShort = user.email ? user.email.split("@")[0].toUpperCase() : "USER";
+    let newCount = 0;
+    let mergedCount = 0;
+    const errorList: string[] = [];
+
+    try {
+      // 1. Fetch latest products for accurate matching
+      const { data: latestRows, error: fetchErr } = await supabase
+        .from("products")
+        .select("*");
+      if (fetchErr) throw fetchErr;
+
+      const existingList = (latestRows || []).map(normalizeProduct);
+
+      for (let i = 0; i < importPreviewItems.length; i++) {
+        const item = importPreviewItems[i];
+        const cleanName = item.name.trim();
+        const cleanCat = item.category.trim();
+        const cleanType = item.item_type.trim();
+
+        const matched = existingList.find(
+          (p) =>
+            p.name.trim().toLowerCase() === cleanName.toLowerCase() &&
+            (p.category || "").trim().toLowerCase() === cleanCat.toLowerCase() &&
+            (!cleanType || (p.item_type || "").trim().toLowerCase() === cleanType.toLowerCase())
+        );
+
+        if (matched) {
+          // Merge
+          const newTotalStock = matched.stock + item.stock;
+          const { error: updErr } = await supabase
+            .from("products")
+            .update({
+              stock_quantity: newTotalStock,
+              target_quantity: item.target || newTotalStock,
+              price: item.price || matched.price || 0,
+              updated_by: userShort,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", matched.id);
+
+          if (updErr) {
+            errorList.push(`${cleanName} (${cleanCat}): ${updErr.message}`);
+          } else {
+            matched.stock = newTotalStock;
+            mergedCount++;
+          }
+        } else {
+          // Insert new
+          const skuVal = `${cleanType}:::${item.unit}:::${Date.now().toString(36)}_${i}_${Math.random().toString(36).slice(2, 6)}`;
+          const payload: Record<string, unknown> = {
+            name: cleanName,
+            category: cleanCat || "기타",
+            sku: skuVal,
+            stock_quantity: item.stock,
+            target_quantity: item.target || item.stock,
+            price: item.price || 0,
+            updated_by: userShort,
+            updated_at: new Date().toISOString(),
+          };
+
+          let { error: insErr } = await supabase.from("products").insert([payload]);
+          if (insErr && insErr.message?.includes("sku")) {
+            payload.sku = null;
+            const retry = await supabase.from("products").insert([payload]);
+            insErr = retry.error;
+          }
+
+          if (insErr) {
+            errorList.push(`${cleanName} (${cleanCat}): ${insErr.message}`);
+          } else {
+            newCount++;
+          }
+        }
+      }
+
+      await logActivity("CREATE", `엑셀 일괄 등록 완료 (신규 ${newCount}건, 합산 ${mergedCount}건)`);
+
+      // Reload products
+      const { data: refreshed } = await supabase
+        .from("products")
+        .select("*")
+        .order("name", { ascending: true });
+      if (refreshed) {
+        setProducts(refreshed.map(normalizeProduct));
+      }
+
+      setImportResult({
+        success: newCount + mergedCount,
+        newCount,
+        mergedCount,
+        errors: errorList,
+      });
+    } catch (err: unknown) {
+      console.error("Import error:", err);
+      const errMsg = err instanceof Error ? err.message : "일괄 등록 처리 중 오류가 발생했습니다.";
+      alert(errMsg);
+    } finally {
+      setImporting(false);
+    }
+  };
+
   return (
     <div className="flex-1 p-3 sm:p-6 md:p-8 flex flex-col min-h-0 bg-zinc-50 dark:bg-zinc-950">
+      
+      {/* Top Header: 재고 관리 Title & Menu Trigger */}
+      <div className="flex items-center justify-between gap-3 mb-3 sm:mb-4 shrink-0">
+        <div className="relative" ref={inventoryMenuRef}>
+          <button
+            type="button"
+            onClick={() => setInventoryMenuOpen(!inventoryMenuOpen)}
+            className="flex items-center gap-2 py-1 px-2.5 -ml-2 rounded-2xl hover:bg-zinc-200/60 dark:hover:bg-zinc-800/80 active:scale-95 transition-all cursor-pointer group select-none"
+            title="재고 관리 메뉴 (Import, Export, 양식 다운로드)"
+          >
+            <h1 className="text-xl sm:text-2xl font-black text-zinc-900 dark:text-white tracking-tight">
+              재고 관리
+            </h1>
+            <ChevronDown className={`w-4 h-4 sm:w-5 sm:h-5 text-zinc-400 group-hover:text-zinc-700 dark:group-hover:text-zinc-200 transition-transform duration-200 ${inventoryMenuOpen ? "rotate-180" : ""}`} />
+          </button>
+
+          {/* Hidden File Input for Excel Import */}
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileChange}
+            accept=".xlsx, .xls, .csv"
+            className="hidden"
+          />
+
+          {/* Dropdown Menu */}
+          {inventoryMenuOpen && (
+            <div className="absolute left-0 top-full mt-2 w-56 sm:w-64 bg-white dark:bg-zinc-900 rounded-2xl shadow-xl border border-zinc-200 dark:border-zinc-800 p-2 z-50 animate-fadeIn space-y-1">
+              {/* 1. Import */}
+              <button
+                type="button"
+                onClick={() => {
+                  setInventoryMenuOpen(false);
+                  handleTriggerImport();
+                }}
+                className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-950/40 text-zinc-800 dark:text-zinc-200 hover:text-blue-600 dark:hover:text-blue-400 font-bold text-xs sm:text-sm transition-all cursor-pointer text-left"
+              >
+                <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center text-blue-600 dark:text-blue-400 shrink-0">
+                  <Upload className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="font-extrabold">Import</div>
+                  <div className="text-[10px] text-zinc-400 font-normal">엑셀 파일로 일괄 등록</div>
+                </div>
+              </button>
+
+              {/* 2. Export */}
+              <button
+                type="button"
+                onClick={() => {
+                  setInventoryMenuOpen(false);
+                  handleExportExcel();
+                }}
+                className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-zinc-800 dark:text-zinc-200 hover:text-emerald-600 dark:hover:text-emerald-400 font-bold text-xs sm:text-sm transition-all cursor-pointer text-left"
+              >
+                <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
+                  <Download className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="font-extrabold">Export</div>
+                  <div className="text-[10px] text-zinc-400 font-normal">현재 재고 목록 엑셀 저장</div>
+                </div>
+              </button>
+
+              {/* 3. 양식 다운로드 */}
+              <button
+                type="button"
+                onClick={() => {
+                  setInventoryMenuOpen(false);
+                  handleDownloadTemplate();
+                }}
+                className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl hover:bg-amber-50 dark:hover:bg-amber-950/40 text-zinc-800 dark:text-zinc-200 hover:text-amber-600 dark:hover:text-amber-400 font-bold text-xs sm:text-sm transition-all cursor-pointer text-left"
+              >
+                <div className="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0">
+                  <FileSpreadsheet className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="font-extrabold">양식 다운로드</div>
+                  <div className="text-[10px] text-zinc-400 font-normal">등록용 엑셀 서식 받기</div>
+                </div>
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
       
       {/* Top Search Bar & Circular Plus Button */}
       <div className="flex items-center gap-2.5 sm:gap-3 shrink-0 mb-3 sm:mb-3.5">
@@ -1342,6 +1765,144 @@ export default function InventoryPage() {
                 삭제 완료
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* 3. Excel Import Preview & Execution Modal */}
+      {importModalOpen && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-md z-[300] flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-zinc-900 w-full max-w-[620px] rounded-[2.5rem] shadow-2xl p-6 sm:p-8 space-y-5 border border-zinc-200 dark:border-zinc-800 flex flex-col max-h-[85vh] animate-fadeIn">
+            
+            {/* Modal Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-zinc-100 dark:border-zinc-800">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-md shadow-blue-600/30 shrink-0">
+                  <Upload className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-black text-lg sm:text-xl text-zinc-900 dark:text-white">
+                    재고 일괄 등록 (Import)
+                  </h3>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400 font-semibold mt-0.5">
+                    {importResult 
+                      ? "일괄 등록 결과 안내" 
+                      : `엑셀 파일에서 총 ${importPreviewItems.length}개의 품목을 읽었습니다.`}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setImportModalOpen(false);
+                  setImportResult(null);
+                }}
+                className="p-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-400 hover:text-zinc-700 dark:hover:text-white rounded-full transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            {importResult ? (
+              // Result View
+              <div className="py-6 flex flex-col items-center text-center space-y-4">
+                <div className="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                  <CheckCircle2 className="w-10 h-10" />
+                </div>
+                <div>
+                  <h4 className="text-lg font-black text-zinc-900 dark:text-white">
+                    일괄 등록이 완료되었습니다!
+                  </h4>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400 font-bold mt-1.5">
+                    신규 등록: <span className="text-blue-600 dark:text-blue-400 font-extrabold">{importResult.newCount}건</span> · 기존 재고 합산: <span className="text-emerald-600 dark:text-emerald-400 font-extrabold">{importResult.mergedCount}건</span>
+                  </p>
+                </div>
+
+                {importResult.errors.length > 0 && (
+                  <div className="w-full bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/50 rounded-2xl p-3 text-left space-y-1 max-h-36 overflow-y-auto custom-scrollbar">
+                    <p className="text-xs font-bold text-rose-600 dark:text-rose-400">일부 품목 실패 ({importResult.errors.length}건):</p>
+                    {importResult.errors.map((err, idx) => (
+                      <p key={idx} className="text-[11px] text-rose-500 font-mono">{err}</p>
+                    ))}
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setImportModalOpen(false);
+                    setImportResult(null);
+                  }}
+                  className="w-full py-3.5 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-black text-sm transition-all shadow-md shadow-blue-600/30 cursor-pointer"
+                >
+                  확인
+                </button>
+              </div>
+            ) : (
+              // Preview View
+              <>
+                <div className="flex-1 overflow-y-auto custom-scrollbar border border-zinc-200/80 dark:border-zinc-800 rounded-2xl">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead className="bg-zinc-100 dark:bg-zinc-800/80 sticky top-0 font-black text-[11px] text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                      <tr>
+                        <th className="px-3.5 py-2.5">품목명</th>
+                        <th className="px-3.5 py-2.5">위치</th>
+                        <th className="px-3.5 py-2.5">분류</th>
+                        <th className="px-3.5 py-2.5 text-right">수량</th>
+                        <th className="px-3.5 py-2.5 text-right">단가</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-200/60 dark:divide-zinc-800/60">
+                      {importPreviewItems.map((item, idx) => (
+                        <tr key={idx} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/40 font-medium">
+                          <td className="px-3.5 py-2 font-bold text-zinc-900 dark:text-white truncate max-w-[140px]">{item.name}</td>
+                          <td className="px-3.5 py-2 text-zinc-600 dark:text-zinc-300">{item.category}</td>
+                          <td className="px-3.5 py-2 text-zinc-500">{item.item_type || "-"}</td>
+                          <td className="px-3.5 py-2 text-right font-black tabular-nums">{item.stock}{item.unit}</td>
+                          <td className="px-3.5 py-2 text-right tabular-nums text-zinc-500">{item.price ? `${item.price.toLocaleString()}원` : "-"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="p-3 bg-zinc-100 dark:bg-zinc-800/60 rounded-xl text-xs text-zinc-600 dark:text-zinc-400 flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
+                  <span>동일한 위치에 같은 품목이 이미 등록되어 있는 경우 재고가 합산되며, 없는 품목은 새로 등록됩니다.</span>
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <button
+                    type="button"
+                    disabled={importing}
+                    onClick={() => {
+                      setImportModalOpen(false);
+                      setImportResult(null);
+                    }}
+                    className="flex-1 py-3.5 border border-zinc-200 dark:border-zinc-800 rounded-2xl font-bold text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all cursor-pointer disabled:opacity-50"
+                  >
+                    취소
+                  </button>
+                  <button
+                    type="button"
+                    disabled={importing}
+                    onClick={handleExecuteImport}
+                    className="flex-1 py-3.5 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-black text-sm shadow-md shadow-blue-600/30 active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                  >
+                    {importing ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>등록 처리 중...</span>
+                      </>
+                    ) : (
+                      <span>{importPreviewItems.length}개 품목 등록 시작</span>
+                    )}
+                  </button>
+                </div>
+              </>
+            )}
+
           </div>
         </div>
       )}

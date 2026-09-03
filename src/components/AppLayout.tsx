@@ -15,7 +15,8 @@ import {
   LogOut, 
   ShieldCheck,
   Users,
-  ChevronRight
+  ChevronRight,
+  ChevronDown
 } from "lucide-react";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -82,14 +83,27 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <div className="flex flex-col md:flex-row min-h-[100dvh] w-full bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 transition-colors duration-200">
       {/* Mobile Top App Bar */}
       <header className="md:hidden sticky top-0 left-0 w-full bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl border-b border-zinc-200 dark:border-zinc-800 px-4 py-2.5 pt-[max(0.6rem,env(safe-area-inset-top))] flex items-center justify-between z-40 shadow-sm select-none">
-        <Link href="/inventory" className="flex items-center gap-2.5 active:scale-95 transition-transform">
+        <div 
+          onClick={(e) => {
+            if (pathname === "/inventory" || pathname === "/") {
+              e.preventDefault();
+              window.dispatchEvent(new CustomEvent("open-inventory-menu"));
+            }
+          }}
+          className="flex items-center gap-2.5 active:scale-95 transition-transform cursor-pointer"
+        >
           <div className="w-7 h-7 bg-blue-600 rounded-xl flex items-center justify-center shadow-sm shadow-blue-600/30">
             <Package className="w-4 h-4 text-white" />
           </div>
-          <span className="font-black text-sm tracking-tight text-zinc-900 dark:text-white">
-            {getPageTitle()}
-          </span>
-        </Link>
+          <div className="flex items-center gap-1">
+            <span className="font-black text-sm tracking-tight text-zinc-900 dark:text-white">
+              {getPageTitle()}
+            </span>
+            {(pathname === "/inventory" || pathname === "/") && (
+              <ChevronDown className="w-3.5 h-3.5 text-zinc-400" />
+            )}
+          </div>
+        </div>
 
         {/* User Avatar & Dropdown Menu */}
         <div className="relative" ref={userMenuRef}>
