@@ -19,47 +19,7 @@ import {
   Truck
 } from "lucide-react";
 
-// Color mapping for member badges (Dark Pastel Accents)
-const getColorForUser = (userName?: string) => {
-  const name = (userName || "UNKNOWN").toUpperCase();
-  const colors = [
-    {
-      badge: "bg-blue-500/15 border border-blue-500/30 text-blue-400",
-      dot: "bg-blue-400",
-    },
-    {
-      badge: "bg-emerald-500/15 border border-emerald-500/30 text-emerald-400",
-      dot: "bg-emerald-400",
-    },
-    {
-      badge: "bg-purple-500/15 border border-purple-500/30 text-purple-400",
-      dot: "bg-purple-400",
-    },
-    {
-      badge: "bg-amber-500/15 border border-amber-500/30 text-amber-400",
-      dot: "bg-amber-400",
-    },
-    {
-      badge: "bg-rose-500/15 border border-rose-500/30 text-rose-400",
-      dot: "bg-rose-400",
-    },
-    {
-      badge: "bg-cyan-500/15 border border-cyan-500/30 text-cyan-400",
-      dot: "bg-cyan-400",
-    },
-    {
-      badge: "bg-fuchsia-500/15 border border-fuchsia-500/30 text-fuchsia-400",
-      dot: "bg-fuchsia-400",
-    }
-  ];
 
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  const index = Math.abs(hash) % colors.length;
-  return colors[index];
-};
 
 export default function LabPage() {
   const { user } = useAuth();
@@ -634,7 +594,6 @@ export default function LabPage() {
                   </div>
                 ) : (
                   visibleOrders.map((order) => {
-                    const color = getColorForUser(order.requestedBy);
                     const hasRequested = order.status === "REQUESTED";
                     const hasOrdered = order.status === "ORDERED";
                     const hasReceived = order.status === "RECEIVED";
@@ -650,12 +609,8 @@ export default function LabPage() {
                             : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800"
                         }`}
                       >
-                        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-                          <span className={`w-6 h-6 rounded-lg flex items-center justify-center font-headline font-black text-[9px] border shadow-inner ${color.badge} shrink-0`}>
-                            {order.requestedBy}
-                          </span>
-                          <div className="flex flex-col min-w-0">
-                            <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
+                        <div className="flex flex-col min-w-0 flex-1 mr-2">
+                          <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
                               <span className={`text-xs sm:text-sm font-bold text-zinc-900 dark:text-zinc-100 truncate ${
                                 hasReceived ? "line-through text-zinc-400 dark:text-zinc-500" : ""
                               }`}>
@@ -691,7 +646,6 @@ export default function LabPage() {
                               )}
                             </span>
                           </div>
-                        </div>
                       
                       <div className="flex items-center gap-1.5 shrink-0">
                         {/* Step 1: Cart (Order) Button */}
