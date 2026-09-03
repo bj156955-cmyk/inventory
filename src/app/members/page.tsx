@@ -14,6 +14,90 @@ import {
 
 
 
+interface MemberTileProps {
+  member: string;
+  isOnline: boolean;
+  onDelete: (member: string) => void;
+}
+
+function MemberTile({ member, isOnline, onDelete }: MemberTileProps) {
+  const timerRef = React.useRef<NodeJS.Timeout | null>(null);
+  const isLongPressRef = React.useRef(false);
+  const [isPressing, setIsPressing] = React.useState(false);
+
+  const startPress = () => {
+    isLongPressRef.current = false;
+    setIsPressing(true);
+    timerRef.current = setTimeout(() => {
+      isLongPressRef.current = true;
+      setIsPressing(false);
+      if (typeof window !== "undefined" && navigator.vibrate) {
+        try {
+          navigator.vibrate(50);
+        } catch {}
+      }
+      onDelete(member);
+    }, 550);
+  };
+
+  const cancelPress = () => {
+    setIsPressing(false);
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+  };
+
+  return (
+    <div
+      onMouseDown={startPress}
+      onMouseUp={cancelPress}
+      onMouseLeave={cancelPress}
+      onTouchStart={startPress}
+      onTouchEnd={cancelPress}
+      onTouchMove={cancelPress}
+      onContextMenu={(e) => {
+        e.preventDefault();
+      }}
+      style={{ WebkitTouchCallout: "none" }}
+      className={`relative group p-3.5 sm:p-4.5 rounded-2xl sm:rounded-3xl border transition-all flex items-center justify-center select-none cursor-pointer ${
+        isPressing
+          ? "scale-90 bg-rose-500/15 border-rose-500/50 dark:bg-rose-500/25 dark:border-rose-500/60 shadow-inner"
+          : "bg-zinc-50 dark:bg-zinc-800/60 border-zinc-200/70 dark:border-zinc-700/70 hover:border-zinc-400 dark:hover:border-zinc-500 hover:shadow-xs"
+      }`}
+      title="길게 눌러서 삭제"
+    >
+      {/* Initials Only */}
+      <span className="font-headline font-black text-sm sm:text-base text-zinc-900 dark:text-zinc-100 tracking-wider pointer-events-none">
+        {member}
+      </span>
+
+      {/* Online Status: Small green dot only */}
+      {isOnline && (
+        <span
+          className="absolute top-2.5 right-2.5 sm:top-3 sm:right-3 w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-emerald-500 shadow-xs shadow-emerald-500/50 pointer-events-none"
+          title="온라인"
+        />
+      )}
+
+      {/* Delete Button on hover (Desktop) */}
+      {member !== "ADMIN" && member !== "BJ" && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete(member);
+          }}
+          className="absolute bottom-1.5 right-1.5 p-1.5 text-zinc-400 hover:text-rose-500 dark:hover:text-rose-400 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer rounded-lg hover:bg-zinc-200 dark:hover:bg-zinc-700"
+          title="삭제"
+        >
+          <Trash2 className="w-3.5 h-3.5" />
+        </button>
+      )}
+    </div>
+  );
+}
+
 const DEFAULT_MEMBERS = ["BJ", "YG", "MJ", "JS", "HS", "HM", "NY", "SH", "TH"];
 
 export default function MembersPage() {
@@ -221,46 +305,21 @@ export default function MembersPage() {
             <div className="w-8 h-8 border-3 border-blue-600 border-t-transparent rounded-full animate-spin" />
           </div>
         ) : (
-          <div className="overflow-y-auto pr-1 mt-4 grid grid-cols-3 gap-2.5 sm:gap-3.5 content-start custom-scrollbar">
-            {members.map((member) => {
-              const isOnline = !!onlineMembers[member];
-              
-              return (
-                <div 
+          <>
+            <div className="overflow-y-auto pr-1 mt-4 grid grid-cols-3 gap-2.5 sm:gap-3.5 content-start custom-scrollbar">
+              {members.map((member) => (
+                <MemberTile
                   key={member}
-                  className="relative group p-3.5 sm:p-4.5 bg-zinc-50 dark:bg-zinc-800/60 rounded-2xl sm:rounded-3xl border border-zinc-200/70 dark:border-zinc-700/70 hover:border-zinc-400 dark:hover:border-zinc-500 hover:shadow-xs transition-all flex items-center justify-center select-none"
-                >
-                  {/* Initials Only */}
-                  <span className="font-headline font-black text-sm sm:text-base text-zinc-900 dark:text-zinc-100 tracking-wider">
-                    {member}
-                  </span>
-
-                  {/* Online Status: Small green dot only */}
-                  {isOnline && (
-                    <span 
-                      className="absolute top-2.5 right-2.5 sm:top-3 sm:right-3 w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-emerald-500 shadow-xs shadow-emerald-500/50" 
-                      title="온라인"
-                    />
-                  )}
-
-                  {/* Delete Button on hover */}
-                  {member !== "ADMIN" && member !== "BJ" && (
-                    <button 
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteMember(member);
-                      }}
-                      className="absolute bottom-1.5 right-1.5 p-1.5 text-zinc-400 hover:text-rose-500 dark:hover:text-rose-400 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer rounded-lg hover:bg-zinc-200 dark:hover:bg-zinc-700"
-                      title="삭제"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+                  member={member}
+                  isOnline={!!onlineMembers[member]}
+                  onDelete={handleDeleteMember}
+                />
+              ))}
+            </div>
+            <p className="text-[10px] text-zinc-400 dark:text-zinc-500 text-center mt-3 select-none">
+              이니셜을 길게 누르면 삭제할 수 있습니다.
+            </p>
+          </>
         )}
       </div>
 
