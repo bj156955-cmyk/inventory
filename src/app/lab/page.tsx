@@ -193,21 +193,29 @@ export default function LabPage() {
   const handleToggleDuty = async (indexInBase: number, type: "cleaning" | "waste") => {
     const currentAssignments = cleaningState?.assignments || members.map((member, i) => {
       const N = members.length;
-      const cleaning = i < Math.min(3, N);
-      const s = Math.max(1, Math.floor(N / 2));
-      const wasteIdx = (i - s + N) % N;
-      const waste = wasteIdx < Math.min(2, N);
+      const cleaning = i === 0;
+      const waste = N > 1 ? i === 1 : false;
       return { member, cleaning, waste };
     });
 
+    const isCurrentlyActive = !!currentAssignments[indexInBase]?.[type];
+
+    // 1주일에 청소 1명, 폐기물 1명만 지정 (중복 선택 불가 단일 선택 라디오 로직)
     const updated = currentAssignments.map((item, i) => {
       if (i === indexInBase) {
         return {
           ...item,
-          [type]: !item[type]
+          [type]: !isCurrentlyActive,
+          // 동일 인원이 청소와 폐기물을 동시에 맡지 않도록 중복 방지
+          ...((!isCurrentlyActive && type === "cleaning") ? { waste: false } : {}),
+          ...((!isCurrentlyActive && type === "waste") ? { cleaning: false } : {})
         };
       }
-      return item;
+      // 해당 역할(type)은 주당 1명만 가능하므로 다른 인원은 false 처리
+      return {
+        ...item,
+        [type]: false
+      };
     });
 
     const newState: CleaningState = {
@@ -222,10 +230,8 @@ export default function LabPage() {
   const handleToggleMember = async (memberName: string) => {
     const currentAssignments = cleaningState?.assignments || members.map((member, i) => {
       const N = members.length;
-      const cleaning = i < Math.min(3, N);
-      const s = Math.max(1, Math.floor(N / 2));
-      const wasteIdx = (i - s + N) % N;
-      const waste = wasteIdx < Math.min(2, N);
+      const cleaning = i === 0;
+      const waste = N > 1 ? i === 1 : false;
       return { member, cleaning, waste };
     });
 
@@ -255,10 +261,8 @@ export default function LabPage() {
     
     const baseAssignments = cleaningState?.assignments || members.map((member, i) => {
       const N = members.length;
-      const cleaning = i < Math.min(3, N);
-      const s = Math.max(1, Math.floor(N / 2));
-      const wasteIdx = (i - s + N) % N;
-      const waste = wasteIdx < Math.min(2, N);
+      const cleaning = i === 0;
+      const waste = N > 1 ? i === 1 : false;
       return { member, cleaning, waste };
     });
 
@@ -487,10 +491,8 @@ export default function LabPage() {
   
   const baseAssignments = cleaningState?.assignments || members.map((member, i) => {
     const N = members.length;
-    const cleaning = i < Math.min(3, N);
-    const s = Math.max(1, Math.floor(N / 2));
-    const wasteIdx = (i - s + N) % N;
-    const waste = wasteIdx < Math.min(2, N);
+    const cleaning = i === 0;
+    const waste = N > 1 ? i === 1 : false;
     return { member, cleaning, waste };
   });
 
@@ -887,37 +889,37 @@ export default function LabPage() {
                         </span>
                       </div>
 
-                      {/* Column 2: Cleaning (Pure Color Block, No Checkmark) */}
+                      {/* Column 2: Cleaning (Pure Solid Color Block) */}
                       <div 
                         className="px-1 cursor-pointer flex items-center justify-center select-none"
                         onClick={() => handleToggleDuty(rotatedIdx, "cleaning")}
                       >
                         {row.cleaning ? (
                           <div 
-                            className="w-full h-8 sm:h-9 rounded-xl bg-gradient-to-b from-emerald-400 to-emerald-500 shadow-[0_3px_10px_rgba(16,185,129,0.3),inset_0_1px_1.5px_rgba(255,255,255,0.6)] transition-transform active:scale-95"
+                            className="w-full h-8 sm:h-9 rounded-xl bg-emerald-500 shadow-sm transition-transform active:scale-95"
                             title="청소 당번"
                           />
                         ) : (
                           <div 
-                            className="w-full h-8 sm:h-9 rounded-xl bg-zinc-100/40 dark:bg-zinc-800/40 hover:bg-zinc-200/40 dark:hover:bg-zinc-700/40 transition-all border border-transparent hover:border-zinc-200/60 dark:hover:border-zinc-700/60"
+                            className="w-full h-8 sm:h-9 rounded-xl bg-zinc-100/50 dark:bg-zinc-800/50 hover:bg-zinc-200/50 dark:hover:bg-zinc-700/50 transition-all border border-transparent hover:border-zinc-200/60 dark:hover:border-zinc-700/60"
                             title="청소 미지정"
                           />
                         )}
                       </div>
 
-                      {/* Column 3: Waste (Pure Color Block, No Checkmark) */}
+                      {/* Column 3: Waste (Pure Solid Color Block) */}
                       <div 
                         className="px-1 cursor-pointer flex items-center justify-center select-none"
                         onClick={() => handleToggleDuty(rotatedIdx, "waste")}
                       >
                         {row.waste ? (
                           <div 
-                            className="w-full h-8 sm:h-9 rounded-xl bg-gradient-to-b from-blue-400 to-blue-500 shadow-[0_3px_10px_rgba(59,130,246,0.3),inset_0_1px_1.5px_rgba(255,255,255,0.6)] transition-transform active:scale-95"
+                            className="w-full h-8 sm:h-9 rounded-xl bg-blue-500 shadow-sm transition-transform active:scale-95"
                             title="폐기물 당번"
                           />
                         ) : (
                           <div 
-                            className="w-full h-8 sm:h-9 rounded-xl bg-zinc-100/40 dark:bg-zinc-800/40 hover:bg-zinc-200/40 dark:hover:bg-zinc-700/40 transition-all border border-transparent hover:border-zinc-200/60 dark:hover:border-zinc-700/60"
+                            className="w-full h-8 sm:h-9 rounded-xl bg-zinc-100/50 dark:bg-zinc-800/50 hover:bg-zinc-200/50 dark:hover:bg-zinc-700/50 transition-all border border-transparent hover:border-zinc-200/60 dark:hover:border-zinc-700/60"
                             title="폐기물 미지정"
                           />
                         )}
