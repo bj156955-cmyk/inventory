@@ -19,7 +19,216 @@ import {
   Truck
 } from "lucide-react";
 
+interface OrderItemRowProps {
+  order: LabOrder;
+  onUpdateStatus: (id: string, status: "ORDERED" | "RECEIVED") => void;
+  onDelete: (id: string) => void;
+}
 
+function OrderItemRow({ order, onUpdateStatus, onDelete }: OrderItemRowProps) {
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const rulerRef = React.useRef<HTMLDivElement>(null);
+  const [isWrapped, setIsWrapped] = React.useState(false);
+
+  const hasRequested = order.status === "REQUESTED";
+  const hasOrdered = order.status === "ORDERED";
+  const hasReceived = order.status === "RECEIVED";
+
+  React.useEffect(() => {
+    const container = containerRef.current;
+    const ruler = rulerRef.current;
+    if (!container || !ruler) return;
+
+    const checkWrap = () => {
+      if (!order.itemCode) {
+        setIsWrapped(false);
+        return;
+      }
+      const neededWidth = ruler.scrollWidth;
+      const availableWidth = container.clientWidth;
+      setIsWrapped(neededWidth > availableWidth);
+    };
+
+    checkWrap();
+
+    const observer = new ResizeObserver(() => {
+      checkWrap();
+    });
+    observer.observe(container);
+
+    return () => observer.disconnect();
+  }, [order.itemName, order.itemCode, order.quantity]);
+
+  return (
+    <div 
+      className={`group flex items-center justify-between p-3 sm:p-3.5 rounded-2xl border transition-all ${
+        hasReceived 
+          ? "bg-zinc-100/50 dark:bg-zinc-800/30 border-zinc-200/50 dark:border-zinc-800/50 opacity-60" 
+          : hasOrdered 
+          ? "bg-sky-500/5 border-sky-500/30 shadow-sm" 
+          : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800"
+      }`}
+    >
+      <div ref={containerRef} className="flex flex-col min-w-0 flex-1 mr-2 relative">
+        {/* Invisible ruler to measure single-line width */}
+        <div 
+          ref={rulerRef} 
+          className="absolute -top-[9999px] -left-[9999px] invisible pointer-events-none flex items-center gap-1.5 whitespace-nowrap -z-50"
+          aria-hidden="true"
+        >
+          <span className="text-xs sm:text-sm font-bold">{order.itemName}</span>
+          {order.itemCode && (
+            <span className="font-mono text-[9px] px-1.5 py-0.5 font-bold border">
+              {order.itemCode}
+            </span>
+          )}
+          {order.quantity && (
+            <span className="text-[10px] font-black px-1.5 py-0.2">
+              {order.quantity}{/^\d+$/.test(String(order.quantity).trim()) ? "개" : ""}
+            </span>
+          )}
+        </div>
+
+        {isWrapped ? (
+          /* Multi-line layout when name/code wraps:
+             1. 이름 수량
+             2. 코드
+             3. 요청 주문 수령
+          */
+          <>
+            {/* Line 1: 이름 수량 */}
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className={`text-xs sm:text-sm font-bold text-zinc-900 dark:text-zinc-100 truncate ${
+                hasReceived ? "line-through text-zinc-400 dark:text-zinc-500" : ""
+              }`}>
+                {order.itemName}
+              </span>
+              {order.quantity && (
+                <span className="text-[10px] font-black px-1.5 py-0.2 rounded-md bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border border-blue-200/60 dark:border-blue-800/50 shrink-0 select-none">
+                  {order.quantity}{/^\d+$/.test(String(order.quantity).trim()) ? "개" : ""}
+                </span>
+              )}
+            </div>
+
+            {/* Line 2: 코드 */}
+            {order.itemCode && (
+              <div className="mt-1">
+                <span className="inline-block font-mono text-[9px] bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-600 dark:text-zinc-300 font-bold border border-zinc-200/80 dark:border-zinc-700/80 select-none">
+                  {order.itemCode}
+                </span>
+              </div>
+            )}
+
+            {/* Line 3: 요청 주문 수령 */}
+            <span className="text-[9px] sm:text-[10px] text-zinc-500 dark:text-zinc-400 font-medium flex items-center gap-1.5 mt-1 select-none flex-wrap">
+              <span>요청: {order.requestedBy}</span>
+              {order.orderedBy && (
+                <>
+                  <span>•</span>
+                  <span className="text-sky-400 font-bold">주문: {order.orderedBy}</span>
+                </>
+              )}
+              {order.receivedBy && (
+                <>
+                  <span>•</span>
+                  <span className="text-emerald-400 font-bold">수령: {order.receivedBy}</span>
+                </>
+              )}
+            </span>
+          </>
+        ) : (
+          /* Single-line layout:
+             1. 이름 코드 수량
+             2. 요청 주문 수령
+          */
+          <>
+            {/* Top Row: 이름, 코드, 수량 */}
+            <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
+              <span className={`text-xs sm:text-sm font-bold text-zinc-900 dark:text-zinc-100 truncate ${
+                hasReceived ? "line-through text-zinc-400 dark:text-zinc-500" : ""
+              }`}>
+                {order.itemName}
+              </span>
+              {order.itemCode && (
+                <span className="font-mono text-[9px] bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-600 dark:text-zinc-300 font-bold border border-zinc-200/80 dark:border-zinc-700/80 shrink-0 select-none">
+                  {order.itemCode}
+                </span>
+              )}
+              {order.quantity && (
+                <span className="text-[10px] font-black px-1.5 py-0.2 rounded-md bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border border-blue-200/60 dark:border-blue-800/50 shrink-0 select-none">
+                  {order.quantity}{/^\d+$/.test(String(order.quantity).trim()) ? "개" : ""}
+                </span>
+              )}
+            </div>
+
+            {/* Bottom Row: 요청, 주문, 수령 */}
+            <span className="text-[9px] sm:text-[10px] text-zinc-500 dark:text-zinc-400 font-medium flex items-center gap-1.5 mt-0.5 select-none flex-wrap">
+              <span>요청: {order.requestedBy}</span>
+              {order.orderedBy && (
+                <>
+                  <span>•</span>
+                  <span className="text-sky-400 font-bold">주문: {order.orderedBy}</span>
+                </>
+              )}
+              {order.receivedBy && (
+                <>
+                  <span>•</span>
+                  <span className="text-emerald-400 font-bold">수령: {order.receivedBy}</span>
+                </>
+              )}
+            </span>
+          </>
+        )}
+      </div>
+
+      <div className="flex items-center gap-1.5 shrink-0">
+        {/* Step 1: Cart (Order) Button */}
+        <button
+          type="button"
+          onClick={() => onUpdateStatus(order.id, "ORDERED")}
+          disabled={!hasRequested}
+          className={`px-2.5 py-1.5 rounded-xl transition-all flex items-center gap-1 border text-xs font-bold ${
+            hasRequested
+              ? "bg-amber-500/20 text-amber-300 border-amber-500/40 hover:bg-amber-500/30 cursor-pointer shadow-sm active:scale-95"
+              : "bg-zinc-100 text-zinc-400 dark:bg-zinc-800 dark:text-zinc-500 border-zinc-200 dark:border-zinc-700 opacity-60 cursor-not-allowed"
+          }`}
+          title={hasRequested ? "물품 주문 완료 처리" : "주문 완료"}
+        >
+          <ShoppingCart className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline">{hasRequested ? "주문하기" : "주문완료"}</span>
+        </button>
+
+        {/* Step 2: Truck (Receive) Button */}
+        <button
+          type="button"
+          onClick={() => onUpdateStatus(order.id, "RECEIVED")}
+          disabled={!hasOrdered}
+          className={`px-2.5 py-1.5 rounded-xl transition-all flex items-center gap-1 border text-xs font-bold ${
+            hasOrdered
+              ? "bg-sky-500/20 text-sky-300 border-sky-500/40 hover:bg-sky-500/30 cursor-pointer shadow-sm active:scale-95"
+              : hasReceived
+              ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40 opacity-80 cursor-not-allowed"
+              : "bg-zinc-100 text-zinc-300 dark:bg-zinc-800 dark:text-zinc-600 border-zinc-200 dark:border-zinc-800 opacity-30 cursor-not-allowed"
+          }`}
+          title={hasOrdered ? "수령 완료 처리" : hasReceived ? "수령 완료됨" : "수령 준비 대기"}
+        >
+          <Truck className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline">{hasReceived ? "수령됨" : "수령확인"}</span>
+        </button>
+
+        {/* Delete (X) Button */}
+        <button
+          type="button"
+          onClick={() => onDelete(order.id)}
+          className="text-zinc-400 hover:text-rose-400 dark:text-zinc-500 dark:hover:text-rose-400 p-1 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all shrink-0 cursor-pointer"
+          title="삭제"
+        >
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export default function LabPage() {
   const { user } = useAuth();
@@ -593,108 +802,14 @@ export default function LabPage() {
                     <span className="text-xs font-bold">현재 등록된 물품 주문 요청이 없습니다.</span>
                   </div>
                 ) : (
-                  visibleOrders.map((order) => {
-                    const hasRequested = order.status === "REQUESTED";
-                    const hasOrdered = order.status === "ORDERED";
-                    const hasReceived = order.status === "RECEIVED";
-
-                    return (
-                      <div 
-                        key={order.id} 
-                        className={`group flex items-center justify-between p-3 sm:p-3.5 rounded-2xl border transition-all ${
-                          hasReceived 
-                            ? "bg-zinc-100/50 dark:bg-zinc-800/30 border-zinc-200/50 dark:border-zinc-800/50 opacity-60" 
-                            : hasOrdered 
-                            ? "bg-sky-500/5 border-sky-500/30 shadow-sm" 
-                            : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800"
-                        }`}
-                      >
-                        <div className="flex flex-col min-w-0 flex-1 mr-2">
-                          {/* Top Row: 이름, 코드, 수량 */}
-                          <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
-                            <span className={`text-xs sm:text-sm font-bold text-zinc-900 dark:text-zinc-100 truncate ${
-                              hasReceived ? "line-through text-zinc-400 dark:text-zinc-500" : ""
-                            }`}>
-                              {order.itemName}
-                            </span>
-                            {order.itemCode && (
-                              <span className="font-mono text-[9px] bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-600 dark:text-zinc-300 font-bold border border-zinc-200/80 dark:border-zinc-700/80 shrink-0 select-none">
-                                {order.itemCode}
-                              </span>
-                            )}
-                            {order.quantity && (
-                              <span className="text-[10px] font-black px-1.5 py-0.2 rounded-md bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border border-blue-200/60 dark:border-blue-800/50 shrink-0 select-none">
-                                {order.quantity}{/^\d+$/.test(String(order.quantity).trim()) ? "개" : ""}
-                              </span>
-                            )}
-                          </div>
-
-                          {/* Bottom Row: 요청, 주문, 수령 */}
-                          <span className="text-[9px] sm:text-[10px] text-zinc-500 dark:text-zinc-400 font-medium flex items-center gap-1.5 mt-0.5 select-none flex-wrap">
-                            <span>요청: {order.requestedBy}</span>
-                            {order.orderedBy && (
-                              <>
-                                <span>•</span>
-                                <span className="text-sky-400 font-bold">주문: {order.orderedBy}</span>
-                              </>
-                            )}
-                            {order.receivedBy && (
-                              <>
-                                <span>•</span>
-                                <span className="text-emerald-400 font-bold">수령: {order.receivedBy}</span>
-                              </>
-                            )}
-                          </span>
-                        </div>
-                      
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        {/* Step 1: Cart (Order) Button */}
-                        <button
-                          type="button"
-                          onClick={() => handleUpdateOrderStatus(order.id, "ORDERED")}
-                          disabled={!hasRequested}
-                          className={`px-2.5 py-1.5 rounded-xl transition-all flex items-center gap-1 border text-xs font-bold ${
-                            hasRequested
-                              ? "bg-amber-500/20 text-amber-300 border-amber-500/40 hover:bg-amber-500/30 cursor-pointer shadow-sm active:scale-95"
-                              : "bg-zinc-100 text-zinc-400 dark:bg-zinc-800 dark:text-zinc-500 border-zinc-200 dark:border-zinc-700 opacity-60 cursor-not-allowed"
-                          }`}
-                          title={hasRequested ? "물품 주문 완료 처리" : "주문 완료"}
-                        >
-                          <ShoppingCart className="w-3.5 h-3.5" />
-                          <span className="hidden sm:inline">{hasRequested ? "주문하기" : "주문완료"}</span>
-                        </button>
-
-                        {/* Step 2: Truck (Receive) Button */}
-                        <button
-                          type="button"
-                          onClick={() => handleUpdateOrderStatus(order.id, "RECEIVED")}
-                          disabled={!hasOrdered}
-                          className={`px-2.5 py-1.5 rounded-xl transition-all flex items-center gap-1 border text-xs font-bold ${
-                            hasOrdered
-                              ? "bg-sky-500/20 text-sky-300 border-sky-500/40 hover:bg-sky-500/30 cursor-pointer shadow-sm active:scale-95"
-                              : hasReceived
-                              ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40 opacity-80 cursor-not-allowed"
-                              : "bg-zinc-100 text-zinc-300 dark:bg-zinc-800 dark:text-zinc-600 border-zinc-200 dark:border-zinc-800 opacity-30 cursor-not-allowed"
-                          }`}
-                          title={hasOrdered ? "수령 완료 처리" : hasReceived ? "수령 완료됨" : "수령 준비 대기"}
-                        >
-                          <Truck className="w-3.5 h-3.5" />
-                          <span className="hidden sm:inline">{hasReceived ? "수령됨" : "수령확인"}</span>
-                        </button>
-
-                        {/* Delete (X) Button */}
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteOrder(order.id)}
-                          className="text-zinc-400 hover:text-rose-400 dark:text-zinc-500 dark:hover:text-rose-400 p-1 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all shrink-0 cursor-pointer"
-                          title="삭제"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })
+                  visibleOrders.map((order) => (
+                    <OrderItemRow
+                      key={order.id}
+                      order={order}
+                      onUpdateStatus={handleUpdateOrderStatus}
+                      onDelete={handleDeleteOrder}
+                    />
+                  ))
               )}
             </div>
 
