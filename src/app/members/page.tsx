@@ -12,47 +12,7 @@ import {
   X
 } from "lucide-react";
 
-// Color mapping function (Dark Pastel Accents)
-const getColorForUser = (userName?: string) => {
-  const name = (userName || "UNKNOWN").toUpperCase();
-  const colors = [
-    {
-      badge: "bg-blue-500/15 border border-blue-500/30 text-blue-400",
-      dot: "bg-blue-400",
-    },
-    {
-      badge: "bg-emerald-500/15 border border-emerald-500/30 text-emerald-400",
-      dot: "bg-emerald-400",
-    },
-    {
-      badge: "bg-purple-500/15 border border-purple-500/30 text-purple-400",
-      dot: "bg-purple-400",
-    },
-    {
-      badge: "bg-amber-500/15 border border-amber-500/30 text-amber-400",
-      dot: "bg-amber-400",
-    },
-    {
-      badge: "bg-rose-500/15 border border-rose-500/30 text-rose-400",
-      dot: "bg-rose-400",
-    },
-    {
-      badge: "bg-cyan-500/15 border border-cyan-500/30 text-cyan-400",
-      dot: "bg-cyan-400",
-    },
-    {
-      badge: "bg-fuchsia-500/15 border border-fuchsia-500/30 text-fuchsia-400",
-      dot: "bg-fuchsia-400",
-    }
-  ];
 
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  const index = Math.abs(hash) % colors.length;
-  return colors[index];
-};
 
 const DEFAULT_MEMBERS = ["BJ", "YG", "MJ", "JS", "HS", "HM", "NY", "SH", "TH"];
 
@@ -359,17 +319,7 @@ export default function MembersPage() {
                 />
               </div>
 
-              {newMemberName.trim() && (
-                <div className="p-3 bg-zinc-50 dark:bg-zinc-800/60 rounded-2xl flex items-center justify-between border border-zinc-200/60 dark:border-zinc-700/60">
-                  <div className="flex items-center gap-2.5">
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-headline font-black text-xs border ${getColorForUser(newMemberName).badge}`}>
-                      {newMemberName.trim().toUpperCase()}
-                    </div>
-                    <span className="text-xs font-bold text-zinc-600 dark:text-zinc-400">스타일 미리보기</span>
-                  </div>
-                  <div className={`w-2.5 h-2.5 rounded-full ${getColorForUser(newMemberName).dot}`} />
-                </div>
-              )}
+
 
               {/* Modal Footer Buttons */}
               <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-end gap-2">
