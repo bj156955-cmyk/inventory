@@ -31,6 +31,9 @@ export default function Sidebar() {
     { name: "Notices", shortName: "공지", href: "/notices", icon: Megaphone },
   ];
 
+  // Index of the currently active tab (-1 when no tab matches the route)
+  const activeIndex = pathname ? navTabs.findIndex((tab) => tab.href === pathname) : -1;
+
   return (
     <>
       {/* Desktop Sidebar (Left Fixed) */}
@@ -46,10 +49,16 @@ export default function Sidebar() {
           </Link>
 
           {/* Navigation Links */}
-          <nav className="flex flex-col space-y-4 w-full items-center">
+          <nav className="relative flex flex-col space-y-4 w-full items-center">
+            {/* Sliding active indicator — travels between tabs instead of a per-tab notch */}
+            <span
+              aria-hidden="true"
+              className="absolute left-1.5 top-0 w-1 h-7 self-center rounded-full bg-blue-600/80 transition-transform duration-300 ease-out"
+              style={{ transform: `translateY(${activeIndex * 64 + 10}px)` }}
+            />
             {navTabs.map((item) => {
               const Icon = item.icon;
-              const isActive = pathname === item.href;
+              const isActive = activeIndex >= 0 && navTabs[activeIndex].href === item.href;
               return (
                 <Link
                   key={item.name}
@@ -62,9 +71,6 @@ export default function Sidebar() {
                   }`}
                 >
                   <Icon className="w-5 h-5" />
-                  {isActive && (
-                    <span className="absolute -left-1 w-1.5 h-6 bg-blue-600 rounded-r-full" />
-                  )}
                 </Link>
               );
             })}
