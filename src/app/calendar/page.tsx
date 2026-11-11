@@ -1,16 +1,14 @@
 "use client";
 
-import React, { useEffect, useState, useCallback, useRef } from "react";
+import React, { useEffect, useLayoutEffect, useState, useCallback, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { CalendarEvent, PublicHoliday, AllowedUser } from "@/types";
 import { useAuth } from "@/context/AuthContext";
 import {
   startOfMonth,
-  endOfMonth,
   format,
   addMonths,
   startOfWeek,
-  endOfWeek,
   addDays,
   differenceInCalendarDays,
 } from "date-fns";
@@ -332,9 +330,8 @@ export default function CalendarPage() {
 
   // Scrolling calendar state
   const scrollRef = useRef<HTMLDivElement>(null);
-  const monthTopsRef = useRef<number[]>([]);
+  const [viewportHeight, setViewportHeight] = useState(0);
   const scrollRafRef = useRef<number | null>(null);
-  const programmaticScrollRef = useRef(false);
   const [focusedMonthIndex, setFocusedMonthIndex] = useState(RENDER_RANGE);
   const [renderFirst, setRenderFirst] = useState(RENDER_RANGE - 1);
   const [renderLast, setRenderLast] = useState(RENDER_RANGE + 1);
@@ -349,29 +346,28 @@ export default function CalendarPage() {
   const maxMonthIndex = months.length - 1;
   const focusedMonth = months[focusedMonthIndex];
 
-  // Every month is laid out on the same Monday-based grid, trimmed to the weeks it needs
+  // 고정 6주(42일) 그리드 — 모든 달이 같은 높이를 가져서 페이지 넘김이 흔들리지 않는다
+  const ROWS_PER_MONTH = 6;
   const monthGrids = React.useMemo(
     () =>
       months.map((m) => {
         const start = startOfWeek(startOfMonth(m));
-        let end = endOfWeek(endOfMonth(m));
-        // collapse a 6th row that is entirely next month
-        if (differenceInCalendarDays(end, start) + 1 === 42) {
-          const sixthRow = Array.from({ length: 7 }, (_, i) => addDays(start, 35 + i));
-          if (sixthRow.every((d) => d.getMonth() !== m.getMonth())) end = addDays(end, -7);
-        }
-        const rows: Date[][] = [];
-        for (let d = start; d <= end; d = addDays(d, 7)) {
-          rows.push(Array.from({ length: 7 }, (_, i) => addDays(d, i)));
-        }
-        return rows;
+        return Array.from({ length: ROWS_PER_MONTH }, (_, r) =>
+          Array.from({ length: 7 }, (_, c) => addDays(start, r * 7 + c))
+        );
       }),
     [months]
   );
 
   const focusedWeeks = React.useMemo(() => buildWeeks(monthGrids[focusedMonthIndex], events), [monthGrids, focusedMonthIndex, events]);
   const focusedLaneCount = Math.max(0, ...focusedWeeks.map((w) => w.laneCount));
-  const rowHeight = Math.max(WEEK_MIN_HEIGHT, 28 + Math.max(focusedLaneCount, 1) * WAVE_HEIGHT + 8);
+  const naturalRow = Math.max(WEEK_MIN_HEIGHT, 28 + Math.max(focusedLaneCount, 1) * WAVE_HEIGHT + 8);
+  // 한 달 = 화면 한 장. 뷰포트 높이를 6주로 나눠 행 높이를 정하고, 일정이 많으면 그만큼만 늘린다.
+  // 한 달 블록 = 월 제목 30 + 패딩 12/8 + 테두리 2 = 52px, 그 아래 6주가 화면을 꽉 채운다
+  const MONTH_CHROME = 52;
+  const rowHeight =
+    viewportHeight > 0 ? Math.max((viewportHeight - MONTH_CHROME) / ROWS_PER_MONTH, naturalRow) : naturalRow;
+  const pageUnit = rowHeight * ROWS_PER_MONTH + MONTH_CHROME;
 
   const eventsOnDay = useCallback(
     (day: Date) =>
@@ -572,94 +568,59 @@ export default function CalendarPage() {
     };
   }, [dragRange, openNewEventModal]);
 
-  // ── Scrolling calendar ───────────────────────────────────────────
-  // offsetTop is relative to the nearest positioned ancestor, but `top` is safe when there is none
-  const measureMonthTops = (el: HTMLElement) => {
-    const top0 = el.offsetTop;
-    el.querySelectorAll<HTMLElement>("[data-month]").forEach((node) => {
-      const idx = months.findIndex((m) => format(m, "yyyy-MM") === node.dataset.month);
-      if (idx >= 0) monthTopsRef.current[idx] = node.offsetTop - top0;
-    });
-  };
+  // ── Scrolling calendar (한 달 = 한 화면, 스크롤하면 다음 달) ──────────
+  // 모든 달의 높이가 같으므로 N번째 달의 페이지는 N * pageUnit 에서 시작한다.
+  const pageTop = (index: number) => index * pageUnit;
 
-  const getBlockRects = (el: HTMLElement) => {
-    const top0 = el.offsetTop;
-    return Array.from(el.querySelectorAll<HTMLElement>(":scope > [data-month], :scope > [data-placeholder]")).map((b) => {
-      const m = b.dataset.month;
-      const idx = m ? months.findIndex((mm) => format(mm, "yyyy-MM") === m) : -1;
-      return { idx, top: b.offsetTop - top0, height: b.offsetHeight };
-    });
-  };
-
-  // Keep the focused month pinned while scrolling: mount its neighbours and re-anchor scrollTop
-  const handleScroll = () => {
+  const measureViewport = () => {
     const el = scrollRef.current;
-    if (!el || programmaticScrollRef.current || scrollRafRef.current !== null) return;
-    scrollRafRef.current = window.requestAnimationFrame(() => {
-      scrollRafRef.current = null;
-      const rects = getBlockRects(el);
-      if (rects.length === 0) return;
-      // Ignore the part hidden behind the sticky weekday header so the label matches what the user sees
-      const stickyHeader = 34;
-      const probe = el.scrollTop + stickyHeader + (el.clientHeight - stickyHeader) * 0.3;
-      const hit = rects.find((r) => probe >= r.top && probe < r.top + r.height) || rects[rects.length - 1];
-      const idx = hit.idx;
-      if (idx < 0) return; // the visible block is still a placeholder
-      if (idx === focusedMonthIndex) return;
-
-      // Re-anchor by the block's top edge. Rendered months and placeholders have identical
-      // heights, so swapping one in never moves the calendar under the cursor.
-      const offsetFromTop = el.scrollTop - hit.top;
-      setFocusedMonthIndex(idx);
-      setRenderFirst(Math.max(0, idx - 1));
-      setRenderLast(Math.min(months.length - 1, idx + 1));
-      programmaticScrollRef.current = true;
-      window.requestAnimationFrame(() => {
-        const after = getBlockRects(el).find((r) => r.idx === idx);
-        if (after) el.scrollTop = after.top + offsetFromTop;
-        window.requestAnimationFrame(() => {
-          programmaticScrollRef.current = false;
-        });
-      });
-    });
+    if (el) setViewportHeight(el.clientHeight);
   };
 
-  const scrollToMonth = (index: number) => {
+  const jumpToMonth = (index: number) => {
     const el = scrollRef.current;
     if (!el) return;
-    measureMonthTops(el);
-    if (index < renderFirst || index > renderLast) {
-      // not mounted yet: jump there once the real month takes the placeholder's slot
-      programmaticScrollRef.current = true;
-      setFocusedMonthIndex(index);
-      setRenderFirst(Math.max(0, index - 1));
-      setRenderLast(Math.min(months.length - 1, index + 1));
-      window.requestAnimationFrame(() => {
-        measureMonthTops(el);
-        if (monthTopsRef.current[index] !== undefined) el.scrollTop = monthTopsRef.current[index];
-        programmaticScrollRef.current = false;
+    const idx = clampNum(index, 0, months.length - 1);
+    setFocusedMonthIndex(idx);
+    setRenderFirst(Math.max(0, idx - 1));
+    setRenderLast(Math.min(months.length - 1, idx + 1));
+    el.scrollTo({ top: pageTop(idx), behavior: "smooth" });
+  };
+
+  // Track the month filling the screen after each scroll frame
+  const handleScroll = () => {
+    if (scrollRafRef.current !== null) return;
+    scrollRafRef.current = window.requestAnimationFrame(() => {
+      scrollRafRef.current = null;
+      const el = scrollRef.current;
+      if (!el) return;
+      const idx = clampNum(Math.round(el.scrollTop / pageUnit), 0, months.length - 1);
+      setFocusedMonthIndex((prev) => {
+        if (prev === idx) return prev;
+        setRenderFirst(Math.max(0, idx - 1));
+        setRenderLast(Math.min(months.length - 1, idx + 1));
+        return idx;
       });
-      return;
-    }
-    const top = monthTopsRef.current[index];
-    if (top === undefined) return;
-    programmaticScrollRef.current = true;
-    setFocusedMonthIndex(index);
-    el.scrollTo({ top, behavior: "smooth" });
-    window.setTimeout(() => {
-      measureMonthTops(el);
-      const settled = monthTopsRef.current[index];
-      if (settled !== undefined) el.scrollTop = settled;
-      programmaticScrollRef.current = false;
-    }, 450);
+    });
+  };
+
+  // Once the user stops scrolling, land exactly on a month page
+  const snapTimerRef = useRef<number | null>(null);
+  const scheduleSnap = () => {
+    if (snapTimerRef.current !== null) window.clearTimeout(snapTimerRef.current);
+    snapTimerRef.current = window.setTimeout(() => {
+      snapTimerRef.current = null;
+      const el = scrollRef.current;
+      if (!el) return;
+      const idx = clampNum(Math.round(el.scrollTop / pageUnit), 0, months.length - 1);
+      const target = pageTop(idx);
+      if (Math.abs(el.scrollTop - target) > 2) el.scrollTo({ top: target, behavior: "smooth" });
+    }, 140);
   };
 
   const handleGoToday = () => {
     setActiveDay(startOfDay(new Date()));
-    setFocusedMonthIndex(RENDER_RANGE);
-    setRenderFirst(RENDER_RANGE - 1);
-    setRenderLast(RENDER_RANGE + 1);
-    window.requestAnimationFrame(() => scrollToMonth(RENDER_RANGE));
+    jumpToMonth(RENDER_RANGE);
   };
 
   // ── Save / delete ─────────────────────────────────────────────────
@@ -758,34 +719,33 @@ export default function CalendarPage() {
 
   // ── Calendar grid renderer ───────────────────────────────────────
   const initialScrollDone = useRef(false);
-  useEffect(() => {
-    if (loading || initialScrollDone.current) return;
-    initialScrollDone.current = true;
-    // start with today's month at the top (after fonts/layout settle)
-    let tries = 0;
-    const align = () => {
-      const el = scrollRef.current;
-      if (!el) return;
-      measureMonthTops(el);
-      const top = monthTopsRef.current[RENDER_RANGE] ?? monthTopsRef.current[renderFirst] ?? 0;
-      programmaticScrollRef.current = true;
-      if (el.scrollTop !== top || tries === 0) el.scrollTop = top;
-      window.requestAnimationFrame(() => {
-        programmaticScrollRef.current = false;
-      });
-      if (++tries < 3) window.requestAnimationFrame(align);
+
+  // 캘린더 스크롤 영역 높이 측정 (창 크기 변경·폰트 로딩 후에도 다시 측정)
+  useLayoutEffect(() => {
+    measureViewport();
+    const onResize = () => measureViewport();
+    window.addEventListener("resize", onResize);
+    const t = window.setTimeout(measureViewport, 300);
+    return () => {
+      window.removeEventListener("resize", onResize);
+      window.clearTimeout(t);
     };
-    window.requestAnimationFrame(align);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading]);
 
-  // Keep month offsets fresh when layout changes (fonts, event lanes, render window)
-  useEffect(() => {
+  // 오늘 달을 한 화면에 맞춰 시작
+  useLayoutEffect(() => {
+    if (loading || viewportHeight === 0 || initialScrollDone.current) return;
     const el = scrollRef.current;
-    if (el) measureMonthTops(el);
-    // measureMonthTops only reads `months` (stable) and writes a ref
+    if (!el) return;
+    initialScrollDone.current = true;
+    el.scrollTop = pageTop(RENDER_RANGE);
+    const id = window.requestAnimationFrame(() => {
+      el.scrollTop = pageTop(RENDER_RANGE);
+    });
+    return () => window.cancelAnimationFrame(id);
+    // pageTop 은 뷰포트 높이가 바뀔 때만 달라진다
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [renderFirst, renderLast, rowHeight, events]);
+  }, [loading, viewportHeight, pageUnit]);
 
   const renderMonth = (monthIndex: number) => {
     const m = months[monthIndex];
@@ -797,11 +757,6 @@ export default function CalendarPage() {
       <div
         key={monthIndex}
         data-month={format(m, "yyyy-MM")}
-        ref={(el) => {
-          if (el && monthTopsRef.current[monthIndex] === undefined && scrollRef.current) {
-            measureMonthTops(scrollRef.current);
-          }
-        }}
         className="px-1 sm:px-2 pt-3 pb-2"
       >
         {/* Sticky month label */}
@@ -942,7 +897,7 @@ export default function CalendarPage() {
         <div className="flex items-center gap-2 min-w-0">
           <button
             type="button"
-            onClick={() => scrollToMonth(clampNum(focusedMonthIndex - 1, 0, maxMonthIndex))}
+            onClick={() => jumpToMonth(clampNum(focusedMonthIndex - 1, 0, maxMonthIndex))}
             className="w-8 h-9 flex items-center justify-center bg-white dark:bg-zinc-900 border border-zinc-200/90 dark:border-zinc-800 rounded-xl shadow-xs text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all cursor-pointer active:scale-95"
             title="이전 달"
           >
@@ -953,7 +908,7 @@ export default function CalendarPage() {
           </span>
           <button
             type="button"
-            onClick={() => scrollToMonth(clampNum(focusedMonthIndex + 1, 0, maxMonthIndex))}
+            onClick={() => jumpToMonth(clampNum(focusedMonthIndex + 1, 0, maxMonthIndex))}
             className="w-8 h-9 flex items-center justify-center bg-white dark:bg-zinc-900 border border-zinc-200/90 dark:border-zinc-800 rounded-xl shadow-xs text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all cursor-pointer active:scale-95"
             title="다음 달"
           >
@@ -1004,38 +959,47 @@ export default function CalendarPage() {
             ))}
           </div>
 
-          {loading ? (
-            <div className="flex-1 flex items-center justify-center p-20">
-              <span className="w-6 h-6 rounded-full border-2 border-blue-500 border-t-transparent animate-spin" />
-            </div>
-          ) : (
-            <div
-              ref={scrollRef}
-              onScroll={handleScroll}
-              onPointerDown={(e) => {
-                const cell = (e.target as HTMLElement).closest<HTMLElement>("[data-day]");
-                if (!cell?.dataset.day) return;
-                handleDayPointerDown(new Date(`${cell.dataset.day}T00:00:00`), e);
-              }}
-              className="flex-1 overflow-y-auto overscroll-contain custom-scrollbar min-h-0 touch-pan-y select-none"
-            >
-              {months.map((m, idx) => {
-                if (idx < renderFirst || idx > renderLast) {
-                  // Placeholders preserve exact scroll height so swapping in the real
-                  // month never shifts what is under the cursor.
-                  const rows = monthGrids[idx].length;
-                  return (
-                    <div key={idx} className="px-1 sm:px-2 pt-3 pb-2" data-placeholder>
-                      <div className="h-[30px]" />
-                      <div style={{ height: rows * rowHeight + 2 }} className="rounded-2xl border border-zinc-200/80 bg-white dark:border-zinc-800 dark:bg-zinc-900" />
-                    </div>
-                  );
-                }
-                return renderMonth(idx);
-              })}
-              <div className="h-4" />
-            </div>
-          )}
+          {/* 스크롤 영역은 항상 마운트한다 (로딩 중에도 높이를 측정해 한 달=한 화면을 유지) */}
+          <div
+            ref={scrollRef}
+            onScroll={() => {
+              handleScroll();
+              scheduleSnap();
+            }}
+            onPointerDown={(e) => {
+              const cell = (e.target as HTMLElement).closest<HTMLElement>("[data-day]");
+              if (!cell?.dataset.day) return;
+              handleDayPointerDown(new Date(`${cell.dataset.day}T00:00:00`), e);
+            }}
+            /* relative: 자식 달 블록의 offsetTop 을 스크롤 영역 기준 0부터 계산하기 위함 */
+            className="relative flex-1 overflow-y-auto overscroll-contain custom-scrollbar min-h-0 touch-pan-y select-none"
+          >
+            {loading ? (
+              <div className="h-full flex items-center justify-center p-20">
+                <span className="w-6 h-6 rounded-full border-2 border-blue-500 border-t-transparent animate-spin" />
+              </div>
+            ) : (
+              <>
+                {months.map((m, idx) => {
+                  if (idx < renderFirst || idx > renderLast) {
+                    // 렌더되지 않는 달도 같은 높이(6주)로 자리를 잡아 스크롤 위치가 튀지 않게 한다
+                    return (
+                      <div key={idx} className="px-1 sm:px-2 pt-3 pb-2" data-placeholder>
+                        <div className="h-[30px]" />
+                        <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800 divide-y divide-zinc-200/70 dark:divide-zinc-800/70">
+                          {Array.from({ length: ROWS_PER_MONTH }, (_, i) => (
+                            <div key={i} style={{ height: `${rowHeight}px` }} className="bg-white dark:bg-zinc-900" />
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  }
+                  return renderMonth(idx);
+                })}
+                <div className="h-4" />
+              </>
+            )}
+          </div>
         </div>
 
         {/* Day panel (desktop) */}
@@ -1054,15 +1018,6 @@ export default function CalendarPage() {
                   )}
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={() => openNewEventModal(activeDay)}
-                className="shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-[11px] font-black transition-all cursor-pointer active:scale-95"
-                title="이 날짜에 일정 추가"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                추가
-              </button>
             </div>
           </div>
 
@@ -1090,14 +1045,6 @@ export default function CalendarPage() {
             {activeDayEvents.length > 0 ? activeDayEvents.map((e) => e.title).join(" · ") : activeHoliday || "일정 없음"}
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => openNewEventModal(activeDay)}
-          className="shrink-0 w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center active:scale-90 transition-all cursor-pointer"
-          title="이 날짜에 일정 추가"
-        >
-          <Plus className="w-4 h-4" />
-        </button>
       </div>
 
       {/* Add / Edit Modal — keyed so every open starts from a clean, fully-initialized form */}
