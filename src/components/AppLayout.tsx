@@ -58,6 +58,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       case "/":
       case "/inventory":
         return "재고 관리";
+      case "/maintenance":
+        return "장비 관리";
       case "/lab":
         return "연구실 공간";
       case "/calendar":

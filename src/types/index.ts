@@ -83,6 +83,38 @@ export interface CleaningState {
   baseWeek: number;
 }
 
+// ── Equipment Maintenance ──────────────────────────────────────────
+export type MaintenancePeriod = "daily" | "weekly" | "monthly";
+
+export interface EquipmentMaintenanceItem {
+  id: string;
+  period: MaintenancePeriod;
+  label: string;
+}
+
+export interface EquipmentConsumable {
+  id: string;
+  name: string;
+  quantity: number;
+  unit?: string;
+}
+
+export interface Equipment {
+  id: string;
+  name: string;
+  photo_url?: string | null;
+  /** daily / weekly / monthly 체크리스트 항목 */
+  maintenance_items: EquipmentMaintenanceItem[];
+  /** 보유 중인 소모품 */
+  consumables: EquipmentConsumable[];
+  /** 체크 완료된 유지보수 항목 id 목록 */
+  completed_items: string[];
+  last_checked_at?: string | null;
+  created_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export interface LabOrder {
   id: string;
   itemName: string;

@@ -10,6 +10,7 @@ import {
   Calendar, 
   Megaphone, 
   FlaskConical,
+  Wrench,
   LogOut,
   Sun,
   Moon,
@@ -21,9 +22,10 @@ export default function Sidebar() {
   const { signOut } = useAuth();
   const { theme, toggleTheme, resolvedTheme } = useTheme();
 
-  // 4 Core Tabs (Inventory, Lab, Calendar, Notices)
+  // Core Tabs (Inventory, Equipment Maintenance, Lab, Calendar, Notices)
   const navTabs = [
     { name: "Inventory", shortName: "재고", href: "/inventory", icon: Package },
+    { name: "Equipment Maintenance", shortName: "장비", href: "/maintenance", icon: Wrench },
     { name: "Lab Space", shortName: "연구실", href: "/lab", icon: FlaskConical },
     { name: "Calendar", shortName: "일정", href: "/calendar", icon: Calendar },
     { name: "Notices", shortName: "공지", href: "/notices", icon: Megaphone },
@@ -100,7 +102,7 @@ export default function Sidebar() {
         </div>
       </aside>
 
-      {/* Mobile Bottom Bar Navigation (Clean 4-Tab Layout) */}
+      {/* Mobile Bottom Bar Navigation (Clean 5-Tab Layout) */}
       <nav className="md:hidden fixed bottom-0 left-0 w-full bg-white/95 dark:bg-zinc-950/95 backdrop-blur-2xl border-t border-zinc-200/80 dark:border-zinc-800/80 px-3 py-2 pb-[max(1rem,env(safe-area-inset-bottom))] flex justify-around items-center z-50 shadow-[0_-8px_30px_rgba(0,0,0,0.04)] select-none">
         {navTabs.map((item) => {
           const Icon = item.icon;
