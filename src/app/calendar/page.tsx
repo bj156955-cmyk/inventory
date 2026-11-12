@@ -533,79 +533,173 @@ export default function CalendarPage() {
   const dragMovedRef = useRef(false);
   const dragStartPointRef = useRef<{ x: number; y: number } | null>(null);
 
-  // Scrolling calendar state (하나로 이어진 주(week) 목록)
+  // ── 스크롤 달력 상태 (애플 캘린더 방식) ──
   const scrollRef = useRef<HTMLDivElement>(null);
   const scrollRafRef = useRef<number | null>(null);
+  const snapTimerRef = useRef<number | null>(null);
+  const lastScrollTopRef = useRef(0);
+  const directionsRef = useRef<number[]>([]);
   const [viewportHeight, setViewportHeight] = useState(0);
+  // 0..100% : 스크롤을 놓았을 때 달력이 한 장에 맞춰지는 정도
+  const SNAP_STRENGTH = 1;
 
   const currentUserInitials = user?.email?.split("@")[0].toUpperCase() || "UNKNOWN";
 
-  // 오늘 기준 ±MONTH_RANGE 개월을 끊김 없이 이어 붙인다
+  // 오늘 기준 ±MONTH_RANGE 개월
   const months = React.useMemo(() => {
     const base = startOfMonth(new Date());
     return Array.from({ length: MONTH_RANGE * 2 + 1 }, (_, i) => addMonths(base, i - MONTH_RANGE));
   }, []);
   const today = React.useMemo(() => startOfDay(new Date()), []);
+  const maxMonthIndex = months.length - 1;
+  const LABEL_BAND = 44; // 맨 위에 뜬 월 라벨 밴드
 
-  // 모든 주가 같은 높이 → 스크롤이 끊기지 않고, 월 경계도 자연스럽게 이어진다
-  const weekHeight = Math.round(Math.min(170, Math.max(84, (viewportHeight || 700) / 5)));
-  const weeks = React.useMemo(() => {
-    const first = startOfWeek(months[0]);
-    const last = endOfWeek(months[months.length - 1]);
-    const list: Date[][] = [];
-    for (let d = first; d <= last; d = addDays(d, 7)) {
-      list.push(Array.from({ length: 7 }, (_, i) => addDays(d, i)));
-    }
-    return list;
-  }, [months]);
-  const builtWeeks = React.useMemo(() => weeks.map((w) => buildWeek(w, events)), [weeks, events]);
-
-  // 각 달의 첫 주 인덱스 (스크롤 → 현재 달 계산용)
-  const monthFirstWeek = React.useMemo(
+  // 한 달 = 항상 6주(42칸). 위·아래로 이웃 달의 주가 겹쳐 보이도록 1주씩 앞뒤로 붙인다.
+  const LEAD = 1;
+  const weekStarts = React.useMemo(() => {
+    const first = addDays(startOfWeek(startOfMonth(months[0])), -7 * LEAD);
+    const lastMonthEnd = endOfWeek(addMonths(months[maxMonthIndex], 1));
+    const n = Math.ceil(differenceInCalendarDays(lastMonthEnd, first) / 7) + 1;
+    return Array.from({ length: n }, (_, i) => addDays(first, i * 7));
+  }, [months, maxMonthIndex]);
+  const weeks = React.useMemo(() => weekStarts.map((ws) => Array.from({ length: 7 }, (_, i) => addDays(ws, i))), [weekStarts]);
+  const monthStartWeek = React.useMemo(
     () =>
       months.map((m) => {
         const ws = startOfWeek(startOfMonth(m));
-        return Math.max(0, differenceInCalendarDays(ws, weeks[0][0]) / 7);
+        return Math.max(0, Math.round(differenceInCalendarDays(ws, weekStarts[0]) / 7));
       }),
-    [months, weeks]
-  );
-  const maxMonthIndex = months.length - 1;
-  // 첫 달의 첫 주는 위쪽 여백을 수용한다 (그 주에 일정이 적으면 라벨 아래로 날짜를 내림)
-  const firstLaneTop = 28;
-  // 위쪽 여백은 '콘텐츠 맨 위' 한 번만 필요하다 — 3주 정도는 라벨 몫 높이의 행으로 덮어 라벨 이동 공간을 만든다
-  const rowHeights = builtWeeks.map(() => weekHeight);
-  const LABEL_BAND = 44; // 맨 위에 뜬 월 라벨이 덮는 높이
-  const weekTops: number[] = [];
-  rowHeights.reduce((acc, h, i) => {
-    weekTops[i] = acc;
-    return acc + h;
-  }, 0);
-  const topOfWeek = useCallback(
-    (w: number) => (w < 0 ? w * weekHeight : weekTops[Math.min(w, weekTops.length - 1)] ?? 0),
-    // weekTops는 rowHeights/weekHeight에서만 달라진다
+    // weekStarts 는 months 에서만 만들어진다
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [weekHeight, rowHeights.length]
+    [months]
+  );
+  const builtWeeks = React.useMemo(() => weeks.map((w) => buildWeek(w, events)), [weeks, events]);
+
+  // 한 주 높이: 화면에 5~6주가 들어오도록 (달마다 6주 고정이라 넘어갈 때 위치가 일정하다)
+  const weekHeight = Math.round(Math.min(178, Math.max(84, (viewportHeight || 760) / 5.2)));
+  const rowHeights = builtWeeks.map(() => weekHeight);
+  const weekCount = builtWeeks.length;
+  const topOfWeek = useCallback(
+    (w: number) => (w < 0 ? w * weekHeight : Math.min(w, weekCount - 1) * weekHeight),
+    [weekHeight, weekCount]
   );
 
-  // 스크롤 위치(주 단위) → 지금 화면에 보이는 달
-  const [focusTop, setFocusTop] = useState(0);
+  // m월 화면에서는 m월 1일이 든 주가 '라벨 아래 첫 줄'에 온다 (그 위로 이전 달 꼬리 한 주가 보임)
+  const monthTop = useCallback(
+    (m: number) => Math.max(0, topOfWeek(monthStartWeek[m]) - weekHeight),
+    [topOfWeek, monthStartWeek, weekHeight]
+  );
+  // 기준선 = 3번째 줄의 상단 (이 선을 다음 달 첫 주가 넘어오면 다음 달)
+  const baselineOffset = LABEL_BAND + 2 * weekHeight;
 
-  // 그 달 1일이 화면에 들어오는 순간 바로 그 달로 전환한다
-  // (10월이 화면에 조금 남아 있어도 11월 1일이 보이면 11월)
-  const labelMonthIndex = React.useMemo(() => {
-    // 라벨 아래 첫 줄에 보이는 날짜(새 달의 1일이 보이면 그 달)
-    // 라벨 아래 첫 줄의 '가운데 날짜'가 속한 달 (그 주가 새 달로 채워지면 바로 전환)
-    const weekIdx = Math.min(Math.max(0, Math.ceil((focusTop + LABEL_BAND) / weekHeight)), rowHeights.length - 1);
-    const firstDay = weeks[Math.min(weekIdx, weeks.length - 1)]?.[0] ?? weeks[0][0];
-    const midWeekDay = addDays(firstDay, 3);
-    const idx = months.findIndex((m) => m.getFullYear() === midWeekDay.getFullYear() && m.getMonth() === midWeekDay.getMonth());
-    return idx >= 0 ? idx : MONTH_RANGE;
-  }, [months, weeks, focusTop, weekHeight, rowHeights.length, LABEL_BAND]);
-
-  // 라벨은 화면 맨 위에 고정
-  const labelTopLocal = 4;
+  const [labelMonthIndex, setLabelMonthIndex] = useState(MONTH_RANGE);
+  const labelMonthRef = useRef(MONTH_RANGE);
   const focusedMonthLabel = months[labelMonthIndex];
+  const firstLaneTop = 28;
 
+  const measureViewport = () => {
+    const el = scrollRef.current;
+    if (el) setViewportHeight(el.clientHeight);
+  };
+
+  // 기준선(3번째 줄) 아래 첫 주의 가운데 날짜가 속한 달 = 지금 화면의 달
+  const monthIndexAt = useCallback(
+    (top: number) => {
+      const probe = top + baselineOffset + weekHeight * 0.5;
+      const weekIdx = clampNum(Math.floor(probe / weekHeight), 0, weekCount - 1);
+      const midDay = addDays(weeks[weekIdx][0], 3);
+      const found = months.findIndex(
+        (m) => m.getFullYear() === midDay.getFullYear() && m.getMonth() === midDay.getMonth()
+      );
+      return clampNum(found >= 0 ? found : MONTH_RANGE, 0, maxMonthIndex);
+    },
+    [baselineOffset, weekHeight, weekCount, weeks, months, maxMonthIndex]
+  );
+
+  // 스크롤: 현재 달 갱신 + 손을 떼면 한 단계(월) 맞춤
+  const snapToMonth = useCallback(
+    (m: number, smooth: boolean) => {
+      const el = scrollRef.current;
+      if (!el) return;
+      const target = monthTop(m);
+      if (Math.abs(el.scrollTop - target) < 1) return;
+      el.scrollTo({ top: target, behavior: smooth ? "smooth" : "auto" });
+    },
+    [monthTop]
+  );
+
+  // 제스처 폭: 작은 제스처로도 다음 달 화면으로 이동 (애플 캘린더처럼 '한 번 넘기면 한 달')
+  const STEP_PX = 18;
+  const snapByDirection = useCallback(
+    (directions: number[]) => {
+      const el = scrollRef.current;
+      if (!el) return;
+      const monthIdx = monthIndexAt(el.scrollTop);
+      let target = monthIdx;
+      for (const d of directions) {
+        if (d > 0) target = Math.min(maxMonthIndex, target + 1);
+        else target = Math.max(0, target - 1);
+      }
+      snapToMonth(target, true);
+      // 맞춤이 끝나면 제스처 기록 초기화 (다음 스와이프는 다시 한 단계)
+      window.setTimeout(() => {
+        if (!el) return;
+        lastScrollTopRef.current = el.scrollTop;
+        directionsRef.current = [];
+      }, 450);
+    },
+    [monthIndexAt, snapToMonth, maxMonthIndex]
+  );
+
+  const scheduleSnap = useCallback(() => {
+    if (snapTimerRef.current !== null) window.clearTimeout(snapTimerRef.current);
+    // 손을 완전히 떼고 잠깐 멈춘 뒤에만 맞춘다
+    snapTimerRef.current = window.setTimeout(() => {
+      snapTimerRef.current = null;
+      const dirs = directionsRef.current;
+      directionsRef.current = [];
+      if (dirs.length === 0 || SNAP_STRENGTH <= 0) return;
+      snapByDirection(dirs);
+    }, 140);
+  }, [snapByDirection]);
+
+  const handleScroll = () => {
+    if (scrollRafRef.current !== null) return;
+    scrollRafRef.current = window.requestAnimationFrame(() => {
+      scrollRafRef.current = null;
+      const el = scrollRef.current;
+      if (!el) return;
+      const top = el.scrollTop;
+      const idx = monthIndexAt(top);
+      if (idx !== labelMonthRef.current) {
+        labelMonthRef.current = idx;
+        setLabelMonthIndex(idx);
+      }
+      if (SNAP_STRENGTH <= 0) return;
+      // 방향이 바뀔 때마다 한 단계로 기록 (내려갔다 올라오면 원래 달로)
+      const delta = top - lastScrollTopRef.current;
+      if (Math.abs(delta) >= STEP_PX) {
+        const dirs = directionsRef.current;
+        const dir = delta > 0 ? 1 : -1;
+        if (dirs[dirs.length - 1] !== dir) dirs.push(dir);
+        if (dirs.length > 4) dirs.shift();
+        lastScrollTopRef.current = top;
+        scheduleSnap();
+      }
+    });
+  };
+
+  const jumpToMonth = (m: number) => {
+    const idx = clampNum(m, 0, maxMonthIndex);
+    labelMonthRef.current = idx;
+    setLabelMonthIndex(idx);
+    snapToMonth(idx, true);
+  };
+
+  const handleGoToday = () => {
+    setActiveDay(startOfDay(new Date()));
+    jumpToMonth(MONTH_RANGE);
+  };
 
   const eventsOnDay = useCallback(
     (day: Date) =>
@@ -659,8 +753,8 @@ export default function CalendarPage() {
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    // months 는 마운트 시 고정
+  }, [months]);
 
   useEffect(() => {
     let ignore = false;
@@ -806,42 +900,6 @@ export default function CalendarPage() {
     };
   }, [dragRange, openNewEventModal]);
 
-  // ── 자연스러운 스크롤 달력 ────────────────────────────────────────
-  // 주(week) 목록을 하나로 이어 붙인 단일 그리드. 스크롤하면 달력이 그대로 흐르고
-  // 월 라벨만 그 달의 주 사이에서 슬라이드한다. 스냅 없음 → 부드럽게 이어짐.
-  const weekTopOf = (monthIndex: number) => {
-    const w = monthFirstWeek[monthIndex];
-    return Math.max(0, (w === 0 ? 0 : topOfWeek(w)) - 4);
-  };
-
-  const measureViewport = () => {
-    const el = scrollRef.current;
-    if (el) setViewportHeight(el.clientHeight);
-  };
-
-  const handleScroll = () => {
-    if (scrollRafRef.current !== null) return;
-    scrollRafRef.current = window.requestAnimationFrame(() => {
-      scrollRafRef.current = null;
-      const el = scrollRef.current;
-      if (!el) return;
-      setFocusTop(el.scrollTop);
-  
-    });
-  };
-
-  const jumpToMonth = (index: number) => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const idx = clampNum(index, 0, maxMonthIndex);
-    el.scrollTo({ top: weekTopOf(idx), behavior: "smooth" });
-  };
-
-  const handleGoToday = () => {
-    setActiveDay(startOfDay(new Date()));
-    jumpToMonth(MONTH_RANGE);
-  };
-
   // ── Save / delete ─────────────────────────────────────────────────
   const handleSaveEvent = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -950,17 +1008,19 @@ export default function CalendarPage() {
     };
   }, [loading]);
 
-  // 오늘 주가 보이도록 시작 위치를 잡는다 (앱 첫 진입 시 한 번)
+  // 오늘 달이 6주 화면에 맞춰 시작된다
   useLayoutEffect(() => {
     if (loading || viewportHeight === 0 || initialScrollDone.current) return;
     const el = scrollRef.current;
     if (!el) return;
     initialScrollDone.current = true;
-    const target = Math.max(0, weekTopOf(MONTH_RANGE) - 4);
+    const target = monthTop(MONTH_RANGE);
     el.scrollTop = target;
-    setFocusTop(target);
+    lastScrollTopRef.current = target;
+    labelMonthRef.current = MONTH_RANGE;
+    setLabelMonthIndex(MONTH_RANGE);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading, viewportHeight, weekHeight, today]);
+  }, [loading, viewportHeight, weekHeight]);
 
   // ── Render ────────────────────────────────────────────────────────
   return (
@@ -1010,7 +1070,7 @@ export default function CalendarPage() {
               <div className="absolute left-0 right-0 top-0 z-30 pointer-events-none" style={{ height: 40 }}>
                 <FloatingMonthLabel
                   month={focusedMonthLabel}
-                  top={labelTopLocal}
+                  top={4}
                   onPrev={() => jumpToMonth(clampNum(labelMonthIndex - 1, 0, maxMonthIndex))}
                   onNext={() => jumpToMonth(clampNum(labelMonthIndex + 1, 0, maxMonthIndex))}
                   onToday={handleGoToday}
