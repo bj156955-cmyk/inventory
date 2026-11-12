@@ -318,8 +318,10 @@ function WeekRow({
   dragRange,
   onOpenEvent,
   onDayPointerEnter,
+  currentMonth,
 }: {
   week: Week;
+  currentMonth: number; // 화면 라벨에 표시 중인 달 (0-11)
   rowHeight: number;
   laneTop: number;
   holidays: { [key: string]: string };
@@ -329,13 +331,13 @@ function WeekRow({
   onOpenEvent: (e: React.SyntheticEvent, event: CalendarEvent) => void;
   onDayPointerEnter: (day: Date) => void;
 }) {
-  const monthOf = week.days[3].getMonth();
-
   return (
     <div
-      className="relative grid grid-cols-7 border-b border-zinc-200/60 dark:border-zinc-800/60"
+      className="relative border-b border-zinc-200/60 dark:border-zinc-800/60"
       style={{ height: rowHeight }}
     >
+      {/* 날짜 칸 — 겹치지 않는 별도 그리드 레이어 */}
+      <div className="absolute inset-0 grid grid-cols-7">
       {week.days.map((day) => {
         const dayStr = format(day, "yyyy-MM-dd");
         const dow = day.getDay();
@@ -343,17 +345,21 @@ function WeekRow({
         const isToday = sameDay(day, today);
         const isActive = sameDay(day, activeDay);
         const inRange = !!dragRange && day >= dragRange.start && day <= dragRange.end;
-        const thisMonth = day.getMonth() === monthOf;
+        const thisMonth = day.getMonth() === currentMonth;
         return (
           <div
             key={dayStr}
             data-day={dayStr}
             onPointerEnter={() => onDayPointerEnter(day)}
             className={`relative flex flex-col min-h-0 overflow-hidden border-r border-zinc-200/60 dark:border-zinc-800/60 last:border-r-0 cursor-pointer select-none transition-colors ${
+              !thisMonth ? "bg-zinc-100/70 dark:bg-zinc-950/60" : ""
+            } ${
               inRange
-                ? "bg-blue-500/15"
+                ? "bg-blue-500/[0.12]"
+                : isActive && thisMonth
+                ? "bg-blue-500/[0.05] dark:bg-blue-500/[0.08]"
                 : isActive
-                ? "bg-blue-500/[0.06] dark:bg-blue-500/[0.09]"
+                ? "bg-zinc-200/50 dark:bg-zinc-800/40"
                 : "hover:bg-zinc-50/80 dark:hover:bg-zinc-800/40"
             }`}
           >
@@ -364,7 +370,7 @@ function WeekRow({
                   isToday
                     ? "bg-rose-500 text-white font-black"
                     : !thisMonth
-                    ? "text-zinc-400 dark:text-zinc-500 font-bold"
+                    ? "text-zinc-300 dark:text-zinc-700 font-semibold"
                     : holiday || dow === 0
                     ? "text-rose-500 dark:text-rose-400 font-extrabold"
                     : dow === 6
@@ -375,7 +381,7 @@ function WeekRow({
                 {format(day, "d")}
               </span>
               {holiday && thisMonth && (
-                <span className="hidden xl:block text-[9px] font-bold text-rose-500/90 dark:text-rose-400/90 truncate">
+                <span className="hidden xl:block text-[9px] font-bold text-rose-500/70 dark:text-rose-400/70 truncate">
                   {holiday}
                 </span>
               )}
@@ -393,6 +399,7 @@ function WeekRow({
           </div>
         );
       })}
+      </div>
 
       {/* 이어지는 일정 막대 (데스크톱/태블릿) */}
       <div className="hidden sm:block pointer-events-none">
@@ -418,13 +425,15 @@ function WeekRow({
                 style={{
                   left: `calc(${(col / 7) * 100}% + 3px)`,
                   width: `calc(${(span / 7) * 100}% - 6px)`,
-                  top: laneTop + lane * WAVE_HEIGHT,
+                  top: 26 + lane * WAVE_HEIGHT,
                   borderTopLeftRadius: isStart ? 7 : 0,
                   borderBottomLeftRadius: isStart ? 7 : 0,
                   borderTopRightRadius: isEnd ? 7 : 0,
                   borderBottomRightRadius: isEnd ? 7 : 0,
                 }}
-                className={`pointer-events-auto absolute z-10 h-[20px] flex items-center gap-1.5 px-1.5 overflow-hidden cursor-pointer border ${color.bg} ${multiDay ? color.border : "border-transparent"} ${color.hoverBg} transition-colors`}
+                className={`pointer-events-auto absolute z-10 h-[20px] flex items-center gap-1.5 px-1.5 overflow-hidden cursor-pointer border ${color.bg} ${multiDay ? color.border : "border-transparent"} ${color.hoverBg} transition-colors ${
+                  week.days[col].getMonth() === currentMonth ? "" : "opacity-40"
+                }`}
               >
                 {isStart && !isAllDayEvent(event) && (
                   <span className={`text-[9.5px] font-black tabular-nums shrink-0 ${color.text}`}>
@@ -439,7 +448,7 @@ function WeekRow({
               </button>
             );
           })}
-      </div>
+        </div>
     </div>
   );
 }
@@ -562,34 +571,39 @@ export default function CalendarPage() {
   );
   const maxMonthIndex = months.length - 1;
   // 첫 달의 첫 주는 위쪽 여백을 수용한다 (그 주에 일정이 적으면 라벨 아래로 날짜를 내림)
-  const firstLaneTop = 30;
+  const firstLaneTop = 28;
   // 위쪽 여백은 '콘텐츠 맨 위' 한 번만 필요하다 — 3주 정도는 라벨 몫 높이의 행으로 덮어 라벨 이동 공간을 만든다
   const rowHeights = builtWeeks.map(() => weekHeight);
-  const LABEL_ALLOWANCE = Math.round(weekHeight / 2);
+  const LABEL_BAND = 44; // 맨 위에 뜬 월 라벨이 덮는 높이
   const weekTops: number[] = [];
   rowHeights.reduce((acc, h, i) => {
-    weekTops[i] = acc + (i === 0 ? LABEL_ALLOWANCE : 0);
-    return acc + h + (i === 0 ? LABEL_ALLOWANCE : 0);
+    weekTops[i] = acc;
+    return acc + h;
   }, 0);
-  const topOfWeek = (w: number) => (w < 0 ? w * weekHeight : weekTops[Math.min(w, weekTops.length - 1)] ?? 0);
-  const contentOffset = LABEL_ALLOWANCE; // 첫 주가 시작되는 콘텐츠 y
-
-  // 스크롤 위치(주 단위) → 지금 화면 최상단에 있는 달. 달 라벨이 그 달의 주 사이에서만 슬라이드한다.
-  const [focusTop, setFocusTop] = useState(0);
-  // 화면 맨 위에 놓인 주 → 그 주가 속한 "화면상의" 달 (예: 10/26~11/1 주는 그 날짜 위치 기준)
-  // 각 달이 시작되는 주 = 그 달 1일이 들어 있는 주 (실제 날짜 흐름 기준)
-  const monthDisplayStartWeek = monthFirstWeek;
-  // 다음 달 첫 주가 화면 중턱에 오면 그 달로 넘어간다 (라벨이 뒤로 되돌아가지 않도록 한 방향으로만)
-  const labelMonthIndex = clampNum(
-    months.reduce((acc, _, i) => (topOfWeek(monthDisplayStartWeek[i]) <= focusTop + weekHeight * 0.6 ? i : acc), 0),
-    0,
-    maxMonthIndex
+  const topOfWeek = useCallback(
+    (w: number) => (w < 0 ? w * weekHeight : weekTops[Math.min(w, weekTops.length - 1)] ?? 0),
+    // weekTops는 rowHeights/weekHeight에서만 달라진다
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [weekHeight, rowHeights.length]
   );
-  // 다음 달이 화면에 올라오기 시작하면(그 달의 첫 주가 위에서 나타나면) 라벨이 아래로 내려가며 바뀐다
-  const labelStartTop = topOfWeek(monthDisplayStartWeek[labelMonthIndex]);
-  // 그 달이 시작되기 전(앞 달의 꼬리)에는 라벨이 아래에서 올라와 자리를 잡고, 시작 이후엔 맨 위에 붙는다
-  const riseIn = clampNum(labelStartTop - weekHeight * 0.6 - focusTop, 0, weekHeight);
-  const labelTopLocal = Math.round(4 + riseIn);
+
+  // 스크롤 위치(주 단위) → 지금 화면에 보이는 달
+  const [focusTop, setFocusTop] = useState(0);
+
+  // 그 달 1일이 화면에 들어오는 순간 바로 그 달로 전환한다
+  // (10월이 화면에 조금 남아 있어도 11월 1일이 보이면 11월)
+  const labelMonthIndex = React.useMemo(() => {
+    // 라벨 아래 첫 줄에 보이는 날짜(새 달의 1일이 보이면 그 달)
+    // 라벨 아래 첫 줄의 '가운데 날짜'가 속한 달 (그 주가 새 달로 채워지면 바로 전환)
+    const weekIdx = Math.min(Math.max(0, Math.ceil((focusTop + LABEL_BAND) / weekHeight)), rowHeights.length - 1);
+    const firstDay = weeks[Math.min(weekIdx, weeks.length - 1)]?.[0] ?? weeks[0][0];
+    const midWeekDay = addDays(firstDay, 3);
+    const idx = months.findIndex((m) => m.getFullYear() === midWeekDay.getFullYear() && m.getMonth() === midWeekDay.getMonth());
+    return idx >= 0 ? idx : MONTH_RANGE;
+  }, [months, weeks, focusTop, weekHeight, rowHeights.length, LABEL_BAND]);
+
+  // 라벨은 화면 맨 위에 고정
+  const labelTopLocal = 4;
   const focusedMonthLabel = months[labelMonthIndex];
 
 
@@ -1020,11 +1034,11 @@ export default function CalendarPage() {
                 </div>
               ) : (
                 <>
-                  <div style={{ height: contentOffset }} aria-hidden="true" />
                   {builtWeeks.map((week, i) => (
                     <WeekRow
                       key={format(week.start, "yyyy-MM-dd")}
                       week={week}
+                      currentMonth={focusedMonthLabel.getMonth()}
                       rowHeight={rowHeights[i]}
                       laneTop={firstLaneTop}
                       holidays={holidays}
