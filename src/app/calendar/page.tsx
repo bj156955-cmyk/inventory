@@ -9,6 +9,7 @@ import {
   format,
   addMonths,
   startOfWeek,
+  endOfWeek,
   addDays,
   differenceInCalendarDays,
 } from "date-fns";
@@ -165,8 +166,7 @@ const USER_COLOR_PALETTES = [
 const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
 const WAVE_HEIGHT = 24; // px per event lane inside a week
 const MAX_LANES = 4;
-const WEEK_MIN_HEIGHT = 108;
-const RENDER_RANGE = 3; // months kept mounted around the focused month
+const MONTH_RANGE = 14; // 오늘 기준 ±14개월을 하나로 이어 붙인다
 
 const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0);
 const endOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999);
@@ -214,39 +214,235 @@ const sortEvents = (list: CalendarEvent[]) =>
 type WeekSegment = { event: CalendarEvent; col: number; span: number; lane: number; multiDay: boolean };
 type Week = { start: Date; days: Date[]; segments: WeekSegment[]; laneCount: number };
 
-/** Turns events into week rows, splitting multi-day events into contiguous segments per week. */
-const buildWeeks = (weeks: Date[][], events: CalendarEvent[]): Week[] =>
-  weeks.map((days) => {
-    const weekStart = days[0];
-    const weekEnd = endOfDay(days[6]);
-    const overlapping = sortEvents(
-      events.filter((ev) => {
-        const s = new Date(ev.start_time);
-        const e = new Date(ev.end_time);
-        return s <= weekEnd && e >= startOfDay(weekStart);
-      })
-    );
+/** 한 주(row)에 걸친 일정들을 레인으로 배치한다. 여러 날 일정은 이어지는 하나의 막대로 보인다. */
+const buildWeek = (days: Date[], events: CalendarEvent[]): Week => {
+  const weekStart = days[0];
+  const weekEnd = endOfDay(days[6]);
+  const overlapping = sortEvents(
+    events.filter((ev) => {
+      const s = new Date(ev.start_time);
+      const e = new Date(ev.end_time);
+      return s <= weekEnd && e >= startOfDay(weekStart);
+    })
+  );
 
-    // Lane assignment: find the first lane whose last column ends before this event starts
-    const laneEnds: number[] = [];
-    const segments: WeekSegment[] = overlapping.map((event) => {
-      const fromStart = differenceInCalendarDays(new Date(event.start_time), weekStart);
-      const fromEnd = differenceInCalendarDays(new Date(event.end_time), weekStart);
-      const col = clampNum(fromStart, 0, 6);
-      const endCol = Math.max(col, clampNum(fromEnd, 0, 6));
-      let lane = laneEnds.findIndex((end) => end < col);
-      if (lane === -1) {
-        lane = laneEnds.length;
-        laneEnds.push(endCol);
-      } else {
-        laneEnds[lane] = endCol;
-      }
-      const multiDay = differenceInCalendarDays(new Date(event.end_time), new Date(event.start_time)) > 0;
-      return { event, col, span: endCol - col + 1, lane, multiDay };
-    });
-
-    return { start: startOfDay(weekStart), days, segments, laneCount: Math.min(laneEnds.length, MAX_LANES) };
+  // Lane assignment: first lane whose last column ends before this event starts
+  const laneEnds: number[] = [];
+  const segments: WeekSegment[] = overlapping.map((event) => {
+    const fromStart = differenceInCalendarDays(new Date(event.start_time), weekStart);
+    const fromEnd = differenceInCalendarDays(new Date(event.end_time), weekStart);
+    const col = clampNum(fromStart, 0, 6);
+    const endCol = Math.max(col, clampNum(fromEnd, 0, 6));
+    let lane = laneEnds.findIndex((end) => end < col);
+    if (lane === -1) {
+      lane = laneEnds.length;
+      laneEnds.push(endCol);
+    } else {
+      laneEnds[lane] = endCol;
+    }
+    const multiDay = differenceInCalendarDays(new Date(event.end_time), new Date(event.start_time)) > 0;
+    return { event, col, span: endCol - col + 1, lane, multiDay };
   });
+
+  return { start: startOfDay(weekStart), days, segments, laneCount: Math.min(laneEnds.length, MAX_LANES) };
+};
+
+/** 스크롤 영역 위에 떠 있는 "2026년 11월" 라벨. 같은 달의 주 목록 사이에서만 슬라이드한다. */
+function FloatingMonthLabel({
+  month,
+  top,
+  onPrev,
+  onNext,
+  onToday,
+}: {
+  month: Date;
+  top: number;
+  onPrev: () => void;
+  onNext: () => void;
+  onToday: () => void;
+}) {
+  const [monthIdx, year] = format(month, "M yyyy", { locale: ko }).split(" ");
+  const label = (
+    <span className="truncate font-headline font-black tracking-tight text-zinc-900 dark:text-white">
+      <span className="text-[15px] sm:text-[17px]">{year.slice(0, 4)}년</span>{" "}
+      <span className="text-[20px] sm:text-[24px]">{monthIdx}월</span>
+    </span>
+  );
+  return (
+    <div
+      className="absolute left-0 right-0 z-30 pointer-events-none flex items-center"
+      style={{ top, transition: "top 180ms ease-out" }}
+    >
+      <div className="flex-1 min-w-0 h-9 pl-1.5 pr-1.5 rounded-xl bg-white/70 dark:bg-zinc-900/70 backdrop-blur-md">
+        <div className="h-full flex items-center justify-between gap-2">
+          {label}
+        </div>
+      </div>
+      <div className="pointer-events-auto flex items-center gap-1 pl-1">
+        <button
+          type="button"
+          onClick={onPrev}
+          className="w-7 h-7 rounded-full bg-white/80 dark:bg-zinc-800/80 backdrop-blur border border-zinc-200/70 dark:border-zinc-700/70 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 flex items-center justify-center cursor-pointer active:scale-95 transition-all"
+          title="이전 달"
+        >
+          <ChevronLeft className="w-3.5 h-3.5" />
+        </button>
+        <button
+          type="button"
+          onClick={onToday}
+          className="h-7 px-2.5 rounded-full bg-white/80 dark:bg-zinc-800/80 backdrop-blur border border-zinc-200/70 dark:border-zinc-700/70 text-[11px] font-black text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 cursor-pointer active:scale-95 transition-all"
+        >
+          오늘
+        </button>
+        <button
+          type="button"
+          onClick={onNext}
+          className="w-7 h-7 rounded-full bg-white/80 dark:bg-zinc-800/80 backdrop-blur border border-zinc-200/70 dark:border-zinc-700/70 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 flex items-center justify-center cursor-pointer active:scale-95 transition-all"
+          title="다음 달"
+        >
+          <ChevronRight className="w-3.5 h-3.5" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** 한 주(row). 이어진 일정은 칸을 가로지르는 하나의 막대로 표시한다. */
+function WeekRow({
+  week,
+  rowHeight,
+  laneTop,
+  holidays,
+  today,
+  activeDay,
+  dragRange,
+  onOpenEvent,
+  onDayPointerEnter,
+}: {
+  week: Week;
+  rowHeight: number;
+  laneTop: number;
+  holidays: { [key: string]: string };
+  today: Date;
+  activeDay: Date;
+  dragRange: { start: Date; end: Date } | null;
+  onOpenEvent: (e: React.SyntheticEvent, event: CalendarEvent) => void;
+  onDayPointerEnter: (day: Date) => void;
+}) {
+  const monthOf = week.days[3].getMonth();
+
+  return (
+    <div
+      className="relative grid grid-cols-7 border-b border-zinc-200/60 dark:border-zinc-800/60"
+      style={{ height: rowHeight }}
+    >
+      {week.days.map((day) => {
+        const dayStr = format(day, "yyyy-MM-dd");
+        const dow = day.getDay();
+        const holiday = holidays[dayStr];
+        const isToday = sameDay(day, today);
+        const isActive = sameDay(day, activeDay);
+        const inRange = !!dragRange && day >= dragRange.start && day <= dragRange.end;
+        const thisMonth = day.getMonth() === monthOf;
+        return (
+          <div
+            key={dayStr}
+            data-day={dayStr}
+            onPointerEnter={() => onDayPointerEnter(day)}
+            className={`relative flex flex-col min-h-0 overflow-hidden border-r border-zinc-200/60 dark:border-zinc-800/60 last:border-r-0 cursor-pointer select-none transition-colors ${
+              inRange
+                ? "bg-blue-500/15"
+                : isActive
+                ? "bg-blue-500/[0.06] dark:bg-blue-500/[0.09]"
+                : "hover:bg-zinc-50/80 dark:hover:bg-zinc-800/40"
+            }`}
+          >
+            {/* 날짜 숫자 — 좌측 상단 (애플 캘린더처럼). 첫 행은 라벨 자리를 비워둔다. */}
+            <div className="flex items-center gap-1.5 px-2 pt-1.5" style={laneTop > 30 ? { paddingTop: laneTop - 6 } : undefined}>
+              <span
+                className={`min-w-5 h-5 px-1 flex items-center justify-center rounded-full text-[11px] sm:text-xs tabular-nums shrink-0 ${
+                  isToday
+                    ? "bg-rose-500 text-white font-black"
+                    : !thisMonth
+                    ? "text-zinc-400 dark:text-zinc-500 font-bold"
+                    : holiday || dow === 0
+                    ? "text-rose-500 dark:text-rose-400 font-extrabold"
+                    : dow === 6
+                    ? "text-blue-500 dark:text-blue-400 font-extrabold"
+                    : "text-zinc-800 dark:text-zinc-200 font-bold"
+                }`}
+              >
+                {format(day, "d")}
+              </span>
+              {holiday && thisMonth && (
+                <span className="hidden xl:block text-[9px] font-bold text-rose-500/90 dark:text-rose-400/90 truncate">
+                  {holiday}
+                </span>
+              )}
+            </div>
+
+            {/* 모바일: 점 */}
+            <div className="sm:hidden flex flex-wrap gap-0.5 px-2 pt-1">
+              {week.segments
+                .filter((s) => differenceInCalendarDays(day, week.start) >= s.col && differenceInCalendarDays(day, week.start) < s.col + s.span)
+                .slice(0, 3)
+                .map((s) => (
+                  <span key={s.event.id} className={`w-1.5 h-1.5 rounded-full ${getColorForEvent(s.event.created_by).dot}`} />
+                ))}
+            </div>
+          </div>
+        );
+      })}
+
+      {/* 이어지는 일정 막대 (데스크톱/태블릿) */}
+      <div className="hidden sm:block pointer-events-none">
+        {week.segments
+          .filter((s) => s.lane < MAX_LANES)
+          .map(({ event, col, span, lane, multiDay }) => {
+            const color = getColorForEvent(event.created_by);
+            const start = new Date(event.start_time);
+            const end = new Date(event.end_time);
+            const isStart = sameDay(start, week.days[col]);
+            const isEnd = sameDay(end, week.days[col + span - 1]);
+            return (
+              <button
+                key={event.id}
+                type="button"
+                onPointerDown={(e) => e.stopPropagation()}
+                onMouseDown={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onOpenEvent(e, event);
+                }}
+                title={`${event.title} · ${parseMembers(event.created_by).join(", ")}`}
+                style={{
+                  left: `calc(${(col / 7) * 100}% + 3px)`,
+                  width: `calc(${(span / 7) * 100}% - 6px)`,
+                  top: laneTop + lane * WAVE_HEIGHT,
+                  borderTopLeftRadius: isStart ? 7 : 0,
+                  borderBottomLeftRadius: isStart ? 7 : 0,
+                  borderTopRightRadius: isEnd ? 7 : 0,
+                  borderBottomRightRadius: isEnd ? 7 : 0,
+                }}
+                className={`pointer-events-auto absolute z-10 h-[20px] flex items-center gap-1.5 px-1.5 overflow-hidden cursor-pointer border ${color.bg} ${multiDay ? color.border : "border-transparent"} ${color.hoverBg} transition-colors`}
+              >
+                {isStart && !isAllDayEvent(event) && (
+                  <span className={`text-[9.5px] font-black tabular-nums shrink-0 ${color.text}`}>
+                    {format(start, "HH:mm")}
+                  </span>
+                )}
+                <span className="text-[10.5px] font-semibold text-zinc-800 dark:text-zinc-100 truncate">
+                  {span > 1 && !isStart ? "‹ " : ""}
+                  {event.title}
+                  {span > 1 && !isEnd ? " ›" : ""}
+                </span>
+              </button>
+            );
+          })}
+      </div>
+    </div>
+  );
+}
 
 /** Compact event line used in the day side panel and the mobile list. */
 function EventListItem({ event, onOpen }: { event: CalendarEvent; onOpen: (e: React.SyntheticEvent) => void }) {
@@ -328,46 +524,74 @@ export default function CalendarPage() {
   const dragMovedRef = useRef(false);
   const dragStartPointRef = useRef<{ x: number; y: number } | null>(null);
 
-  // Scrolling calendar state
+  // Scrolling calendar state (하나로 이어진 주(week) 목록)
   const scrollRef = useRef<HTMLDivElement>(null);
-  const [viewportHeight, setViewportHeight] = useState(0);
   const scrollRafRef = useRef<number | null>(null);
-  const [focusedMonthIndex, setFocusedMonthIndex] = useState(RENDER_RANGE);
-  const [renderFirst, setRenderFirst] = useState(RENDER_RANGE - 1);
-  const [renderLast, setRenderLast] = useState(RENDER_RANGE + 1);
+  const [viewportHeight, setViewportHeight] = useState(0);
 
   const currentUserInitials = user?.email?.split("@")[0].toUpperCase() || "UNKNOWN";
 
-  // Month list: RENDER_RANGE months before/after the current one
+  // 오늘 기준 ±MONTH_RANGE 개월을 끊김 없이 이어 붙인다
   const months = React.useMemo(() => {
     const base = startOfMonth(new Date());
-    return Array.from({ length: RENDER_RANGE * 2 + 1 }, (_, i) => addMonths(base, i - RENDER_RANGE));
+    return Array.from({ length: MONTH_RANGE * 2 + 1 }, (_, i) => addMonths(base, i - MONTH_RANGE));
   }, []);
-  const maxMonthIndex = months.length - 1;
-  const focusedMonth = months[focusedMonthIndex];
+  const today = React.useMemo(() => startOfDay(new Date()), []);
 
-  // 고정 6주(42일) 그리드 — 모든 달이 같은 높이를 가져서 페이지 넘김이 흔들리지 않는다
-  const ROWS_PER_MONTH = 6;
-  const monthGrids = React.useMemo(
+  // 모든 주가 같은 높이 → 스크롤이 끊기지 않고, 월 경계도 자연스럽게 이어진다
+  const weekHeight = Math.round(Math.min(170, Math.max(84, (viewportHeight || 700) / 5)));
+  const weeks = React.useMemo(() => {
+    const first = startOfWeek(months[0]);
+    const last = endOfWeek(months[months.length - 1]);
+    const list: Date[][] = [];
+    for (let d = first; d <= last; d = addDays(d, 7)) {
+      list.push(Array.from({ length: 7 }, (_, i) => addDays(d, i)));
+    }
+    return list;
+  }, [months]);
+  const builtWeeks = React.useMemo(() => weeks.map((w) => buildWeek(w, events)), [weeks, events]);
+
+  // 각 달의 첫 주 인덱스 (스크롤 → 현재 달 계산용)
+  const monthFirstWeek = React.useMemo(
     () =>
       months.map((m) => {
-        const start = startOfWeek(startOfMonth(m));
-        return Array.from({ length: ROWS_PER_MONTH }, (_, r) =>
-          Array.from({ length: 7 }, (_, c) => addDays(start, r * 7 + c))
-        );
+        const ws = startOfWeek(startOfMonth(m));
+        return Math.max(0, differenceInCalendarDays(ws, weeks[0][0]) / 7);
       }),
-    [months]
+    [months, weeks]
   );
+  const maxMonthIndex = months.length - 1;
+  // 첫 달의 첫 주는 위쪽 여백을 수용한다 (그 주에 일정이 적으면 라벨 아래로 날짜를 내림)
+  const firstLaneTop = 30;
+  // 위쪽 여백은 '콘텐츠 맨 위' 한 번만 필요하다 — 3주 정도는 라벨 몫 높이의 행으로 덮어 라벨 이동 공간을 만든다
+  const rowHeights = builtWeeks.map(() => weekHeight);
+  const LABEL_ALLOWANCE = Math.round(weekHeight / 2);
+  const weekTops: number[] = [];
+  rowHeights.reduce((acc, h, i) => {
+    weekTops[i] = acc + (i === 0 ? LABEL_ALLOWANCE : 0);
+    return acc + h + (i === 0 ? LABEL_ALLOWANCE : 0);
+  }, 0);
+  const topOfWeek = (w: number) => (w < 0 ? w * weekHeight : weekTops[Math.min(w, weekTops.length - 1)] ?? 0);
+  const contentOffset = LABEL_ALLOWANCE; // 첫 주가 시작되는 콘텐츠 y
 
-  const focusedWeeks = React.useMemo(() => buildWeeks(monthGrids[focusedMonthIndex], events), [monthGrids, focusedMonthIndex, events]);
-  const focusedLaneCount = Math.max(0, ...focusedWeeks.map((w) => w.laneCount));
-  const naturalRow = Math.max(WEEK_MIN_HEIGHT, 28 + Math.max(focusedLaneCount, 1) * WAVE_HEIGHT + 8);
-  // 한 달 = 화면 한 장. 뷰포트 높이를 6주로 나눠 행 높이를 정하고, 일정이 많으면 그만큼만 늘린다.
-  // 한 달 블록 = 월 제목 30 + 패딩 12/8 + 테두리 2 = 52px, 그 아래 6주가 화면을 꽉 채운다
-  const MONTH_CHROME = 52;
-  const rowHeight =
-    viewportHeight > 0 ? Math.max((viewportHeight - MONTH_CHROME) / ROWS_PER_MONTH, naturalRow) : naturalRow;
-  const pageUnit = rowHeight * ROWS_PER_MONTH + MONTH_CHROME;
+  // 스크롤 위치(주 단위) → 지금 화면 최상단에 있는 달. 달 라벨이 그 달의 주 사이에서만 슬라이드한다.
+  const [focusTop, setFocusTop] = useState(0);
+  // 화면 맨 위에 놓인 주 → 그 주가 속한 "화면상의" 달 (예: 10/26~11/1 주는 그 날짜 위치 기준)
+  // 각 달이 시작되는 주 = 그 달 1일이 들어 있는 주 (실제 날짜 흐름 기준)
+  const monthDisplayStartWeek = monthFirstWeek;
+  // 다음 달 첫 주가 화면 중턱에 오면 그 달로 넘어간다 (라벨이 뒤로 되돌아가지 않도록 한 방향으로만)
+  const labelMonthIndex = clampNum(
+    months.reduce((acc, _, i) => (topOfWeek(monthDisplayStartWeek[i]) <= focusTop + weekHeight * 0.6 ? i : acc), 0),
+    0,
+    maxMonthIndex
+  );
+  // 다음 달이 화면에 올라오기 시작하면(그 달의 첫 주가 위에서 나타나면) 라벨이 아래로 내려가며 바뀐다
+  const labelStartTop = topOfWeek(monthDisplayStartWeek[labelMonthIndex]);
+  // 그 달이 시작되기 전(앞 달의 꼬리)에는 라벨이 아래에서 올라와 자리를 잡고, 시작 이후엔 맨 위에 붙는다
+  const riseIn = clampNum(labelStartTop - weekHeight * 0.6 - focusTop, 0, weekHeight);
+  const labelTopLocal = Math.round(4 + riseIn);
+  const focusedMonthLabel = months[labelMonthIndex];
+
 
   const eventsOnDay = useCallback(
     (day: Date) =>
@@ -568,59 +792,40 @@ export default function CalendarPage() {
     };
   }, [dragRange, openNewEventModal]);
 
-  // ── Scrolling calendar (한 달 = 한 화면, 스크롤하면 다음 달) ──────────
-  // 모든 달의 높이가 같으므로 N번째 달의 페이지는 N * pageUnit 에서 시작한다.
-  const pageTop = (index: number) => index * pageUnit;
+  // ── 자연스러운 스크롤 달력 ────────────────────────────────────────
+  // 주(week) 목록을 하나로 이어 붙인 단일 그리드. 스크롤하면 달력이 그대로 흐르고
+  // 월 라벨만 그 달의 주 사이에서 슬라이드한다. 스냅 없음 → 부드럽게 이어짐.
+  const weekTopOf = (monthIndex: number) => {
+    const w = monthFirstWeek[monthIndex];
+    return Math.max(0, (w === 0 ? 0 : topOfWeek(w)) - 4);
+  };
 
   const measureViewport = () => {
     const el = scrollRef.current;
     if (el) setViewportHeight(el.clientHeight);
   };
 
-  const jumpToMonth = (index: number) => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const idx = clampNum(index, 0, months.length - 1);
-    setFocusedMonthIndex(idx);
-    setRenderFirst(Math.max(0, idx - 1));
-    setRenderLast(Math.min(months.length - 1, idx + 1));
-    el.scrollTo({ top: pageTop(idx), behavior: "smooth" });
-  };
-
-  // Track the month filling the screen after each scroll frame
   const handleScroll = () => {
     if (scrollRafRef.current !== null) return;
     scrollRafRef.current = window.requestAnimationFrame(() => {
       scrollRafRef.current = null;
       const el = scrollRef.current;
       if (!el) return;
-      const idx = clampNum(Math.round(el.scrollTop / pageUnit), 0, months.length - 1);
-      setFocusedMonthIndex((prev) => {
-        if (prev === idx) return prev;
-        setRenderFirst(Math.max(0, idx - 1));
-        setRenderLast(Math.min(months.length - 1, idx + 1));
-        return idx;
-      });
+      setFocusTop(el.scrollTop);
+  
     });
   };
 
-  // Once the user stops scrolling, land exactly on a month page
-  const snapTimerRef = useRef<number | null>(null);
-  const scheduleSnap = () => {
-    if (snapTimerRef.current !== null) window.clearTimeout(snapTimerRef.current);
-    snapTimerRef.current = window.setTimeout(() => {
-      snapTimerRef.current = null;
-      const el = scrollRef.current;
-      if (!el) return;
-      const idx = clampNum(Math.round(el.scrollTop / pageUnit), 0, months.length - 1);
-      const target = pageTop(idx);
-      if (Math.abs(el.scrollTop - target) > 2) el.scrollTo({ top: target, behavior: "smooth" });
-    }, 140);
+  const jumpToMonth = (index: number) => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const idx = clampNum(index, 0, maxMonthIndex);
+    el.scrollTo({ top: weekTopOf(idx), behavior: "smooth" });
   };
 
   const handleGoToday = () => {
     setActiveDay(startOfDay(new Date()));
-    jumpToMonth(RENDER_RANGE);
+    jumpToMonth(MONTH_RANGE);
   };
 
   // ── Save / delete ─────────────────────────────────────────────────
@@ -720,7 +925,6 @@ export default function CalendarPage() {
   // ── Calendar grid renderer ───────────────────────────────────────
   const initialScrollDone = useRef(false);
 
-  // 캘린더 스크롤 영역 높이 측정 (창 크기 변경·폰트 로딩 후에도 다시 측정)
   useLayoutEffect(() => {
     measureViewport();
     const onResize = () => measureViewport();
@@ -732,196 +936,23 @@ export default function CalendarPage() {
     };
   }, [loading]);
 
-  // 오늘 달을 한 화면에 맞춰 시작
+  // 오늘 주가 보이도록 시작 위치를 잡는다 (앱 첫 진입 시 한 번)
   useLayoutEffect(() => {
     if (loading || viewportHeight === 0 || initialScrollDone.current) return;
     const el = scrollRef.current;
     if (!el) return;
     initialScrollDone.current = true;
-    el.scrollTop = pageTop(RENDER_RANGE);
-    const id = window.requestAnimationFrame(() => {
-      el.scrollTop = pageTop(RENDER_RANGE);
-    });
-    return () => window.cancelAnimationFrame(id);
-    // pageTop 은 뷰포트 높이가 바뀔 때만 달라진다
+    const target = Math.max(0, weekTopOf(MONTH_RANGE) - 4);
+    el.scrollTop = target;
+    setFocusTop(target);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading, viewportHeight, pageUnit]);
-
-  const renderMonth = (monthIndex: number) => {
-    const m = months[monthIndex];
-    const rows = monthGrids[monthIndex];
-    const weeks = buildWeeks(rows, events);
-    const inMonth = (d: Date) => d.getMonth() === m.getMonth();
-
-    return (
-      <div
-        key={monthIndex}
-        data-month={format(m, "yyyy-MM")}
-        className="px-1 sm:px-2 pt-3 pb-2"
-      >
-        {/* Sticky month label */}
-        <div className="sticky top-0 z-30 h-[30px] bg-white dark:bg-zinc-900 flex items-center gap-2">
-          <span className="text-sm font-black text-zinc-900 dark:text-white tracking-tight tabular-nums">
-            {format(m, "yyyy년 M월", { locale: ko })}
-          </span>
-          <span className="h-px flex-1 bg-zinc-200/80 dark:bg-zinc-800" />
-        </div>
-
-        <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800 overflow-hidden divide-y divide-zinc-200/70 dark:divide-zinc-800/70">
-          {weeks.map((week, wi) => (
-            <div
-              key={wi}
-              className="relative grid grid-cols-7 divide-x divide-zinc-200/70 dark:divide-zinc-800/70 bg-white dark:bg-zinc-900"
-              style={{ height: rowHeight }}
-            >
-              {/* Day backgrounds */}
-              {week.days.map((day) => {
-                const dayStr = format(day, "yyyy-MM-dd");
-                const dow = day.getDay();
-                const holiday = holidays[dayStr];
-                const isToday = sameDay(day, new Date());
-                const isActive = sameDay(day, activeDay);
-                const inRange = !!dragRange && day >= dragRange.start && day <= dragRange.end;
-                const thisMonth = inMonth(day);
-                return (
-                  <div
-                    key={dayStr}
-                    data-day={dayStr}
-                    onPointerEnter={() => handleDayPointerEnter(day)}
-                    className={`relative flex flex-col min-h-0 overflow-hidden select-none cursor-pointer transition-colors ${
-                      inRange
-                        ? "bg-blue-500/15"
-                        : isActive
-                        ? "bg-blue-500/[0.06] dark:bg-blue-500/[0.09]"
-                        : "hover:bg-zinc-50 dark:hover:bg-zinc-800/40"
-                    } ${thisMonth ? "" : "bg-zinc-50/70 dark:bg-zinc-950/50"}`}
-                  >
-                    <div className="flex items-center gap-1 px-1.5 pt-1">
-                      <span
-                        className={`text-[11px] sm:text-xs w-5 h-5 flex items-center justify-center rounded-full shrink-0 tabular-nums ${
-                          isToday
-                            ? "bg-blue-600 text-white font-black"
-                            : !thisMonth
-                            ? "text-zinc-300 dark:text-zinc-600 font-bold"
-                            : dow === 0 || holiday
-                            ? "text-rose-500 dark:text-rose-400 font-extrabold"
-                            : dow === 6
-                            ? "text-blue-500 dark:text-blue-400 font-extrabold"
-                            : "text-zinc-700 dark:text-zinc-200 font-bold"
-                        }`}
-                      >
-                        {format(day, "d")}
-                      </span>
-                      {holiday && thisMonth && (
-                        <span className="hidden xl:block text-[9px] font-bold text-rose-500/90 dark:text-rose-400/90 truncate">
-                          {holiday}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Mobile: dots */}
-                    <div className="sm:hidden flex flex-wrap gap-0.5 px-1.5 pt-0.5">
-                      {week.segments
-                        .filter((s) => sameDay(week.days[s.col], day) || (day >= week.days[0] && colOf(week, day) >= s.col && colOf(week, day) < s.col + s.span))
-                        .slice(0, 3)
-                        .map((s) => (
-                          <span key={s.event.id} className={`w-1.5 h-1.5 rounded-full ${getColorForEvent(s.event.created_by).dot}`} />
-                        ))}
-                    </div>
-                  </div>
-                );
-              })}
-
-              {/* Continuous event bars (desktop/tablet). Mobile uses dots + the day bar below the grid. */}
-              <div className="hidden sm:block">
-              {week.segments
-                .filter((s) => s.lane < MAX_LANES)
-                .map(({ event, col, span, lane, multiDay }) => {
-                  const color = getColorForEvent(event.created_by);
-                  const start = new Date(event.start_time);
-                  const end = new Date(event.end_time);
-                  const isStart = sameDay(start, week.days[col]);
-                  const isEnd = sameDay(end, week.days[col + span - 1]);
-                  return (
-                    <button
-                      key={event.id}
-                      type="button"
-                      onPointerDown={(e) => e.stopPropagation()}
-                      onMouseDown={(e) => e.stopPropagation()}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        openViewModal(e, event);
-                      }}
-                      title={`${event.title} · ${parseMembers(event.created_by).join(", ")}`}
-                      style={{
-                        left: `calc(${(col / 7) * 100}% + 3px)`,
-                        width: `calc(${(span / 7) * 100}% - 6px)`,
-                        top: 26 + lane * WAVE_HEIGHT,
-                        borderTopLeftRadius: isStart ? 7 : 0,
-                        borderBottomLeftRadius: isStart ? 7 : 0,
-                        borderTopRightRadius: isEnd ? 7 : 0,
-                        borderBottomRightRadius: isEnd ? 7 : 0,
-                      }}
-                      className={`absolute z-10 h-[20px] flex items-center gap-1.5 px-1.5 overflow-hidden cursor-pointer border ${color.bg} ${multiDay ? color.border : "border-transparent"} ${color.hoverBg} transition-colors`}
-                    >
-                      {isStart && !isAllDayEvent(event) && (
-                        <span className={`text-[9.5px] font-black tabular-nums shrink-0 ${color.text}`}>
-                          {format(start, "HH:mm")}
-                        </span>
-                      )}
-                      <span className="text-[10.5px] font-semibold text-zinc-800 dark:text-zinc-100 truncate">
-                        {span > 1 && !isStart ? "‹ " : ""}
-                        {event.title}
-                        {span > 1 && !isEnd ? " ›" : ""}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  };
-
-  function colOf(week: Week, day: Date) {
-    return differenceInCalendarDays(day, week.start);
-  }
+  }, [loading, viewportHeight, weekHeight, today]);
 
   // ── Render ────────────────────────────────────────────────────────
   return (
     <div className="flex-1 p-2 sm:p-4 md:p-5 flex flex-col min-h-0 h-[calc(100dvh-50px-5rem)] md:h-[100dvh] max-h-[calc(100dvh-50px-5rem)] md:max-h-[100dvh] gap-2 sm:gap-3 bg-zinc-50 dark:bg-zinc-950 overflow-hidden">
-      {/* Top bar — no add button: 날짜를 눌러서 등록 */}
-      <div className="flex items-center justify-between gap-2.5 shrink-0">
-        <div className="flex items-center gap-2 min-w-0">
-          <button
-            type="button"
-            onClick={() => jumpToMonth(clampNum(focusedMonthIndex - 1, 0, maxMonthIndex))}
-            className="w-8 h-9 flex items-center justify-center bg-white dark:bg-zinc-900 border border-zinc-200/90 dark:border-zinc-800 rounded-xl shadow-xs text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all cursor-pointer active:scale-95"
-            title="이전 달"
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </button>
-          <span className="text-sm sm:text-base font-black text-zinc-900 dark:text-white tabular-nums min-w-[92px] text-center">
-            {format(focusedMonth, "yyyy. MM", { locale: ko })}
-          </span>
-          <button
-            type="button"
-            onClick={() => jumpToMonth(clampNum(focusedMonthIndex + 1, 0, maxMonthIndex))}
-            className="w-8 h-9 flex items-center justify-center bg-white dark:bg-zinc-900 border border-zinc-200/90 dark:border-zinc-800 rounded-xl shadow-xs text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all cursor-pointer active:scale-95"
-            title="다음 달"
-          >
-            <ChevronRight className="w-4 h-4" />
-          </button>
-          <button
-            type="button"
-            onClick={handleGoToday}
-            className="px-3 py-2 bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 border border-zinc-200/90 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 rounded-xl text-xs font-bold transition-all shadow-xs active:scale-95 cursor-pointer"
-          >
-            오늘
-          </button>
-        </div>
+      {/* Top bar — 라벨/이동 버튼은 달력 위에 떠 있고, 오른쪽은 상태/도움말 */}
+      <div className="flex items-center justify-end gap-2.5 shrink-0 min-h-9">
         {dragRange ? (
           <p className="flex items-center gap-1.5 text-[11px] font-black text-blue-600 dark:text-blue-400 shrink-0 tabular-nums">
             <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
@@ -934,13 +965,13 @@ export default function CalendarPage() {
         ) : (
           <p className="hidden md:flex items-center gap-1.5 text-[11px] font-semibold text-zinc-400 dark:text-zinc-500 shrink-0">
             <CalendarDays className="w-3.5 h-3.5" />
-            날짜 클릭 또는 여러 날 드래그로 일정 등록
+            날짜 클릭 또는 여러 날 드래그로 일정 등록 · 스크롤하면 달이 이어집니다
           </p>
         )}
       </div>
 
       <div className="flex-1 flex gap-3 min-h-0">
-        {/* Scrolling calendar */}
+        {/* 이어진 스크롤 달력 */}
         <div className="flex-1 bg-white dark:bg-zinc-900 rounded-2xl sm:rounded-3xl shadow-xs border border-zinc-200/90 dark:border-zinc-800 overflow-hidden flex flex-col min-w-0 min-h-0">
           <div className="grid grid-cols-7 border-b border-zinc-200/80 dark:border-zinc-800/80 bg-zinc-50/90 dark:bg-zinc-800/40 shrink-0">
             {WEEKDAYS.map((day, idx) => (
@@ -959,46 +990,55 @@ export default function CalendarPage() {
             ))}
           </div>
 
-          {/* 스크롤 영역은 항상 마운트한다 (로딩 중에도 높이를 측정해 한 달=한 화면을 유지) */}
-          <div
-            ref={scrollRef}
-            onScroll={() => {
-              handleScroll();
-              scheduleSnap();
-            }}
-            onPointerDown={(e) => {
-              const cell = (e.target as HTMLElement).closest<HTMLElement>("[data-day]");
-              if (!cell?.dataset.day) return;
-              handleDayPointerDown(new Date(`${cell.dataset.day}T00:00:00`), e);
-            }}
-            /* relative: 자식 달 블록의 offsetTop 을 스크롤 영역 기준 0부터 계산하기 위함 */
-            className="relative flex-1 overflow-y-auto overscroll-contain custom-scrollbar min-h-0 touch-pan-y select-none"
-          >
-            {loading ? (
-              <div className="h-full flex items-center justify-center p-20">
-                <span className="w-6 h-6 rounded-full border-2 border-blue-500 border-t-transparent animate-spin" />
+          <div className="relative flex-1 min-h-0">
+            {/* 떠 있는 월 라벨: 화면 기준 좌표 (스크롤 영역과 같은 크기) */}
+            {!loading && (
+              <div className="absolute left-0 right-0 top-0 z-30 pointer-events-none" style={{ height: 40 }}>
+                <FloatingMonthLabel
+                  month={focusedMonthLabel}
+                  top={labelTopLocal}
+                  onPrev={() => jumpToMonth(clampNum(labelMonthIndex - 1, 0, maxMonthIndex))}
+                  onNext={() => jumpToMonth(clampNum(labelMonthIndex + 1, 0, maxMonthIndex))}
+                  onToday={handleGoToday}
+                />
               </div>
-            ) : (
-              <>
-                {months.map((m, idx) => {
-                  if (idx < renderFirst || idx > renderLast) {
-                    // 렌더되지 않는 달도 같은 높이(6주)로 자리를 잡아 스크롤 위치가 튀지 않게 한다
-                    return (
-                      <div key={idx} className="px-1 sm:px-2 pt-3 pb-2" data-placeholder>
-                        <div className="h-[30px]" />
-                        <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800 divide-y divide-zinc-200/70 dark:divide-zinc-800/70">
-                          {Array.from({ length: ROWS_PER_MONTH }, (_, i) => (
-                            <div key={i} style={{ height: `${rowHeight}px` }} className="bg-white dark:bg-zinc-900" />
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  }
-                  return renderMonth(idx);
-                })}
-                <div className="h-4" />
-              </>
             )}
+
+            <div
+              ref={scrollRef}
+              onScroll={handleScroll}
+              onPointerDown={(e) => {
+                const cell = (e.target as HTMLElement).closest<HTMLElement>("[data-day]");
+                if (!cell?.dataset.day) return;
+                handleDayPointerDown(new Date(`${cell.dataset.day}T00:00:00`), e);
+              }}
+              className="absolute inset-0 overflow-y-auto overscroll-contain custom-scrollbar touch-pan-y select-none"
+            >
+              {loading ? (
+                <div className="h-full flex items-center justify-center p-20">
+                  <span className="w-6 h-6 rounded-full border-2 border-blue-500 border-t-transparent animate-spin" />
+                </div>
+              ) : (
+                <>
+                  <div style={{ height: contentOffset }} aria-hidden="true" />
+                  {builtWeeks.map((week, i) => (
+                    <WeekRow
+                      key={format(week.start, "yyyy-MM-dd")}
+                      week={week}
+                      rowHeight={rowHeights[i]}
+                      laneTop={firstLaneTop}
+                      holidays={holidays}
+                      today={today}
+                      activeDay={activeDay}
+                      dragRange={dragRange}
+                      onOpenEvent={openViewModal}
+                      onDayPointerEnter={handleDayPointerEnter}
+                    />
+                  ))}
+                  <div className="h-6" />
+                </>
+              )}
+            </div>
           </div>
         </div>
 
