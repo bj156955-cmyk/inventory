@@ -577,31 +577,25 @@ export default function CalendarPage() {
     [monthFirstRow, weekHeight]
   );
 
-  // 라벨은 '화면 위치'로 파생:
-  //  - 화면 맨 위 칸의 날짜가 속한 달
-  //  - 단, 지금 달의 1일이 화면에 남아 있으면 지금 달 (작게 넘겨도 지금 달)
+  // 라벨은 '화면 위치'만으로 결정한다 (앞뒤 모두 자유롭게)
+  //  - 그 달 1일이 낀 주가 위에서 세 번째 줄(기준선)까지 올라오면 그 달
+  //  - 위로 넘겨 다시 내려가면 바로 이전 달
   const [mTop, setMTop] = useState(0);
-  const [mIdx, setMIdx] = useState(MONTH_RANGE);
+
   const visibleMonthAt = useCallback(
     (top: number) => {
-      // 화면 맨 위 칸의 날짜가 속한 달 안에서 '가장 늦은 달' = 그 달
-      // (10 월 꼬리가 남아 있으면 10 월, 그 꼬리가 다 사라지면 11 월)
-      const weekIdx = Math.max(0, Math.round(top / weekHeight));
+      // 1일이 낀 주가 3번째 줄 자리에 오는 스크롤 위치를 넘으면 그 달
       let idx = 0;
       monthFirstRow.forEach((row, i) => {
-        if (row <= weekIdx) idx = i;
+        const switchTop = (row - 2) * weekHeight;
+        if (top >= switchTop) idx = i;
       });
       return clampNum(idx, 0, maxMonthIndex);
     },
     [weekHeight, monthFirstRow, maxMonthIndex]
   );
 
-  const labelMonthIndex = (() => {
-    // 지금 화면에 보이는 달 = 배치된 달과 '화면 최상단 칸 날짜의 달' 중 더 늦은 쪽
-    // (마지막 주가 이전 달 꼬리여도 그 달 표시, 다음 달로 넘어가면 다음 달 표시)
-    const here = visibleMonthAt(mTop);
-    return Math.max(mIdx, here);
-  })();
+  const labelMonthIndex = visibleMonthAt(mTop);
   const labelMonthRef = useRef(MONTH_RANGE);
   useEffect(() => {
     labelMonthRef.current = labelMonthIndex;
@@ -627,7 +621,6 @@ export default function CalendarPage() {
 
   const jumpToMonth = (m: number) => {
     const idx = clampNum(m, 0, maxMonthIndex);
-    setMIdx(idx);
     scrollRef.current?.scrollTo({ top: monthTop(idx), behavior: "smooth" });
   };
 
@@ -951,7 +944,6 @@ export default function CalendarPage() {
     initialScrollDone.current = true;
     const target = monthTop(MONTH_RANGE);
     el.scrollTop = target;
-    setMIdx(MONTH_RANGE);
     setMTop(target);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, viewportHeight, weekHeight]);
